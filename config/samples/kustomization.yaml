@@ -1,0 +1,6 @@
+## Append samples of your project ##
+resources:
+- tenants_v1_tenantregistry.yaml
+- tenants_v1_tenanttemplate.yaml
+- tenants_v1_tenant.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

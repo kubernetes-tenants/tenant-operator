@@ -1,0 +1,9 @@
+apiVersion: tenants.tenants.ecube.dev/v1
+kind: TenantRegistry
+metadata:
+  labels:
+    app.kubernetes.io/name: tenant-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: tenantregistry-sample
+spec:
+  # TODO(user): Add fields here
