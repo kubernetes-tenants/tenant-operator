@@ -4,6 +4,145 @@ metadata:
   labels:
     app.kubernetes.io/name: tenant-operator
     app.kubernetes.io/managed-by: kustomize
-  name: tenanttemplate-sample
+  name: webapp-template
+  namespace: default
 spec:
-  # TODO(user): Add fields here
+  registryId: sample-registry
+
+  # Create namespace for each tenant
+  namespaces:
+    - id: ns
+      nameTemplate: "tenant-{{ .uid }}"
+      creationPolicy: WhenNeeded
+      deletionPolicy: Delete
+      spec:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          labels:
+            tenant.ecube.dev/uid: "{{ .uid }}"
+            tenant.ecube.dev/managed: "true"
+
+  # Create ServiceAccount
+  serviceAccounts:
+    - id: sa
+      nameTemplate: "{{ .uid }}-sa"
+      namespaceTemplate: "tenant-{{ .uid }}"
+      dependIds: [ns]
+      spec:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          labels:
+            tenant.ecube.dev/uid: "{{ .uid }}"
+
+  # Create Deployment
+  deployments:
+    - id: api
+      nameTemplate: "{{ .uid }}-api"
+      namespaceTemplate: "tenant-{{ .uid }}"
+      dependIds: [ns, sa]
+      waitForReady: true
+      timeoutSeconds: 300
+      spec:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          labels:
+            app: "{{ .uid }}"
+            tenant.ecube.dev/uid: "{{ .uid }}"
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
+              app: "{{ .uid }}"
+          template:
+            metadata:
+              labels:
+                app: "{{ .uid }}"
+            spec:
+              serviceAccountName: "{{ .uid }}-sa"
+              containers:
+                - name: api
+                  image: "{{ default \"nginx:stable\" .deployImage }}"
+                  ports:
+                    - containerPort: 8080
+                      name: http
+                      protocol: TCP
+                  env:
+                    - name: TENANT_UID
+                      value: "{{ .uid }}"
+                    - name: TENANT_HOST
+                      value: "{{ .host }}"
+                  resources:
+                    requests:
+                      cpu: 100m
+                      memory: 128Mi
+                    limits:
+                      cpu: 500m
+                      memory: 512Mi
+                  livenessProbe:
+                    httpGet:
+                      path: /healthz
+                      port: http
+                    initialDelaySeconds: 30
+                    periodSeconds: 10
+                  readinessProbe:
+                    httpGet:
+                      path: /ready
+                      port: http
+                    initialDelaySeconds: 5
+                    periodSeconds: 5
+
+  # Create Service
+  services:
+    - id: svc
+      nameTemplate: "{{ .uid }}-api"
+      namespaceTemplate: "tenant-{{ .uid }}"
+      dependIds: [api]
+      waitForReady: false
+      spec:
+        apiVersion: v1
+        kind: Service
+        metadata:
+          labels:
+            app: "{{ .uid }}"
+            tenant.ecube.dev/uid: "{{ .uid }}"
+        spec:
+          type: ClusterIP
+          selector:
+            app: "{{ .uid }}"
+          ports:
+            - port: 80
+              targetPort: 8080
+              protocol: TCP
+              name: http
+
+  # Create Ingress
+  ingresses:
+    - id: ing
+      nameTemplate: "{{ .uid }}"
+      namespaceTemplate: "tenant-{{ .uid }}"
+      dependIds: [svc]
+      spec:
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          labels:
+            tenant.ecube.dev/uid: "{{ .uid }}"
+          annotations:
+            nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        spec:
+          ingressClassName: nginx
+          rules:
+            - host: "{{ .host }}"
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: "{{ .uid }}-api"
+                        port:
+                          number: 80

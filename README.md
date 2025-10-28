@@ -1,8 +1,36 @@
-# tenant-operator
-// TODO(user): Add simple overview of use/purpose
+# Tenant Operator v1.0
+
+A Kubernetes operator for automated multi-tenant application provisioning and lifecycle management, driven by external data sources.
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/kubernetes-tenants/tenant-operator)](https://goreportcard.com/report/github.com/kubernetes-tenants/tenant-operator)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+## Overview
+
+Tenant Operator v1.0 automates the provisioning, configuration, and lifecycle management of multi-tenant Kubernetes applications by:
+
+- **Reading tenant metadata** from external data sources (MySQL, PostgreSQL - planned)
+- **Applying templates** to generate Kubernetes resources dynamically
+- **Managing lifecycle** with policy-based creation, deletion, and conflict resolution
+- **Ensuring consistency** between database state and Kubernetes resources
+
+### Key Features
+
+- **Declarative Templates**: Go text/template + 200+ Sprig functions
+- **Server-Side Apply (SSA)**: Efficient, conflict-free resource management
+- **Dependency Graphs**: Order resource creation with `dependIds` and readiness checks
+- **Policy-Driven**: Configure creation (Once/WhenNeeded), deletion (Delete/Retain), and conflict (Stuck/Force) behaviors
+- **Observability**: Prometheus metrics, structured logging, detailed events
+- **Strong Consistency**: Active tenant count = database active rows
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+
+This operator is designed for SaaS platforms and multi-tenant applications that need to:
+
+1. **Automatically provision** Kubernetes resources (Deployments, Services, Ingresses, etc.) for each tenant
+2. **Sync tenant state** from external databases (MySQL initially, extensible to PostgreSQL, REST APIs, etc.)
+3. **Manage lifecycle** with fine-grained policies for creation, updates, and deletion
+4. **Ensure consistency** between source-of-truth (database) and Kubernetes cluster state
 
 ## Getting Started
 

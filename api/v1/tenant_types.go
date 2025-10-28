@@ -25,17 +25,86 @@ import (
 
 // TenantSpec defines the desired state of Tenant.
 type TenantSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// UID is the unique identifier from the registry data source
+	// +kubebuilder:validation:Required
+	UID string `json:"uid"`
 
-	// Foo is an example field of Tenant. Edit tenant_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// TemplateRef references the TenantTemplate to use
+	// +kubebuilder:validation:Required
+	TemplateRef string `json:"templateRef"`
+
+	// Namespaces are the resolved namespace resources
+	// +optional
+	Namespaces []TResource `json:"namespaces,omitempty"`
+
+	// ServiceAccounts are the resolved ServiceAccount resources
+	// +optional
+	ServiceAccounts []TResource `json:"serviceAccounts,omitempty"`
+
+	// Deployments are the resolved Deployment resources
+	// +optional
+	Deployments []TResource `json:"deployments,omitempty"`
+
+	// StatefulSets are the resolved StatefulSet resources
+	// +optional
+	StatefulSets []TResource `json:"statefulSets,omitempty"`
+
+	// Services are the resolved Service resources
+	// +optional
+	Services []TResource `json:"services,omitempty"`
+
+	// Ingresses are the resolved Ingress resources
+	// +optional
+	Ingresses []TResource `json:"ingresses,omitempty"`
+
+	// ConfigMaps are the resolved ConfigMap resources
+	// +optional
+	ConfigMaps []TResource `json:"configMaps,omitempty"`
+
+	// Secrets are the resolved Secret resources
+	// +optional
+	Secrets []TResource `json:"secrets,omitempty"`
+
+	// PersistentVolumeClaims are the resolved PVC resources
+	// +optional
+	PersistentVolumeClaims []TResource `json:"persistentVolumeClaims,omitempty"`
+
+	// Jobs are the resolved Job resources
+	// +optional
+	Jobs []TResource `json:"jobs,omitempty"`
+
+	// CronJobs are the resolved CronJob resources
+	// +optional
+	CronJobs []TResource `json:"cronJobs,omitempty"`
+
+	// Manifests are the resolved arbitrary resources
+	// +optional
+	Manifests []TResource `json:"manifests,omitempty"`
 }
 
 // TenantStatus defines the observed state of Tenant.
 type TenantStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// ObservedGeneration is the generation observed by the controller
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// ReadyResources is the number of resources that are ready
+	// +optional
+	ReadyResources int32 `json:"readyResources,omitempty"`
+
+	// DesiredResources is the total number of resources
+	// +optional
+	DesiredResources int32 `json:"desiredResources,omitempty"`
+
+	// FailedResources is the number of resources that failed
+	// +optional
+	FailedResources int32 `json:"failedResources,omitempty"`
+
+	// Conditions represent the latest available observations of the tenant's state
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 // +kubebuilder:object:root=true
