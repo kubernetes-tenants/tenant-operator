@@ -17,7 +17,7 @@ limitations under the License.
 package v1
 
 import (
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // Policy types
@@ -65,7 +65,7 @@ type TResource struct {
 	// Can be any Kubernetes native resource or custom resource
 	// +kubebuilder:validation:Required
 	// +kubebuilder:pruning:PreserveUnknownFields
-	Spec runtime.RawExtension `json:"spec"`
+	Spec unstructured.Unstructured `json:"spec"`
 
 	// DependIds lists IDs of resources that must be ready before this resource is created
 	// +optional

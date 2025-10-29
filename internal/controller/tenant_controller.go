@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -269,11 +268,8 @@ func (r *TenantReconciler) renderResource(ctx context.Context, engine *template.
 		return nil, fmt.Errorf("failed to render annotations: %w", err)
 	}
 
-	// Parse spec
-	obj := &unstructured.Unstructured{}
-	if err := json.Unmarshal(resource.Spec.Raw, obj); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal spec: %w", err)
-	}
+	// Get spec (now it's already an unstructured.Unstructured)
+	obj := resource.Spec.DeepCopy()
 
 	// Set metadata
 	obj.SetName(name)
