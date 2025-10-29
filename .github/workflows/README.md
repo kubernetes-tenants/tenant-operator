@@ -57,10 +57,9 @@ Runs end-to-end tests against a real Kubernetes cluster.
 
 | Event | Generated Tags | Example |
 |-------|---------------|---------|
-| Push to `main` | `main`, `latest`, `main-<sha>` | `main`, `latest`, `main-abc123` |
+| Push to `main` | `main`, `latest`, `main-<sha>` | `main`, `latest`, `main-74bab2c` |
 | Tag `v1.2.3` | `v1.2.3`, `v1.2`, `v1`, `latest` | All semver variants |
-| PR #42 | `pr-42` | Build only, not pushed |
-| Commit SHA | `<branch>-<sha>` | `main-abc123` |
+| PR #42 | `pr-42`, `sha-<sha>` | `pr-42`, `sha-74bab2c` (build only, not pushed) |
 
 ## Using Pre-built Images
 

@@ -24,6 +24,7 @@ The `build-push.yml` workflow automatically builds and publishes images on:
 
 ### 3. **Pull Requests**
 - Build-only (no push to registry)
+- Tags: `pr-<number>`, `sha-<commit-sha>` (for validation only)
 - Validates that the image builds successfully
 
 ## Using the Image
@@ -63,9 +64,9 @@ Images are publicly accessible for pulling. No authentication required.
 
 | Event | Tags Generated | Example |
 |-------|---------------|---------|
-| Push to `main` | `main`, `latest`, `main-<sha>` | `main`, `latest`, `main-a1b2c3d` |
+| Push to `main` | `main`, `latest`, `main-<sha>` | `main`, `latest`, `main-74bab2c` |
 | Tag `v1.2.3` | `v1.2.3`, `v1.2`, `v1`, `latest` | `v1.2.3`, `v1.2`, `v1` |
-| PR #123 | `pr-123` | `pr-123` (build only, not pushed) |
+| PR #123 | `pr-123`, `sha-<sha>` | `pr-123`, `sha-74bab2c` (build only, not pushed) |
 
 ## Multi-Platform Support
 
