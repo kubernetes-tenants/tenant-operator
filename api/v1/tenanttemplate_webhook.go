@@ -58,7 +58,6 @@ func (d *TenantTemplateDefaulter) Default(ctx context.Context, obj runtime.Objec
 	tenanttemplatelog.Info("default", "name", tmpl.Name)
 
 	// Set defaults for all resource types
-	SetDefaultsForTResourceList(tmpl.Spec.Namespaces)
 	SetDefaultsForTResourceList(tmpl.Spec.ServiceAccounts)
 	SetDefaultsForTResourceList(tmpl.Spec.Deployments)
 	SetDefaultsForTResourceList(tmpl.Spec.StatefulSets)
@@ -242,7 +241,6 @@ func (v *TenantTemplateValidator) detectCycle(id string, adjList map[string][]st
 func (v *TenantTemplateValidator) collectAllResources(tmpl *TenantTemplate) []TResource {
 	var resources []TResource
 
-	resources = append(resources, tmpl.Spec.Namespaces...)
 	resources = append(resources, tmpl.Spec.ServiceAccounts...)
 	resources = append(resources, tmpl.Spec.Deployments...)
 	resources = append(resources, tmpl.Spec.StatefulSets...)
@@ -277,13 +275,6 @@ func (v *TenantTemplateValidator) validateTemplateSyntax(tmpl *TenantTemplate) e
 		if res.NameTemplate != "" {
 			if _, err := engine.Render(res.NameTemplate, sampleVars); err != nil {
 				return fmt.Errorf("invalid NameTemplate in resource '%s': %w", res.ID, err)
-			}
-		}
-
-		// Validate NamespaceTemplate
-		if res.NamespaceTemplate != "" {
-			if _, err := engine.Render(res.NamespaceTemplate, sampleVars); err != nil {
-				return fmt.Errorf("invalid NamespaceTemplate in resource '%s': %w", res.ID, err)
 			}
 		}
 

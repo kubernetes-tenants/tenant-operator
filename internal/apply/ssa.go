@@ -59,7 +59,8 @@ func (a *Applier) ApplyResource(
 	conflictPolicy tenantsv1.ConflictPolicy,
 	patchStrategy tenantsv1.PatchStrategy,
 ) error {
-	// Set owner reference
+	// Set owner reference for all resources
+	// Note: All resources are expected to be in the same namespace as the owner
 	if owner != nil {
 		if err := controllerutil.SetControllerReference(owner, obj, a.scheme); err != nil {
 			return fmt.Errorf("failed to set owner reference: %w", err)

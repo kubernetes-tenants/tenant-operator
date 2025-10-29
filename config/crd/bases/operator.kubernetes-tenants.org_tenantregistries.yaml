@@ -14,7 +14,27 @@ spec:
     singular: tenantregistry
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - description: Number of active tenants from datasource
+      jsonPath: .status.desired
+      name: Desired
+      type: integer
+    - description: Number of ready tenants
+      jsonPath: .status.ready
+      name: Ready
+      type: integer
+    - description: Number of failed tenants
+      jsonPath: .status.failed
+      name: Failed
+      type: integer
+    - description: Ready status
+      jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: TenantRegistry is the Schema for the tenantregistries API.

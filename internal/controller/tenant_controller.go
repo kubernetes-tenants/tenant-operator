@@ -162,7 +162,7 @@ func (r *TenantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		resource := node.Resource
 
 		// Render templates
-		obj, err := r.renderResource(ctx, templateEngine, resource, vars)
+		obj, err := r.renderResource(ctx, templateEngine, resource, vars, tenant)
 		if err != nil {
 			logger.Error(err, "Failed to render resource", "id", resource.ID)
 			r.Recorder.Eventf(tenant, corev1.EventTypeWarning, "TemplateRenderError",
@@ -320,7 +320,6 @@ func (r *TenantReconciler) buildTemplateVariablesFromAnnotations(tenant *tenants
 func (r *TenantReconciler) collectResourcesFromTenant(tenant *tenantsv1.Tenant) []tenantsv1.TResource {
 	var resources []tenantsv1.TResource
 
-	resources = append(resources, tenant.Spec.Namespaces...)
 	resources = append(resources, tenant.Spec.ServiceAccounts...)
 	resources = append(resources, tenant.Spec.Deployments...)
 	resources = append(resources, tenant.Spec.StatefulSets...)
@@ -337,9 +336,9 @@ func (r *TenantReconciler) collectResourcesFromTenant(tenant *tenantsv1.Tenant) 
 }
 
 // renderResource renders a resource template
-// Note: NameTemplate, NamespaceTemplate, LabelsTemplate, AnnotationsTemplate are already rendered by Registry controller
+// Note: NameTemplate, LabelsTemplate, AnnotationsTemplate are already rendered by Registry controller
 // We only need to render the spec (unstructured.Unstructured) contents which may contain template variables
-func (r *TenantReconciler) renderResource(ctx context.Context, engine *template.Engine, resource tenantsv1.TResource, vars template.Variables) (*unstructured.Unstructured, error) {
+func (r *TenantReconciler) renderResource(ctx context.Context, engine *template.Engine, resource tenantsv1.TResource, vars template.Variables, tenant *tenantsv1.Tenant) (*unstructured.Unstructured, error) {
 	// Get spec (already an unstructured.Unstructured)
 	obj := resource.Spec.DeepCopy()
 
@@ -347,9 +346,11 @@ func (r *TenantReconciler) renderResource(ctx context.Context, engine *template.
 	if resource.NameTemplate != "" {
 		obj.SetName(resource.NameTemplate)
 	}
-	if resource.NamespaceTemplate != "" {
-		obj.SetNamespace(resource.NamespaceTemplate)
-	}
+
+	// Set namespace to Tenant CR's namespace
+	// All resources are created in the same namespace as the Tenant CR
+	obj.SetNamespace(tenant.Namespace)
+
 	if len(resource.LabelsTemplate) > 0 {
 		obj.SetLabels(resource.LabelsTemplate)
 	}
@@ -496,7 +497,7 @@ func (r *TenantReconciler) cleanupTenantResources(ctx context.Context, tenant *t
 	// Process each resource according to its DeletionPolicy
 	for _, res := range allResources {
 		// Render resource to get actual name/namespace
-		rendered, err := r.renderResource(ctx, templateEngine, res, vars)
+		rendered, err := r.renderResource(ctx, templateEngine, res, vars, tenant)
 		if err != nil {
 			logger.Error(err, "Failed to render resource for cleanup",
 				"resource", res.ID,
@@ -555,7 +556,8 @@ func (r *TenantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named("tenant").
 		// Watch owned resources for drift detection
 		// When these resources are modified, the parent Tenant will be reconciled
-		Owns(&corev1.Namespace{}).
+		// Note: Namespace is not included here because it's cluster-scoped and
+		// cannot have namespace-scoped owners. Instead, we use labels for tracking.
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).

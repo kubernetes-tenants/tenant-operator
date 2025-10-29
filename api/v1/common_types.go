@@ -89,13 +89,9 @@ type TResource struct {
 	// +kubebuilder:default=Stuck
 	ConflictPolicy ConflictPolicy `json:"conflictPolicy,omitempty"`
 
-	// NamespaceTemplate is a Go template for the namespace name
-	// Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-	// +optional
-	NamespaceTemplate string `json:"namespaceTemplate,omitempty"`
-
 	// NameTemplate is a Go template for the resource name
 	// Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+	// Note: All resources are created in the same namespace as the Tenant CR
 	// +optional
 	NameTemplate string `json:"nameTemplate,omitempty"`
 

@@ -24,14 +24,12 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // TenantTemplateSpec defines the desired state of TenantTemplate.
+// Note: Namespace management has been removed. All resources are created in the same namespace as the Tenant CR.
+// Users must create the target namespace before deploying the Tenant CR.
 type TenantTemplateSpec struct {
 	// RegistryID references the TenantRegistry that this template is associated with
 	// +kubebuilder:validation:Required
 	RegistryID string `json:"registryId"`
-
-	// Namespaces defines namespace resources to create
-	// +optional
-	Namespaces []TResource `json:"namespaces,omitempty"`
 
 	// ServiceAccounts defines ServiceAccount resources to create
 	// +optional
@@ -94,6 +92,9 @@ type TenantTemplateStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Registry",type="string",JSONPath=".spec.registryId",description="TenantRegistry reference"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status",description="Ready status"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // TenantTemplate is the Schema for the tenanttemplates API.
 type TenantTemplate struct {

@@ -248,7 +248,6 @@ func (r *TenantRegistryReconciler) renderAllTemplateResources(
 	engine := template.NewEngine()
 
 	spec := &tenantsv1.TenantSpec{
-		Namespaces:             make([]tenantsv1.TResource, 0),
 		ServiceAccounts:        make([]tenantsv1.TResource, 0),
 		Deployments:            make([]tenantsv1.TResource, 0),
 		StatefulSets:           make([]tenantsv1.TResource, 0),
@@ -264,11 +263,6 @@ func (r *TenantRegistryReconciler) renderAllTemplateResources(
 
 	// Render each resource type
 	var err error
-
-	spec.Namespaces, err = r.renderResourceList(engine, tmpl.Spec.Namespaces, vars)
-	if err != nil {
-		return nil, fmt.Errorf("failed to render namespaces: %w", err)
-	}
 
 	spec.ServiceAccounts, err = r.renderResourceList(engine, tmpl.Spec.ServiceAccounts, vars)
 	if err != nil {
@@ -365,15 +359,6 @@ func (r *TenantRegistryReconciler) renderResource(
 			return resource, fmt.Errorf("failed to render name template: %w", err)
 		}
 		rendered.NameTemplate = name
-	}
-
-	// Render namespace template
-	if resource.NamespaceTemplate != "" {
-		namespace, err := engine.Render(resource.NamespaceTemplate, vars)
-		if err != nil {
-			return resource, fmt.Errorf("failed to render namespace template: %w", err)
-		}
-		rendered.NamespaceTemplate = namespace
 	}
 
 	// Render labels template
@@ -580,16 +565,16 @@ func (r *TenantRegistryReconciler) updateStatus(ctx context.Context, registry *t
 	registry.Status.ObservedGeneration = registry.Generation
 
 	condition := metav1.Condition{
-		Type:               "Synced",
+		Type:               "Ready",
 		Status:             metav1.ConditionTrue,
-		Reason:             "SuccessfulSync",
-		Message:            "Successfully synced tenants from data source",
+		Reason:             "DatabaseConnected",
+		Message:            "Successfully connected to database and queried tenant data",
 		LastTransitionTime: metav1.Now(),
 	}
 	if !synced {
 		condition.Status = metav1.ConditionFalse
-		condition.Reason = "SyncFailed"
-		condition.Message = "Failed to sync tenants from data source"
+		condition.Reason = "DatabaseConnectionFailed"
+		condition.Message = "Failed to connect to database or query tenant data"
 	}
 
 	// Update or append condition
@@ -647,7 +632,6 @@ func (r *TenantRegistryReconciler) processRetainResourcesForTenant(ctx context.C
 
 	// Collect all resources with DeletionPolicy.Retain
 	allResources := []tenantsv1.TResource{}
-	allResources = append(allResources, tenant.Spec.Namespaces...)
 	allResources = append(allResources, tenant.Spec.ServiceAccounts...)
 	allResources = append(allResources, tenant.Spec.Deployments...)
 	allResources = append(allResources, tenant.Spec.StatefulSets...)
@@ -671,7 +655,8 @@ func (r *TenantRegistryReconciler) processRetainResourcesForTenant(ctx context.C
 		// Get the resource from cluster
 		obj := resource.Spec.DeepCopy()
 		obj.SetName(resource.NameTemplate)
-		obj.SetNamespace(resource.NamespaceTemplate)
+		// All resources are in the same namespace as the Tenant CR
+		obj.SetNamespace(tenant.Namespace)
 
 		key := client.ObjectKey{
 			Name:      obj.GetName(),

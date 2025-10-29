@@ -14,7 +14,31 @@ spec:
     singular: tenant
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - description: Tenant unique identifier
+      jsonPath: .spec.uid
+      name: UID
+      type: string
+    - description: TenantTemplate reference
+      jsonPath: .spec.templateRef
+      name: Template
+      type: string
+    - description: Number of ready resources
+      jsonPath: .status.readyResources
+      name: Ready
+      type: integer
+    - description: Total number of resources
+      jsonPath: .status.desiredResources
+      name: Desired
+      type: integer
+    - description: Ready status
+      jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: Tenant is the Schema for the tenants API.
@@ -37,7 +61,9 @@ spec:
           metadata:
             type: object
           spec:
-            description: TenantSpec defines the desired state of Tenant.
+            description: |-
+              TenantSpec defines the desired state of Tenant.
+              Note: All resources are created in the same namespace as this Tenant CR.
             properties:
               configMaps:
                 description: ConfigMaps are the resolved ConfigMap resources
@@ -98,11 +124,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                      type: string
-                    namespaceTemplate:
-                      description: |-
-                        NamespaceTemplate is a Go template for the namespace name
-                        Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -199,11 +221,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                      type: string
-                    namespaceTemplate:
-                      description: |-
-                        NamespaceTemplate is a Go template for the namespace name
-                        Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -300,11 +318,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                      type: string
-                    namespaceTemplate:
-                      description: |-
-                        NamespaceTemplate is a Go template for the namespace name
-                        Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -401,11 +415,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                      type: string
-                    namespaceTemplate:
-                      description: |-
-                        NamespaceTemplate is a Go template for the namespace name
-                        Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -502,11 +512,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                      type: string
-                    namespaceTemplate:
-                      description: |-
-                        NamespaceTemplate is a Go template for the namespace name
-                        Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -603,112 +609,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                      type: string
-                    namespaceTemplate:
-                      description: |-
-                        NamespaceTemplate is a Go template for the namespace name
-                        Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                      type: string
-                    patchStrategy:
-                      default: apply
-                      description: |-
-                        PatchStrategy determines how to apply the resource
-                        Default: apply (Server-Side Apply)
-                      enum:
-                      - apply
-                      - merge
-                      - replace
-                      type: string
-                    spec:
-                      description: |-
-                        Spec is the Kubernetes resource specification
-                        Can be any Kubernetes native resource or custom resource
-                      type: object
-                      x-kubernetes-preserve-unknown-fields: true
-                    timeoutSeconds:
-                      default: 300
-                      description: |-
-                        TimeoutSeconds is the maximum time to wait for the resource to be ready
-                        Default: 300
-                      format: int32
-                      maximum: 3600
-                      minimum: 1
-                      type: integer
-                    waitForReady:
-                      default: true
-                      description: |-
-                        WaitForReady determines whether to wait for the resource to be ready before continuing
-                        Default: true
-                      type: boolean
-                  required:
-                  - id
-                  - spec
-                  type: object
-                type: array
-              namespaces:
-                description: Namespaces are the resolved namespace resources
-                items:
-                  description: TResource defines a Kubernetes resource template with
-                    policies and dependencies
-                  properties:
-                    annotationsTemplate:
-                      additionalProperties:
-                        type: string
-                      description: AnnotationsTemplate defines annotations to apply
-                        to the resource (supports templates)
-                      type: object
-                    conflictPolicy:
-                      default: Stuck
-                      description: |-
-                        ConflictPolicy determines how to handle conflicts with existing resources
-                        Default: Stuck (fail reconciliation if resource exists with different owner)
-                      enum:
-                      - Force
-                      - Stuck
-                      type: string
-                    creationPolicy:
-                      default: WhenNeeded
-                      description: |-
-                        CreationPolicy determines when the resource should be created
-                        Default: WhenNeeded
-                      enum:
-                      - Once
-                      - WhenNeeded
-                      type: string
-                    deletionPolicy:
-                      default: Delete
-                      description: |-
-                        DeletionPolicy determines what happens to the resource when the Tenant is deleted
-                        Default: Delete
-                      enum:
-                      - Delete
-                      - Retain
-                      type: string
-                    dependIds:
-                      description: DependIds lists IDs of resources that must be ready
-                        before this resource is created
-                      items:
-                        type: string
-                      type: array
-                    id:
-                      description: ID is a unique identifier within the template (used
-                        for dependencies and references)
-                      type: string
-                    labelsTemplate:
-                      additionalProperties:
-                        type: string
-                      description: LabelsTemplate defines labels to apply to the resource
-                        (supports templates)
-                      type: object
-                    nameTemplate:
-                      description: |-
-                        NameTemplate is a Go template for the resource name
-                        Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                      type: string
-                    namespaceTemplate:
-                      description: |-
-                        NamespaceTemplate is a Go template for the namespace name
-                        Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -805,11 +706,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                      type: string
-                    namespaceTemplate:
-                      description: |-
-                        NamespaceTemplate is a Go template for the namespace name
-                        Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -906,11 +803,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                      type: string
-                    namespaceTemplate:
-                      description: |-
-                        NamespaceTemplate is a Go template for the namespace name
-                        Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -1007,11 +900,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                      type: string
-                    namespaceTemplate:
-                      description: |-
-                        NamespaceTemplate is a Go template for the namespace name
-                        Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -1108,11 +997,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                      type: string
-                    namespaceTemplate:
-                      description: |-
-                        NamespaceTemplate is a Go template for the namespace name
-                        Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -1209,11 +1094,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                      type: string
-                    namespaceTemplate:
-                      description: |-
-                        NamespaceTemplate is a Go template for the namespace name
-                        Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply

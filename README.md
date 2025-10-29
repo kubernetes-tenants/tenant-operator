@@ -271,7 +271,6 @@ spec:
   deployments:
     - id: app-deploy
       nameTemplate: "{{ .uid }}-app"
-      namespaceTemplate: "tenant-{{ .uid }}"
       dependIds: ["tenant-ns"]
       spec:
         apiVersion: apps/v1
@@ -297,7 +296,6 @@ spec:
   services:
     - id: app-svc
       nameTemplate: "{{ .uid }}-app"
-      namespaceTemplate: "tenant-{{ .uid }}"
       dependIds: ["app-deploy"]
       spec:
         apiVersion: v1

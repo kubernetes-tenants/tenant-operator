@@ -20,10 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -35,13 +37,15 @@ import (
 // TenantTemplateReconciler reconciles a TenantTemplate object
 type TenantTemplateReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	Recorder record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=operator.kubernetes-tenants.org,resources=tenanttemplates,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=operator.kubernetes-tenants.org,resources=tenanttemplates/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=operator.kubernetes-tenants.org,resources=tenanttemplates/finalizers,verbs=update
 // +kubebuilder:rbac:groups=operator.kubernetes-tenants.org,resources=tenantregistries,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile validates a TenantTemplate
 func (r *TenantTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -60,13 +64,20 @@ func (r *TenantTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Validate
 	validationErrors := r.validate(ctx, tmpl)
 
-	// Update status
+	// Update status and emit events
 	r.updateStatus(ctx, tmpl, validationErrors)
 
 	if len(validationErrors) > 0 {
 		logger.Info("TenantTemplate validation failed", "errors", validationErrors)
+		// Emit warning event for validation failure
+		r.Recorder.Eventf(tmpl, corev1.EventTypeWarning, "ValidationFailed",
+			"Template validation failed: %v", validationErrors)
 		return ctrl.Result{}, nil
 	}
+
+	// Emit normal event for validation success
+	r.Recorder.Event(tmpl, corev1.EventTypeNormal, "ValidationPassed",
+		"Template validation passed successfully")
 
 	return ctrl.Result{}, nil
 }
@@ -78,16 +89,24 @@ func (r *TenantTemplateReconciler) validate(ctx context.Context, tmpl *tenantsv1
 	// 1. Check if TenantRegistry exists
 	if err := r.validateRegistryExists(ctx, tmpl); err != nil {
 		errors = append(errors, fmt.Sprintf("Registry validation failed: %v", err))
+		// Emit specific event for registry not found
+		r.Recorder.Eventf(tmpl, corev1.EventTypeWarning, "RegistryNotFound",
+			"Referenced TenantRegistry '%s' not found in namespace '%s'",
+			tmpl.Spec.RegistryID, tmpl.Namespace)
 	}
 
 	// 2. Check for duplicate resource IDs
 	if dupes := r.findDuplicateIDs(tmpl); len(dupes) > 0 {
 		errors = append(errors, fmt.Sprintf("Duplicate resource IDs: %v", dupes))
+		r.Recorder.Eventf(tmpl, corev1.EventTypeWarning, "DuplicateResourceIDs",
+			"Found duplicate resource IDs: %v", dupes)
 	}
 
 	// 3. Validate dependency graph
 	if err := r.validateDependencies(tmpl); err != nil {
 		errors = append(errors, fmt.Sprintf("Dependency validation failed: %v", err))
+		r.Recorder.Eventf(tmpl, corev1.EventTypeWarning, "DependencyValidationFailed",
+			"Dependency graph validation failed: %v", err)
 	}
 
 	return errors
@@ -147,7 +166,6 @@ func (r *TenantTemplateReconciler) validateDependencies(tmpl *tenantsv1.TenantTe
 func (r *TenantTemplateReconciler) collectAllResources(tmpl *tenantsv1.TenantTemplate) []tenantsv1.TResource {
 	var resources []tenantsv1.TResource
 
-	resources = append(resources, tmpl.Spec.Namespaces...)
 	resources = append(resources, tmpl.Spec.ServiceAccounts...)
 	resources = append(resources, tmpl.Spec.Deployments...)
 	resources = append(resources, tmpl.Spec.StatefulSets...)

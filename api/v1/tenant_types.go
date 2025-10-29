@@ -24,6 +24,7 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // TenantSpec defines the desired state of Tenant.
+// Note: All resources are created in the same namespace as this Tenant CR.
 type TenantSpec struct {
 	// UID is the unique identifier from the registry data source
 	// +kubebuilder:validation:Required
@@ -32,10 +33,6 @@ type TenantSpec struct {
 	// TemplateRef references the TenantTemplate to use
 	// +kubebuilder:validation:Required
 	TemplateRef string `json:"templateRef"`
-
-	// Namespaces are the resolved namespace resources
-	// +optional
-	Namespaces []TResource `json:"namespaces,omitempty"`
 
 	// ServiceAccounts are the resolved ServiceAccount resources
 	// +optional
@@ -109,6 +106,12 @@ type TenantStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="UID",type="string",JSONPath=".spec.uid",description="Tenant unique identifier"
+// +kubebuilder:printcolumn:name="Template",type="string",JSONPath=".spec.templateRef",description="TenantTemplate reference"
+// +kubebuilder:printcolumn:name="Ready",type="integer",JSONPath=".status.readyResources",description="Number of ready resources"
+// +kubebuilder:printcolumn:name="Desired",type="integer",JSONPath=".status.desiredResources",description="Total number of resources"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status",description="Ready status"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // Tenant is the Schema for the tenants API.
 type Tenant struct {

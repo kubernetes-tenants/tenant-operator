@@ -136,6 +136,11 @@ type TenantRegistryStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Desired",type="integer",JSONPath=".status.desired",description="Number of active tenants from datasource"
+// +kubebuilder:printcolumn:name="Ready",type="integer",JSONPath=".status.ready",description="Number of ready tenants"
+// +kubebuilder:printcolumn:name="Failed",type="integer",JSONPath=".status.failed",description="Number of failed tenants"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status",description="Ready status"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // TenantRegistry is the Schema for the tenantregistries API.
 type TenantRegistry struct {

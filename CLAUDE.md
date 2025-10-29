@@ -61,7 +61,7 @@ Tenant Controller -> Reconciles each Tenant -> SSA applies resources
 
 **Key Points**:
 - References a `registryId`
-- Contains arrays of resource types: `namespaces`, `serviceAccounts`, `deployments`, `services`, `ingresses`, `configMaps`, `secrets`, `jobs`, `cronJobs`, `manifests` (raw)
+- Contains arrays of resource types: `serviceAccounts`, `deployments`, `services`, `ingresses`, `configMaps`, `secrets`, `jobs`, `cronJobs`, `manifests` (raw)
 - Each resource follows `TResource` structure (see api/v1/common_types.go:58)
 - All `*Template` fields support Go `text/template` + sprig functions
 
@@ -70,9 +70,14 @@ Tenant Controller -> Reconciles each Tenant -> SSA applies resources
 - Extra: Any keys from `extraValueMappings`
 - Context: `.registryId`, `.templateRef`, etc.
 
-**Custom Template Functions**:
-- Standard: All sprig functions
-- Custom: `toHost(url)`, `trunc63`, `sha1sum`, `b64enc`, `fromJson`, `toJson`, etc.
+**Custom Template Functions** (All Implemented ✅):
+- Standard: All sprig functions (200+ from Sprig library)
+- Custom (Implemented):
+  - `toHost(url)` ✅ - Extract host from URL
+  - `trunc63(s)` ✅ - Truncate to 63 chars (K8s name limit)
+  - `sha1sum(s)` ✅ - SHA1 hash (Priority 1 implementation)
+  - `fromJson(s)` ✅ - Parse JSON string to object (Priority 1 implementation)
+  - Plus all sprig functions: `default`, `b64enc`, `b64dec`, `toJson`, `sha256sum`, etc.
 
 ### Tenant
 
@@ -101,7 +106,6 @@ type TResource struct {
     CreationPolicy      CreationPolicy      // Once | WhenNeeded (default)
     DeletionPolicy      DeletionPolicy      // Delete (default) | Retain
     ConflictPolicy      ConflictPolicy      // Stuck (default) | Force
-    NamespaceTemplate   string              // Go template for namespace
     NameTemplate        string              // Go template for name
     LabelsTemplate      map[string]string   // Template-enabled labels
     AnnotationsTemplate map[string]string   // Template-enabled annotations
@@ -125,10 +129,12 @@ type TResource struct {
 - `Stuck` (default): Stop reconciliation if resource exists with different owner, mark Tenant as Degraded
 - `Force`: Use SSA with `force=true` to take ownership, fail gracefully if unsuccessful
 
-**PatchStrategy**:
-- `apply` (default): SSA (Server-Side Apply)
-- `merge`: Strategic merge patch
-- `replace`: Full replacement
+**PatchStrategy** ✅ (All Implemented):
+- `apply` (default): SSA (Server-Side Apply) with conflict management
+- `merge` ✅: Strategic merge patch (Priority 2 implementation)
+- `replace` ✅: Full replacement via Update (Priority 2 implementation)
+  - Handles create-if-not-exists
+  - Preserves resourceVersion for conflict-free updates
 
 ---
 
@@ -142,20 +148,60 @@ type TResource struct {
 4. Create missing Tenants, delete excess Tenants
 5. Update `status.{desired, ready, failed}`
 
-### Tenant Controller Flow
+### Tenant Controller Flow ✅
 
-1. **Resolve dependencies**: Build DAG from `dependIds`, detect cycles
-2. **Topological sort**: Determine apply order
-3. **For each resource in order**:
-   - Evaluate `nameTemplate`, `namespaceTemplate`
+1. **Handle Deletion with Finalizer** ✅ (Implemented):
+   - Check if `DeletionTimestamp` is set
+   - If finalizer present: Run `cleanupTenantResources()`
+     - Respect `DeletionPolicy` per resource:
+       - `Delete`: Remove resource from cluster
+       - `Retain`: Remove ownerReference, keep resource
+   - Remove finalizer after cleanup
+   - Return (allow Kubernetes to delete Tenant CR)
+
+2. **Add Finalizer if Missing** ✅ (Implemented):
+   - Check if finalizer `tenant.operator.kubernetes-tenants.org/finalizer` exists
+   - Add finalizer if missing
+   - Update Tenant CR
+   - Requeue for reconciliation
+
+3. **Build Template Variables**:
+   - Extract variables from Tenant annotations
+   - Merge with registry data
+
+4. **Resolve Dependencies**:
+   - Build DAG from `dependIds`
+   - Detect cycles (fail fast if found)
+
+5. **Topological Sort**:
+   - Determine apply order based on dependency graph
+
+6. **For Each Resource in Order**:
+   - **Check CreationPolicy** ✅:
+     - `Once`: Skip if already created (check annotation `kubernetes-tenants.org/created-once`)
+     - `WhenNeeded` (default): Proceed with apply
+   - Evaluate `nameTemplate` (namespace is automatically set to Tenant CR's namespace)
    - Render resource `spec` with template variables
-   - Apply conflict policy:
+   - **Apply ConflictPolicy**:
      - `Stuck`: Check ownership, fail if conflict
      - `Force`: SSA with `force=true`
-   - Apply using SSA (fieldManager: `tenant-operator`)
+   - **Apply using Selected PatchStrategy** ✅:
+     - `apply` (default): Server-Side Apply
+     - `merge`: Strategic Merge Patch
+     - `replace`: Get → Update with resourceVersion
    - If `waitForReady=true`: Wait for resource Ready condition (with timeout)
-   - Track success/failure
-4. **Update Tenant status**: Aggregate resource states
+   - Track success/failure with metrics
+
+7. **Update Tenant Status**:
+   - Aggregate resource states
+   - Update `readyResources`, `failedResources`, `desiredResources`
+   - Set `Ready` condition
+
+8. **Requeue for Drift Detection** ✅ (Implemented):
+   - Return with `RequeueAfter: 5 * time.Minute`
+   - Ensures periodic reconciliation for drift correction
+
+**Location**: `internal/controller/tenant_controller.go`
 
 ### Synchronization Rules
 
@@ -163,8 +209,15 @@ type TResource struct {
 2. **Creation/Deletion**:
    - `desired \ current` -> Create new Tenants
    - `current \ desired` -> Delete Tenants (respect `deletionPolicy`)
-3. **Drift Detection**: Periodic resync ensures convergence
-4. **Naming/Scope**: Use `nameTemplate`, `namespaceTemplate` (63-char limit via `trunc63`)
+3. **Drift Detection** ✅ (Implemented - Priority 2):
+   - **Event-driven**: `Owns()` watches on 11 resource types trigger immediate reconciliation
+     - ServiceAccounts, Deployments, StatefulSets, DaemonSets
+     - Services, ConfigMaps, Secrets, PersistentVolumeClaims
+     - Jobs, CronJobs, Ingresses
+   - **Periodic**: 5-minute requeue ensures eventual consistency
+   - **Auto-correction**: Automatically reverts manual changes to tenant resources
+   - **Location**: `internal/controller/tenant_controller.go:551-571`
+4. **Naming/Scope**: Use `nameTemplate` (63-char limit via `trunc63`). All resources are created in the same namespace as the Tenant CR.
 5. **Ordering**: Topological sort by `dependIds`, `waitForReady` enforces readiness gates
 
 ---
@@ -178,8 +231,8 @@ type TResource struct {
 - **Service**: Immediate (or `waitForReady=false` recommended)
 - **Ingress**: `status.loadBalancer.ingress` exists OR controller-specific Ready condition
 - **Job**: `status.succeeded >= 1`
-- **Namespace**: Immediate after creation
 - **ServiceAccount**: Immediate after creation
+- **ConfigMap/Secret**: Immediate after creation
 - **Custom Resources**: `status.conditions[type=Ready].status=True` or custom health checks
 
 **Timeout**: Each resource has `timeoutSeconds` (default 300s), exceeding marks resource as failed.
@@ -219,7 +272,6 @@ type TResource struct {
 
 ```yaml
 nameTemplate: "{{ .uid }}-api"
-namespaceTemplate: "tenant-{{ .uid }}"
 nameTemplate: "{{ .uid | trunc63 }}"
 nameTemplate: "{{ .uid }}-{{ .planId | default \"basic\" }}"
 
@@ -249,11 +301,11 @@ value: "{{ .uid }}"
 
 **For operator ServiceAccount**:
 - CRDs: `tenantregistries`, `tenanttemplates`, `tenants` (all verbs)
-- Workload resources: Required native resources (Deployments, Services, etc.) in target namespaces
+- Workload resources: Required native resources (Deployments, Services, etc.) - namespace-scoped permissions
 - `events`, `leases` for leader election
-- `secrets` (read-only) for registry credentials in specific namespace
+- `secrets` (read-only) for registry credentials
 
-**Principle**: Least privilege, namespace-scoped where possible
+**Principle**: Least privilege, namespace-scoped permissions. All tenant resources are created in the same namespace as the Tenant CR.
 
 ---
 
@@ -404,23 +456,24 @@ pkg/datasource/       # External datasource integrations
 
 ## Example Workflow
 
-1. User creates `TenantRegistry` pointing to MySQL
-2. User creates `TenantTemplate` referencing the registry
+1. User creates `TenantRegistry` pointing to MySQL in a specific namespace (e.g., `default`)
+2. User creates `TenantTemplate` referencing the registry in the same namespace
 3. Registry controller syncs every `syncInterval`:
    - Queries MySQL for active rows (`activate=true`)
-   - Creates/updates/deletes `Tenant` CRs to match
+   - Creates/updates/deletes `Tenant` CRs in the same namespace
 4. For each `Tenant`:
    - Template controller ensures linkage
    - Tenant controller reconciles:
      - Renders templates with row data
      - Builds dependency graph
-     - Applies resources in order with SSA
+     - Applies all resources in the same namespace as the Tenant CR (no separate namespaces created)
      - Waits for readiness
      - Updates status
 5. Users observe:
    - `Registry.status.{desired, ready, failed}`
    - `Tenant.status.conditions[Ready]`
    - Events and metrics
+   - All tenant resources (ConfigMaps, Deployments, Services) in the same namespace
 
 ---
 
