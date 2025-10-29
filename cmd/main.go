@@ -60,6 +60,7 @@ func main() {
 	var metricsCertPath, metricsCertName, metricsCertKey string
 	var webhookCertPath, webhookCertName, webhookCertKey string
 	var enableLeaderElection bool
+	var webhookTLSDisabled bool
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
@@ -70,6 +71,9 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&webhookTLSDisabled, "webhook-disable-tls", false,
+		"Disable TLS for webhooks. Webhooks will run over HTTP instead of HTTPS. "+
+			"Useful for local development and testing without cert-manager.")
 	flag.BoolVar(&secureMetrics, "metrics-secure", true,
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
 	flag.StringVar(&webhookCertPath, "webhook-cert-path", "", "The directory that contains the webhook certificate.")
@@ -107,31 +111,46 @@ func main() {
 	// Create watchers for metrics and webhooks certificates
 	var metricsCertWatcher, webhookCertWatcher *certwatcher.CertWatcher
 
-	// Initial webhook TLS options
-	webhookTLSOpts := tlsOpts
+	// Configure webhook server
+	var webhookServerOptions webhook.Options
 
-	if len(webhookCertPath) > 0 {
-		setupLog.Info("Initializing webhook certificate watcher using provided certificates",
-			"webhook-cert-path", webhookCertPath, "webhook-cert-name", webhookCertName, "webhook-cert-key", webhookCertKey)
+	if webhookTLSDisabled {
+		setupLog.Info("Webhooks will run without TLS (HTTP mode)")
+		// Disable TLS for webhook server
+		webhookServerOptions = webhook.Options{
+			TLSOpts: nil, // No TLS options
+		}
+	} else {
+		// TLS enabled - use certificates
+		webhookTLSOpts := tlsOpts
 
-		var err error
-		webhookCertWatcher, err = certwatcher.New(
-			filepath.Join(webhookCertPath, webhookCertName),
-			filepath.Join(webhookCertPath, webhookCertKey),
-		)
-		if err != nil {
-			setupLog.Error(err, "Failed to initialize webhook certificate watcher")
-			os.Exit(1)
+		if len(webhookCertPath) > 0 {
+			setupLog.Info("Initializing webhook certificate watcher using provided certificates",
+				"webhook-cert-path", webhookCertPath, "webhook-cert-name", webhookCertName, "webhook-cert-key", webhookCertKey)
+
+			var err error
+			webhookCertWatcher, err = certwatcher.New(
+				filepath.Join(webhookCertPath, webhookCertName),
+				filepath.Join(webhookCertPath, webhookCertKey),
+			)
+			if err != nil {
+				setupLog.Error(err, "Failed to initialize webhook certificate watcher")
+				os.Exit(1)
+			}
+
+			webhookTLSOpts = append(webhookTLSOpts, func(config *tls.Config) {
+				config.GetCertificate = webhookCertWatcher.GetCertificate
+			})
+		} else {
+			setupLog.Info("No webhook certificate path provided, controller-runtime will generate self-signed certificates")
 		}
 
-		webhookTLSOpts = append(webhookTLSOpts, func(config *tls.Config) {
-			config.GetCertificate = webhookCertWatcher.GetCertificate
-		})
+		webhookServerOptions = webhook.Options{
+			TLSOpts: webhookTLSOpts,
+		}
 	}
 
-	webhookServer := webhook.NewServer(webhook.Options{
-		TLSOpts: webhookTLSOpts,
-	})
+	webhookServer := webhook.NewServer(webhookServerOptions)
 
 	// Metrics endpoint is enabled in 'config/default/kustomization.yaml'. The Metrics options configure the server.
 	// More info:
@@ -225,6 +244,9 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Tenant")
 		os.Exit(1)
 	}
+
+	// Setup webhooks (always enabled for validation/defaulting)
+	setupLog.Info("Setting up webhooks", "tls-disabled", webhookTLSDisabled)
 	if err := (&tenantsv1.TenantRegistry{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "TenantRegistry")
 		os.Exit(1)

@@ -211,6 +211,19 @@ cd tenant-operator
 make install deploy IMG=ghcr.io/kubernetes-tenants/tenant-operator:latest
 ```
 
+**For testing without TLS (webhooks remain active):**
+
+```bash
+# Deploy with webhooks over HTTP (no cert-manager required)
+make install deploy-testing IMG=ghcr.io/kubernetes-tenants/tenant-operator:latest
+
+# Or with kubectl
+kubectl apply -k config/testing
+
+# Or locally
+make run  # Automatically disables webhook TLS
+```
+
 ### 2. Create a TenantRegistry
 
 ```yaml
@@ -561,6 +574,40 @@ Production deployments handle 1000+ tenants:
 - Optional sharding support
 
 See [Performance Guide](docs/performance.md) for tuning.
+</details>
+
+<details>
+<summary><b>How do I run without TLS certificates in test environments?</b></summary>
+
+If you see errors like `open /tmp/k8s-webhook-server/serving-certs/tls.crt: no such file or directory`, webhook TLS certificates are missing.
+
+**Solution 1: Run webhooks without TLS (recommended for testing)**
+```bash
+# Local development
+make run  # Automatically uses --webhook-disable-tls=true
+
+# Or run the binary directly
+./bin/manager --webhook-disable-tls=true
+
+# In Kubernetes, add to deployment args:
+args:
+  - --webhook-disable-tls=true
+```
+
+This runs webhooks over HTTP instead of HTTPS. Validation and defaulting still work, but no TLS certificates are required.
+
+**Solution 2: Use TLS with cert-manager (production)**
+1. Install cert-manager: `kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml`
+2. Uncomment webhook sections in `config/default/kustomization.yaml`
+3. Deploy: `make deploy`
+
+**Benefits of running without TLS:**
+- ✅ Validation and defaulting still active
+- ✅ No cert-manager dependency for testing
+- ✅ Easier local development
+- ✅ HTTP communication within cluster is safe
+
+Note: Always use TLS in production environments.
 </details>
 
 ---
