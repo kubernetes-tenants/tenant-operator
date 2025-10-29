@@ -18,6 +18,9 @@ package template
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -43,6 +46,8 @@ func NewEngine() *Engine {
 	// Add custom functions
 	engine.funcMap["toHost"] = toHost
 	engine.funcMap["trunc63"] = trunc63
+	engine.funcMap["sha1sum"] = sha1sum
+	engine.funcMap["fromJson"] = fromJson
 
 	return engine
 }
@@ -113,6 +118,26 @@ func trunc63(s string) string {
 		return s
 	}
 	return s[:63]
+}
+
+// sha1sum computes SHA1 hash of a string and returns hex-encoded result
+// Example: sha1sum("test") -> "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3"
+func sha1sum(s string) string {
+	h := sha1.New()
+	h.Write([]byte(s))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// fromJson parses a JSON string into a generic interface (map or slice)
+// Example: fromJson("{\"key\":\"value\"}") -> map[string]interface{}{"key": "value"}
+// Returns empty map on error to allow templates to continue
+func fromJson(jsonStr string) interface{} {
+	var result interface{}
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		// Return empty map on error to prevent template execution failure
+		return map[string]interface{}{}
+	}
+	return result
 }
 
 // BuildVariables creates Variables from database row data

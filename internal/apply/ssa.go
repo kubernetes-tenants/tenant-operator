@@ -51,12 +51,13 @@ func NewApplier(c client.Client, scheme *runtime.Scheme) *Applier {
 	}
 }
 
-// ApplyResource applies a resource using Server-Side Apply
+// ApplyResource applies a resource using the specified patch strategy
 func (a *Applier) ApplyResource(
 	ctx context.Context,
 	obj *unstructured.Unstructured,
 	owner *tenantsv1.Tenant,
-	policy tenantsv1.ConflictPolicy,
+	conflictPolicy tenantsv1.ConflictPolicy,
+	patchStrategy tenantsv1.PatchStrategy,
 ) error {
 	// Set owner reference
 	if owner != nil {
@@ -65,19 +66,56 @@ func (a *Applier) ApplyResource(
 		}
 	}
 
-	// Determine force option based on conflict policy
-	force := policy == tenantsv1.ConflictPolicyForce
+	// Apply resource based on patch strategy
+	switch patchStrategy {
+	case tenantsv1.PatchStrategyApply, "":
+		// Server-Side Apply (default)
+		force := conflictPolicy == tenantsv1.ConflictPolicyForce
 
-	// Apply the resource
-	if err := a.client.Patch(ctx, obj, client.Apply, &client.PatchOptions{
-		FieldManager: FieldManager,
-		Force:        &force,
-	}); err != nil {
-		// Check if it's a conflict error
-		if errors.IsConflict(err) && policy == tenantsv1.ConflictPolicyStuck {
-			return fmt.Errorf("resource conflict (policy=Stuck): %w", err)
+		if err := a.client.Patch(ctx, obj, client.Apply, &client.PatchOptions{
+			FieldManager: FieldManager,
+			Force:        &force,
+		}); err != nil {
+			if errors.IsConflict(err) && conflictPolicy == tenantsv1.ConflictPolicyStuck {
+				return fmt.Errorf("resource conflict (policy=Stuck): %w", err)
+			}
+			return fmt.Errorf("failed to apply resource: %w", err)
 		}
-		return fmt.Errorf("failed to apply resource: %w", err)
+
+	case tenantsv1.PatchStrategyMerge:
+		// Strategic Merge Patch
+		if err := a.client.Patch(ctx, obj, client.Merge); err != nil {
+			return fmt.Errorf("failed to merge resource: %w", err)
+		}
+
+	case tenantsv1.PatchStrategyReplace:
+		// Full replacement via Update
+		// First check if resource exists
+		existing := obj.DeepCopy()
+		key := types.NamespacedName{
+			Name:      obj.GetName(),
+			Namespace: obj.GetNamespace(),
+		}
+
+		if err := a.client.Get(ctx, key, existing); err != nil {
+			if errors.IsNotFound(err) {
+				// Create if not exists
+				if err := a.client.Create(ctx, obj); err != nil {
+					return fmt.Errorf("failed to create resource: %w", err)
+				}
+				return nil
+			}
+			return fmt.Errorf("failed to get existing resource: %w", err)
+		}
+
+		// Preserve resourceVersion and update
+		obj.SetResourceVersion(existing.GetResourceVersion())
+		if err := a.client.Update(ctx, obj); err != nil {
+			return fmt.Errorf("failed to replace resource: %w", err)
+		}
+
+	default:
+		return fmt.Errorf("unsupported patch strategy: %s", patchStrategy)
 	}
 
 	return nil

@@ -1,4 +1,4 @@
-apiVersion: tenants.tenants.ecube.dev/v1
+apiVersion: operator.kubernetes-tenants.org/v1
 kind: TenantTemplate
 metadata:
   labels:
@@ -20,8 +20,8 @@ spec:
         kind: Namespace
         metadata:
           labels:
-            tenant.ecube.dev/uid: "{{ .uid }}"
-            tenant.ecube.dev/managed: "true"
+            kubernetes-tenants.org/uid: "{{ .uid }}"
+            kubernetes-tenants.org/managed: "true"
 
   # Create ServiceAccount
   serviceAccounts:
@@ -34,7 +34,7 @@ spec:
         kind: ServiceAccount
         metadata:
           labels:
-            tenant.ecube.dev/uid: "{{ .uid }}"
+            kubernetes-tenants.org/uid: "{{ .uid }}"
 
   # Create Deployment
   deployments:
@@ -50,7 +50,7 @@ spec:
         metadata:
           labels:
             app: "{{ .uid }}"
-            tenant.ecube.dev/uid: "{{ .uid }}"
+            kubernetes-tenants.org/uid: "{{ .uid }}"
         spec:
           replicas: 2
           selector:
@@ -107,7 +107,7 @@ spec:
         metadata:
           labels:
             app: "{{ .uid }}"
-            tenant.ecube.dev/uid: "{{ .uid }}"
+            kubernetes-tenants.org/uid: "{{ .uid }}"
         spec:
           type: ClusterIP
           selector:
@@ -129,7 +129,7 @@ spec:
         kind: Ingress
         metadata:
           labels:
-            tenant.ecube.dev/uid: "{{ .uid }}"
+            kubernetes-tenants.org/uid: "{{ .uid }}"
           annotations:
             nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
             nginx.ingress.kubernetes.io/ssl-redirect: "true"

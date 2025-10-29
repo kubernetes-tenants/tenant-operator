@@ -1,7 +1,7 @@
 # This rule is not used by the project tenant-operator itself.
 # It is provided to allow the cluster admin to help manage permissions for users.
 #
-# Grants read-only access to tenants.tenants.ecube.dev resources.
+# Grants read-only access to operator.kubernetes-tenants.org resources.
 # This role is intended for users who need visibility into these resources
 # without permissions to modify them. It is ideal for monitoring purposes and limited-access viewing.
 
@@ -14,7 +14,7 @@ metadata:
   name: tenanttemplate-viewer-role
 rules:
 - apiGroups:
-  - tenants.tenants.ecube.dev
+  - operator.kubernetes-tenants.org
   resources:
   - tenanttemplates
   verbs:
@@ -22,7 +22,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - tenants.tenants.ecube.dev
+  - operator.kubernetes-tenants.org
   resources:
   - tenanttemplates/status
   verbs:

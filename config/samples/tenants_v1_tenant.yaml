@@ -1,4 +1,4 @@
-apiVersion: tenants.tenants.ecube.dev/v1
+apiVersion: operator.kubernetes-tenants.org/v1
 kind: Tenant
 metadata:
   labels:

@@ -102,7 +102,7 @@ var _ = Describe("Tenant Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 						Labels: map[string]string{
-							"tenants.ecube.dev/registry": registryName,
+							"kubernetes-tenants.org/registry": registryName,
 						},
 					},
 					Spec: tenantsv1.TenantSpec{

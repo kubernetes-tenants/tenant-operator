@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.18.0
-  name: tenanttemplates.tenants.tenants.ecube.dev
+  name: tenanttemplates.operator.kubernetes-tenants.org
 spec:
-  group: tenants.tenants.ecube.dev
+  group: operator.kubernetes-tenants.org
   names:
     kind: TenantTemplate
     listKind: TenantTemplateList

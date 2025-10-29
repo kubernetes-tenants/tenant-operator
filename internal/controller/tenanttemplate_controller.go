@@ -38,10 +38,10 @@ type TenantTemplateReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=tenants.tenants.ecube.dev,resources=tenanttemplates,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=tenants.tenants.ecube.dev,resources=tenanttemplates/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=tenants.tenants.ecube.dev,resources=tenanttemplates/finalizers,verbs=update
-// +kubebuilder:rbac:groups=tenants.tenants.ecube.dev,resources=tenantregistries,verbs=get;list;watch
+// +kubebuilder:rbac:groups=operator.kubernetes-tenants.org,resources=tenanttemplates,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=operator.kubernetes-tenants.org,resources=tenanttemplates/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=operator.kubernetes-tenants.org,resources=tenanttemplates/finalizers,verbs=update
+// +kubebuilder:rbac:groups=operator.kubernetes-tenants.org,resources=tenantregistries,verbs=get;list;watch
 
 // Reconcile validates a TenantTemplate
 func (r *TenantTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -194,7 +194,9 @@ func (r *TenantTemplateReconciler) updateStatus(ctx context.Context, tmpl *tenan
 		tmpl.Status.Conditions = append(tmpl.Status.Conditions, condition)
 	}
 
-	_ = r.Status().Update(ctx, tmpl)
+	if err := r.Status().Update(ctx, tmpl); err != nil {
+		log.FromContext(ctx).Error(err, "Failed to update TenantTemplate status")
+	}
 }
 
 // SetupWithManager sets up the controller with the Manager.

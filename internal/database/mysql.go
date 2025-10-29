@@ -133,22 +133,25 @@ func (c *MySQLClient) QueryTenants(ctx context.Context, table string, valueMappi
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 
-		// Map extra values
-		i := 0
+		// Map extra values - Build column index map first for stable mapping
+		colIndex := make(map[string]int)
+		for i, col := range extraColumns {
+			colIndex[col] = i
+		}
+
+		// Map extra values using stable indices
 		for key, col := range extraMappings {
-			if extraValues[i].Valid {
-				row.Extra[key] = extraValues[i].String
+			idx, ok := colIndex[col]
+			if !ok {
+				// Column not in result set (shouldn't happen)
+				row.Extra[key] = ""
+				continue
+			}
+			if extraValues[idx].Valid {
+				row.Extra[key] = extraValues[idx].String
 			} else {
 				row.Extra[key] = "" // Null values become empty strings
 			}
-			// Find the column name in the extraColumns slice
-			for j, c := range extraColumns {
-				if c == col {
-					i = j
-					break
-				}
-			}
-			i++
 		}
 
 		// Filter: only include active tenants

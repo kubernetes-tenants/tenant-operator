@@ -22,6 +22,13 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
   - apps
   resources:
   - daemonsets
@@ -61,7 +68,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - tenants.tenants.ecube.dev
+  - operator.kubernetes-tenants.org
   resources:
   - tenantregistries
   - tenants
@@ -75,7 +82,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - tenants.tenants.ecube.dev
+  - operator.kubernetes-tenants.org
   resources:
   - tenantregistries/finalizers
   - tenants/finalizers
@@ -83,7 +90,7 @@ rules:
   verbs:
   - update
 - apiGroups:
-  - tenants.tenants.ecube.dev
+  - operator.kubernetes-tenants.org
   resources:
   - tenantregistries/status
   - tenants/status

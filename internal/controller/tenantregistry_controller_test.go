@@ -86,11 +86,20 @@ var _ = Describe("TenantRegistry Controller", func() {
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &TenantRegistryReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:   k8sClient,
+				Scheme:   k8sClient.Scheme(),
+				Recorder: &fakeRecorder{},
 			}
 
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+			// First reconciliation adds finalizer
+			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.RequeueAfter).To(Equal(result.RequeueAfter))
+
+			// Second reconciliation attempts database connection
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
 			})
 			// In test environment without MySQL, we expect a database connection error

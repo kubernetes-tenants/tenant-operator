@@ -8,7 +8,7 @@ stringData:
   password: changeme
 
 ---
-apiVersion: tenants.tenants.ecube.dev/v1
+apiVersion: operator.kubernetes-tenants.org/v1
 kind: TenantRegistry
 metadata:
   labels:
