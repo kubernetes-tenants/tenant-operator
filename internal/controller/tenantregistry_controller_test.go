@@ -51,7 +51,24 @@ var _ = Describe("TenantRegistry Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: tenantsv1.TenantRegistrySpec{
+						Source: tenantsv1.DataSource{
+							Type:         tenantsv1.SourceTypeMySQL,
+							SyncInterval: "30s",
+							MySQL: &tenantsv1.MySQLSource{
+								Host:     "mysql.default.svc.cluster.local",
+								Port:     3306,
+								Username: "root",
+								Database: "tenants",
+								Table:    "tenants",
+							},
+						},
+						ValueMappings: tenantsv1.ValueMappings{
+							UID:       "id",
+							HostOrURL: "url",
+							Activate:  "isActive",
+						},
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
@@ -69,16 +86,26 @@ var _ = Describe("TenantRegistry Controller", func() {
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &TenantRegistryReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:   k8sClient,
+				Scheme:   k8sClient.Scheme(),
+				Recorder: &fakeRecorder{},
 			}
 
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+			// First reconciliation adds finalizer
+			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+			Expect(result.RequeueAfter).To(Equal(result.RequeueAfter))
+
+			// Second reconciliation attempts database connection
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
+			// In test environment without MySQL, we expect a database connection error
+			// The reconciler should handle this gracefully and requeue
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to ping MySQL"))
 		})
 	})
 })

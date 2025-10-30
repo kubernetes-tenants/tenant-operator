@@ -24,22 +24,87 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // TenantTemplateSpec defines the desired state of TenantTemplate.
+// Note: Namespace management has been removed. All resources are created in the same namespace as the Tenant CR.
+// Users must create the target namespace before deploying the Tenant CR.
 type TenantTemplateSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// RegistryID references the TenantRegistry that this template is associated with
+	// +kubebuilder:validation:Required
+	RegistryID string `json:"registryId"`
 
-	// Foo is an example field of TenantTemplate. Edit tenanttemplate_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// ServiceAccounts defines ServiceAccount resources to create
+	// +optional
+	ServiceAccounts []TResource `json:"serviceAccounts,omitempty"`
+
+	// Deployments defines Deployment resources to create
+	// +optional
+	Deployments []TResource `json:"deployments,omitempty"`
+
+	// StatefulSets defines StatefulSet resources to create
+	// +optional
+	StatefulSets []TResource `json:"statefulSets,omitempty"`
+
+	// Services defines Service resources to create
+	// +optional
+	Services []TResource `json:"services,omitempty"`
+
+	// Ingresses defines Ingress resources to create
+	// +optional
+	Ingresses []TResource `json:"ingresses,omitempty"`
+
+	// ConfigMaps defines ConfigMap resources to create
+	// +optional
+	ConfigMaps []TResource `json:"configMaps,omitempty"`
+
+	// Secrets defines Secret resources to create
+	// +optional
+	Secrets []TResource `json:"secrets,omitempty"`
+
+	// PersistentVolumeClaims defines PVC resources to create
+	// +optional
+	PersistentVolumeClaims []TResource `json:"persistentVolumeClaims,omitempty"`
+
+	// Jobs defines Job resources to create
+	// +optional
+	Jobs []TResource `json:"jobs,omitempty"`
+
+	// CronJobs defines CronJob resources to create
+	// +optional
+	CronJobs []TResource `json:"cronJobs,omitempty"`
+
+	// Manifests defines arbitrary Kubernetes resources as raw manifests
+	// Use this for any resource type not explicitly supported above
+	// +optional
+	Manifests []TResource `json:"manifests,omitempty"`
 }
 
 // TenantTemplateStatus defines the observed state of TenantTemplate.
 type TenantTemplateStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// ObservedGeneration is the generation observed by the controller
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// TotalTenants is the total number of Tenants using this template
+	// +optional
+	TotalTenants int32 `json:"totalTenants,omitempty"`
+
+	// ReadyTenants is the number of Ready Tenants using this template
+	// +optional
+	ReadyTenants int32 `json:"readyTenants,omitempty"`
+
+	// Conditions represent the latest available observations of the template's state
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Registry",type="string",JSONPath=".spec.registryId",description="TenantRegistry reference"
+// +kubebuilder:printcolumn:name="Total",type="integer",JSONPath=".status.totalTenants",description="Total tenants using template"
+// +kubebuilder:printcolumn:name="Ready",type="integer",JSONPath=".status.readyTenants",description="Ready tenants"
+// +kubebuilder:printcolumn:name="Applied",type="string",JSONPath=".status.conditions[?(@.type=='Applied')].status",description="Applied status"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // TenantTemplate is the Schema for the tenanttemplates API.
 type TenantTemplate struct {

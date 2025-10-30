@@ -107,7 +107,7 @@ func main() {
 	// Create watchers for metrics and webhooks certificates
 	var metricsCertWatcher, webhookCertWatcher *certwatcher.CertWatcher
 
-	// Initial webhook TLS options
+	// Configure webhook server with TLS
 	webhookTLSOpts := tlsOpts
 
 	if len(webhookCertPath) > 0 {
@@ -127,6 +127,8 @@ func main() {
 		webhookTLSOpts = append(webhookTLSOpts, func(config *tls.Config) {
 			config.GetCertificate = webhookCertWatcher.GetCertificate
 		})
+	} else {
+		setupLog.Info("No webhook certificate path provided, cert-manager will provide certificates")
 	}
 
 	webhookServer := webhook.NewServer(webhook.Options{
@@ -184,7 +186,7 @@ func main() {
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "f2130106.tenants.ecube.dev",
+		LeaderElectionID:       "f2130106.kubernetes-tenants.org",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -203,24 +205,38 @@ func main() {
 	}
 
 	if err := (&controller.TenantRegistryReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor("tenantregistry-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "TenantRegistry")
 		os.Exit(1)
 	}
 	if err := (&controller.TenantTemplateReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor("tenanttemplate-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "TenantTemplate")
 		os.Exit(1)
 	}
 	if err := (&controller.TenantReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor("tenant-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Tenant")
+		os.Exit(1)
+	}
+
+	// Setup webhooks (always enabled for validation/defaulting with TLS)
+	setupLog.Info("Setting up webhooks with TLS")
+	if err := (&tenantsv1.TenantRegistry{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "TenantRegistry")
+		os.Exit(1)
+	}
+	if err := (&tenantsv1.TenantTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "TenantTemplate")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
