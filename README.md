@@ -70,6 +70,14 @@ Multi-tenant SaaS platforms face common challenges:
 - **Template Functions**: `sha1sum`, `fromJson`, `toHost`, `trunc63`, and 200+ Sprig functions
 - **Custom Metrics**: Track tenant health, resource counts, reconciliation duration
 
+### 🔌 Integrations
+
+- **ExternalDNS**: Automatic DNS record management (Route53, Cloudflare, Google Cloud DNS)
+- **Terraform Operator**: Provision cloud resources per tenant (S3, RDS, CloudFront, etc.)
+- **cert-manager**: Automatic TLS certificate provisioning
+- **NGINX/Istio/Traefik**: Ingress controller integration
+- **Prometheus/Grafana**: Complete monitoring stack with ready-to-use dashboards
+
 ---
 
 ## 🏗️ Architecture
@@ -463,6 +471,11 @@ env:
 - [**Security**](docs/security.md) - RBAC, secrets, and multi-tenancy
 - [**Performance**](docs/performance.md) - Scaling and optimization
 - [**Development**](docs/development.md) - Building and testing
+
+### Integrations
+
+- [**ExternalDNS Integration**](docs/integration-external-dns.md) - Automatic DNS record management with Route53, Cloudflare, etc.
+- [**Terraform Operator Integration**](docs/integration-terraform-operator.md) - Provision cloud resources (S3, RDS, CDN) per tenant
 
 ---
 
