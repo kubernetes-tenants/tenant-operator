@@ -16,11 +16,17 @@ Use the [Quick Start with Minikube](quickstart.md) guide for an automated setup 
 | --- | --- | --- |
 | Kubernetes cluster | v1.11.3+ | API compatibility tested with recent releases |
 | `kubectl` | Matches cluster | Must target the cluster where you deploy |
+| **cert-manager** | **v1.13.0+** | **REQUIRED for all installations** (production, development, local) |
 
-### Production
+::: danger cert-manager is REQUIRED
+**cert-manager v1.13.0+** is **REQUIRED for ALL installations** (production, development, and local environments). It provisions webhook TLS certificates, handles automatic renewal, and injects CA bundles into webhook configurations.
 
-::: warning Don't skip cert-manager
-Install **cert-manager v1.13.0+** to provision webhook TLS certificates. It issues and renews certificates automatically and injects CA bundles into webhook configurations. See [Method 1](#method-1-production-install-with-cert-manager).
+**Webhooks are no longer optional.** They provide essential validation and defaulting at admission time.
+
+Install before deploying Tenant Operator:
+```bash
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+```
 :::
 
 ### Optional
@@ -29,9 +35,37 @@ Install **cert-manager v1.13.0+** to provision webhook TLS certificates. It issu
 
 ## Installation Methods
 
-### Method 1: Production Install with cert-manager
+### Method 1: Install with Helm (Recommended)
 
-**cert-manager is required** for webhook TLS certificate management.
+**cert-manager is REQUIRED** for all installations.
+
+```bash
+# Step 1: Install cert-manager (REQUIRED)
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+# Step 2: Wait for cert-manager to be ready
+kubectl wait --for=condition=Available --timeout=300s -n cert-manager \
+  deployment/cert-manager \
+  deployment/cert-manager-webhook \
+  deployment/cert-manager-cainjector
+
+# Step 3: Add Helm repository
+helm repo add tenant-operator https://kubernetes-tenants.github.io/tenant-operator
+helm repo update
+
+# Step 4: Install Tenant Operator
+helm install tenant-operator tenant-operator/tenant-operator \
+  --namespace tenant-operator-system \
+  --create-namespace
+```
+
+See the [Helm Chart README](https://github.com/kubernetes-tenants/tenant-operator/blob/main/chart/README.md) for detailed configuration options.
+
+---
+
+### Method 2: Install with Kustomize
+
+**cert-manager is REQUIRED** for webhook TLS certificate management.
 
 ```bash
 # Step 1: Install cert-manager (if not already installed)
@@ -53,7 +87,7 @@ kubectl apply -k https://github.com/kubernetes-tenants/tenant-operator/config/de
 - Provides battle-tested certificate automation for Kubernetes clusters
 :::
 
-### Method 2: Install from Source
+### Method 3: Install from Source
 
 ```bash
 # Clone repository
@@ -74,17 +108,21 @@ make deploy IMG=ghcr.io/kubernetes-tenants/tenant-operator:latest
 Even when deploying from source, install cert-manager before applying the operator manifests, otherwise webhooks will fail to start.
 :::
 
-### Method 3: Local Development with Minikube
+### Method 4: Local Development with Minikube
 
-For local development, use Minikube with automated setup scripts.
+For local development, use Minikube with automated setup scripts. **cert-manager is automatically installed** by the setup script.
 
 See [Local Development with Minikube](local-development-minikube.md) for detailed instructions.
 
 ```bash
-# Quick setup
+# Quick setup (cert-manager included)
 ./scripts/setup-minikube.sh      # Create cluster with cert-manager
 ./scripts/deploy-to-minikube.sh  # Build and deploy operator
 ```
+
+::: tip cert-manager in Local Development
+The setup script automatically installs cert-manager. You don't need to install it manually for local development when using the provided scripts.
+:::
 
 ## Verification
 

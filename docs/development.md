@@ -48,8 +48,27 @@ make run
 LOG_LEVEL=debug make run
 ```
 
-::: info Local TLS
-`make run` disables webhook TLS because the controller runs outside the cluster and uses your local kubeconfig.
+::: warning Local Run Limitations
+`make run` runs the operator outside the cluster, which means:
+- ⚠️ **Webhooks are NOT available** (no TLS certificates)
+- ⚠️ **No validation** at admission time (invalid configs will only fail at reconciliation)
+- ⚠️ **No defaulting** (all fields must be specified explicitly)
+
+**For complete testing with webhooks**, deploy to cluster with cert-manager:
+```bash
+# See Local Development with Minikube guide
+./scripts/deploy-to-minikube.sh  # Includes cert-manager and webhooks
+```
+
+**When to use `make run`**:
+- Quick iteration on controller logic
+- Testing reconciliation loops
+- Debugging without webhook complications
+
+**When to deploy to cluster**:
+- Testing webhooks (validation/defaulting)
+- Final testing before committing
+- Verifying production-like behavior
 :::
 
 ### Testing Against Local Cluster

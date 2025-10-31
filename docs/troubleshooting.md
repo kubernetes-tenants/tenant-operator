@@ -41,13 +41,63 @@ kubectl get tenant <tenant-name> -o jsonpath='{.status}'
 open /tmp/k8s-webhook-server/serving-certs/tls.crt: no such file or directory
 ```
 
-**Cause:** Webhook TLS certificates not found
+**Cause:** Webhook TLS certificates not found. cert-manager is **REQUIRED** for all installations.
+
+::: danger cert-manager Required
+cert-manager v1.13.0+ is **REQUIRED** for ALL installations including local development. Webhooks provide validation and defaulting at admission time.
+:::
+
+**Diagnosis:**
+
+```bash
+# Check if cert-manager is installed
+kubectl get pods -n cert-manager
+
+# Check if Certificate resource exists
+kubectl get certificate -n tenant-operator-system
+
+# Check Certificate details
+kubectl describe certificate -n tenant-operator-system
+
+# Check if secret was created
+kubectl get secret -n tenant-operator-system | grep webhook-server-cert
+```
 
 **Solutions:**
 
-Install cert-manager:
+**A. Install cert-manager** (if not installed):
 ```bash
+# Install cert-manager
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+# Wait for cert-manager to be ready
+kubectl wait --for=condition=Available --timeout=300s -n cert-manager \
+  deployment/cert-manager \
+  deployment/cert-manager-webhook \
+  deployment/cert-manager-cainjector
+
+# Verify cert-manager is running
+kubectl get pods -n cert-manager
+```
+
+**B. Restart operator** (after cert-manager is ready):
+```bash
+kubectl rollout restart -n tenant-operator-system deployment/tenant-operator-controller-manager
+
+# Watch rollout status
+kubectl rollout status -n tenant-operator-system deployment/tenant-operator-controller-manager
+```
+
+**C. Check Certificate issuance**:
+```bash
+# Check if Certificate is Ready
+kubectl get certificate -n tenant-operator-system
+
+# If not ready, check cert-manager logs
+kubectl logs -n cert-manager -l app=cert-manager
+
+# Check if Issuer exists
+kubectl get issuer -n tenant-operator-system
 ```
 
 ### 2. Tenant Not Creating Resources

@@ -1,0 +1,109 @@
+{{- $_ := include "tenant-operator.validateWebhook" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tenant-operator.fullname" . }}-controller-manager
+  namespace: {{ include "tenant-operator.namespace" . }}
+  labels:
+    {{- include "tenant-operator.labels" . | nindent 4 }}
+  {{- with include "tenant-operator.annotations" . }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "tenant-operator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: {{ include "tenant-operator.managerContainerName" . }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "tenant-operator.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "tenant-operator.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: {{ include "tenant-operator.managerContainerName" . }}
+        image: {{ include "tenant-operator.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command:
+        - /manager
+        args:
+        {{- if .Values.manager.leaderElection }}
+        - --leader-elect
+        {{- end }}
+        {{- if .Values.manager.healthProbeBindAddress }}
+        - --health-probe-bind-address={{ .Values.manager.healthProbeBindAddress }}
+        {{- end }}
+        {{- if .Values.manager.metricsBindAddress }}
+        - --metrics-bind-address={{ .Values.manager.metricsBindAddress }}
+        {{- end }}
+        {{- with .Values.manager.args }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.manager.env }}
+        env:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        {{- if .Values.webhook.enabled }}
+        - containerPort: {{ .Values.webhook.port }}
+          name: webhook-server
+          protocol: TCP
+        {{- end }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+        livenessProbe:
+          {{- toYaml .Values.livenessProbe | nindent 10 }}
+        readinessProbe:
+          {{- toYaml .Values.readinessProbe | nindent 10 }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        volumeMounts:
+        {{- if .Values.webhook.enabled }}
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+        {{- end }}
+        {{- with .Values.manager.volumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      volumes:
+      {{- if .Values.webhook.enabled }}
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: {{ include "tenant-operator.webhookCertificateName" . }}
+      {{- end }}
+      {{- with .Values.manager.volumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 10

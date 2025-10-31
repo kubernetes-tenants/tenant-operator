@@ -1,0 +1,22 @@
+---
+# Metrics Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tenant-operator.metricsServiceName" . }}
+  namespace: {{ include "tenant-operator.namespace" . }}
+  labels:
+    {{- include "tenant-operator.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - name: {{ .Values.service.metricsPortName }}
+    port: {{ .Values.service.metricsPort }}
+    protocol: TCP
+    targetPort: {{ .Values.service.metricsPort }}
+  selector:
+    {{- include "tenant-operator.selectorLabels" . | nindent 4 }}

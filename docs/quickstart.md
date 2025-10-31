@@ -7,14 +7,18 @@ Get Tenant Operator running on Minikube in under 5 minutes using automated scrip
 ## Overview
 
 This guide uses automated scripts to set up a complete local environment:
-1. **Minikube cluster** with cert-manager
-2. **Tenant Operator** deployed and running
+1. **Minikube cluster** with **cert-manager** (automatically installed)
+2. **Tenant Operator** deployed and running with webhooks enabled
 3. **MySQL test database** for tenant data
 4. **Sample TenantRegistry** and **TenantTemplate**
 5. **Live tenant provisioning** from database
 
 ::: tip Time required
 Full setup typically completes in around 5 minutes.
+:::
+
+::: info cert-manager Included
+cert-manager is **automatically installed** by the setup script. It's required for webhook validation and defaulting in all environments (including local development).
 :::
 
 ## Prerequisites
@@ -48,9 +52,13 @@ cd /path/to/tenant-operator
 
 **What this does:**
 - ✅ Creates Minikube cluster with 2 CPUs, 2GB RAM
-- ✅ Installs cert-manager v1.13.2 for webhook TLS
+- ✅ **Installs cert-manager v1.13.2** (REQUIRED for webhooks)
 - ✅ Installs Tenant Operator CRDs
 - ✅ Creates namespaces: `tenant-operator-system`, `tenant-operator-test`
+
+::: warning cert-manager is Essential
+cert-manager provides webhook TLS certificates for validation and defaulting. It's no longer optional, even for local development, to ensure consistency with production environments.
+:::
 
 **Expected output:**
 ```
@@ -310,11 +318,12 @@ kubectl logs deployment/acme-corp-app
 ## 🎉 Success! You're Running Tenant Operator
 
 You now have:
-- ✅ **Minikube cluster** with cert-manager
-- ✅ **Tenant Operator** managing tenants
+- ✅ **Minikube cluster** with **cert-manager** (for webhook TLS)
+- ✅ **Tenant Operator** managing tenants with **webhooks enabled**
 - ✅ **MySQL database** with 3 tenant rows
 - ✅ **2 Active Tenants** (acme-corp, beta-inc) fully provisioned
 - ✅ **Live sync** between database and Kubernetes
+- ✅ **Admission validation** catching errors at apply time
 
 ### What Was Created?
 

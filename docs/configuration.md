@@ -28,7 +28,8 @@ spec:
             # HTTP/2
             - --enable-http2=false                # Enable HTTP/2 (default: false, disabled for security)
 
-            # TLS Certificates (optional, cert-manager provides by default)
+            # TLS Certificates (cert-manager REQUIRED for webhook TLS)
+            # cert-manager automatically provisions certificates to these paths
             - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs
             - --metrics-cert-path=/tmp/k8s-metrics-server/serving-certs
 
@@ -156,11 +157,16 @@ RBAC manifests are located in `config/rbac/` and are applied automatically via `
 ### Network Policies
 
 Network policies are not included by default. If your cluster requires network policies, create them based on your security requirements:
-- Allow ingress from Kubernetes API server for webhooks
+- Allow ingress from Kubernetes API server for **webhooks** (webhooks require cert-manager)
+- Allow ingress from cert-manager for certificate provisioning
 - Allow egress to database for registry sync
 - Allow egress to Kubernetes API for resource management
 
 See `config/network-policy/` for example configurations.
+
+::: info cert-manager Required
+Webhooks require cert-manager v1.13.0+ to be installed for TLS certificate management. See the [Installation Guide](installation.md) for setup instructions.
+:::
 
 ## See Also
 
