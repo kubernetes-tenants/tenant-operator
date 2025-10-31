@@ -17,7 +17,7 @@ limitations under the License.
 package v1
 
 import (
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // Policy types
@@ -65,7 +65,7 @@ type TResource struct {
 	// Can be any Kubernetes native resource or custom resource
 	// +kubebuilder:validation:Required
 	// +kubebuilder:pruning:PreserveUnknownFields
-	Spec runtime.RawExtension `json:"spec"`
+	Spec unstructured.Unstructured `json:"spec"`
 
 	// DependIds lists IDs of resources that must be ready before this resource is created
 	// +optional
@@ -89,13 +89,9 @@ type TResource struct {
 	// +kubebuilder:default=Stuck
 	ConflictPolicy ConflictPolicy `json:"conflictPolicy,omitempty"`
 
-	// NamespaceTemplate is a Go template for the namespace name
-	// Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-	// +optional
-	NamespaceTemplate string `json:"namespaceTemplate,omitempty"`
-
 	// NameTemplate is a Go template for the resource name
 	// Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+	// Note: All resources are created in the same namespace as the Tenant CR
 	// +optional
 	NameTemplate string `json:"nameTemplate,omitempty"`
 

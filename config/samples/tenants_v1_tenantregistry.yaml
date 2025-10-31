@@ -1,9 +1,39 @@
-apiVersion: tenants.tenants.ecube.dev/v1
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-credentials
+  namespace: default
+type: Opaque
+stringData:
+  password: changeme
+
+---
+apiVersion: operator.kubernetes-tenants.org/v1
 kind: TenantRegistry
 metadata:
   labels:
     app.kubernetes.io/name: tenant-operator
     app.kubernetes.io/managed-by: kustomize
-  name: tenantregistry-sample
+  name: sample-registry
+  namespace: default
 spec:
-  # TODO(user): Add fields here
+  source:
+    type: mysql
+    syncInterval: 30s
+    mysql:
+      host: mysql.default.svc.cluster.local
+      port: 3306
+      username: root
+      passwordRef:
+        name: mysql-credentials
+        key: password
+      database: tenants
+      table: tenants
+  valueMappings:
+    uid: id
+    hostOrUrl: url
+    activate: isActive
+  extraValueMappings:
+    deployImage: image
+    planId: plan_id
+    replicas: replica_count

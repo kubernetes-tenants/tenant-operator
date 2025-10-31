@@ -2,7 +2,7 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: tenants.ecube.dev
+domain: kubernetes-tenants.org
 layout:
 - go.kubebuilder.io/v4
 plugins:
@@ -15,8 +15,8 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: tenants.ecube.dev
-  group: tenants
+  domain: kubernetes-tenants.org
+  group: operator
   kind: TenantRegistry
   path: github.com/kubernetes-tenants/tenant-operator/api/v1
   version: v1
@@ -24,8 +24,8 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: tenants.ecube.dev
-  group: tenants
+  domain: kubernetes-tenants.org
+  group: operator
   kind: TenantTemplate
   path: github.com/kubernetes-tenants/tenant-operator/api/v1
   version: v1
@@ -33,8 +33,8 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: tenants.ecube.dev
-  group: tenants
+  domain: kubernetes-tenants.org
+  group: operator
   kind: Tenant
   path: github.com/kubernetes-tenants/tenant-operator/api/v1
   version: v1

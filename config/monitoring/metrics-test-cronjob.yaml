@@ -1,0 +1,89 @@
+---
+# ServiceAccount for metrics test cronjob
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: metrics-test
+  namespace: tenant-operator-system
+---
+# ClusterRole to access metrics endpoint
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: metrics-test-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: metrics-test-reader-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: metrics-test-reader
+subjects:
+- kind: ServiceAccount
+  name: metrics-test
+  namespace: tenant-operator-system
+---
+# CronJob to test metrics endpoint every minute
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: metrics-test
+  namespace: tenant-operator-system
+  labels:
+    app: metrics-test
+spec:
+  schedule: "*/1 * * * *"  # Every 1 minute
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: metrics-test
+        spec:
+          serviceAccountName: metrics-test
+          restartPolicy: Never
+          containers:
+          - name: curl
+            image: curlimages/curl:8.5.0
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "===================="
+              echo "Metrics Test - $(date)"
+              echo "===================="
+              echo ""
+
+              # Get token for authentication
+              TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+
+              # Curl metrics endpoint
+              echo "Fetching metrics from: https://tenant-operator-controller-manager-metrics-service.tenant-operator-system.svc:8443/metrics"
+              echo ""
+
+              curl -k -s \
+                -H "Authorization: Bearer $TOKEN" \
+                https://tenant-operator-controller-manager-metrics-service.tenant-operator-system.svc:8443/metrics \
+                | grep -E "^(tenant_|registry_|apply_)" || echo "No custom metrics found"
+
+              echo ""
+              echo "===================="
+              echo "Test completed"
+              echo "===================="
+            resources:
+              limits:
+                cpu: 100m
+                memory: 64Mi
+              requests:
+                cpu: 10m
+                memory: 32Mi

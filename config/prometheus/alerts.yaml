@@ -1,0 +1,176 @@
+# Prometheus Alert Rules for Tenant Operator
+# These alerts monitor tenant health, conflicts, and failures
+#
+# To deploy these alerts:
+# 1. Install prometheus-operator in your cluster
+# 2. Apply this file: kubectl apply -f config/prometheus/alerts.yaml
+# 3. Configure AlertManager to send notifications
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: tenant-operator-alerts
+  namespace: tenant-operator-system
+  labels:
+    app: tenant-operator
+    prometheus: kube-prometheus
+spec:
+  groups:
+    - name: tenant-operator.alerts
+      interval: 30s
+      rules:
+        # Critical: Tenant has failed resources
+        - alert: TenantResourcesFailed
+          expr: tenant_resources_failed > 0
+          for: 5m
+          labels:
+            severity: critical
+            component: tenant-operator
+          annotations:
+            summary: "Tenant {{ $labels.tenant }} has failed resources"
+            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $value }} failed resources for more than 5 minutes. This indicates a critical issue with resource provisioning."
+            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.example.com/runbooks/tenant-resources-failed"
+
+        # Critical: Tenant is in degraded state
+        - alert: TenantDegraded
+          expr: tenant_degraded_status > 0
+          for: 5m
+          labels:
+            severity: critical
+            component: tenant-operator
+          annotations:
+            summary: "Tenant {{ $labels.tenant }} is in degraded state"
+            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} is in degraded state. Reason: {{ $labels.reason }}. This may indicate template rendering errors, conflicts, or dependency issues."
+            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.example.com/runbooks/tenant-degraded"
+
+        # Warning: Tenant has conflicted resources
+        - alert: TenantResourcesConflicted
+          expr: tenant_resources_conflicted > 0
+          for: 10m
+          labels:
+            severity: warning
+            component: tenant-operator
+          annotations:
+            summary: "Tenant {{ $labels.tenant }} has resources in conflict"
+            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $value }} resources in conflict state. This usually indicates ownership conflicts with existing resources."
+            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.example.com/runbooks/tenant-conflicts"
+
+        # Warning: High rate of conflicts
+        - alert: TenantHighConflictRate
+          expr: rate(tenant_conflicts_total[5m]) > 0.1
+          for: 10m
+          labels:
+            severity: warning
+            component: tenant-operator
+          annotations:
+            summary: "High conflict rate for tenant {{ $labels.tenant }}"
+            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} is experiencing a high rate of conflicts ({{ $value }} conflicts/sec) for resource kind {{ $labels.resource_kind }}. Policy: {{ $labels.conflict_policy }}"
+            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.example.com/runbooks/high-conflict-rate"
+
+        # Critical: Tenant not ready
+        - alert: TenantNotReady
+          expr: tenant_condition_status{type="Ready"} != 1
+          for: 10m
+          labels:
+            severity: critical
+            component: tenant-operator
+          annotations:
+            summary: "Tenant {{ $labels.tenant }} is not ready"
+            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has not been ready for more than 10 minutes. Current status: {{ $value }} (0=False, 1=True, 2=Unknown)"
+            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.example.com/runbooks/tenant-not-ready"
+
+        # Warning: Tenant resources not matching desired state
+        - alert: TenantResourcesMismatch
+          expr: tenant_resources_ready != tenant_resources_desired and tenant_resources_desired > 0
+          for: 15m
+          labels:
+            severity: warning
+            component: tenant-operator
+          annotations:
+            summary: "Tenant {{ $labels.tenant }} resources mismatch"
+            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $value }} ready resources but expects a different count. This may indicate reconciliation issues."
+            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.example.com/runbooks/tenant-resources-mismatch"
+
+        # Warning: Registry has failed tenants
+        - alert: RegistryTenantsFailure
+          expr: registry_failed > 0
+          for: 5m
+          labels:
+            severity: warning
+            component: tenant-operator
+          annotations:
+            summary: "Registry {{ $labels.registry }} has failed tenants"
+            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $value }} failed tenants. This may indicate a systemic issue with tenant provisioning."
+            dashboard: "https://grafana.example.com/d/tenant-operator/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.example.com/runbooks/registry-tenants-failed"
+
+        # Critical: Registry has many failed tenants
+        - alert: RegistryManyTenantsFailure
+          expr: registry_failed > 5 or (registry_failed / registry_desired > 0.5 and registry_desired > 0)
+          for: 5m
+          labels:
+            severity: critical
+            component: tenant-operator
+          annotations:
+            summary: "Registry {{ $labels.registry }} has many failed tenants"
+            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $value }} failed tenants (more than 5 or >50% of desired count). This indicates a critical systemic issue."
+            dashboard: "https://grafana.example.com/d/tenant-operator/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.example.com/runbooks/registry-many-tenants-failed"
+
+        # Warning: Registry sync issues
+        - alert: RegistryDesiredCountMismatch
+          expr: registry_ready != registry_desired and registry_desired > 0
+          for: 15m
+          labels:
+            severity: warning
+            component: tenant-operator
+          annotations:
+            summary: "Registry {{ $labels.registry }} has tenant count mismatch"
+            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $value }} desired tenants but a different count is ready. Expected all tenants to be ready within 15 minutes."
+            dashboard: "https://grafana.example.com/d/tenant-operator/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.example.com/runbooks/registry-sync-issues"
+
+        # Warning: High reconciliation error rate
+        - alert: TenantReconciliationErrors
+          expr: rate(tenant_reconcile_duration_seconds_count{result="error"}[5m]) > 0.1
+          for: 10m
+          labels:
+            severity: warning
+            component: tenant-operator
+          annotations:
+            summary: "High tenant reconciliation error rate"
+            description: "Tenant operator is experiencing a high reconciliation error rate ({{ $value }} errors/sec). This may indicate controller issues or API server problems."
+            dashboard: "https://grafana.example.com/d/tenant-operator/controller-health"
+            runbook_url: "https://docs.example.com/runbooks/reconciliation-errors"
+
+        # Warning: Slow reconciliation
+        - alert: TenantReconciliationSlow
+          expr: histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m])) > 30
+          for: 10m
+          labels:
+            severity: warning
+            component: tenant-operator
+          annotations:
+            summary: "Slow tenant reconciliation"
+            description: "95th percentile of tenant reconciliation duration is {{ $value }}s (>30s). This may indicate performance issues or resource contention."
+            dashboard: "https://grafana.example.com/d/tenant-operator/controller-health"
+            runbook_url: "https://docs.example.com/runbooks/slow-reconciliation"
+
+        # Info: New conflicts detected
+        - alert: TenantNewConflictsDetected
+          expr: increase(tenant_conflicts_total[5m]) > 0
+          for: 1m
+          labels:
+            severity: info
+            component: tenant-operator
+          annotations:
+            summary: "New conflicts detected for tenant {{ $labels.tenant }}"
+            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $value }} new conflicts in the last 5 minutes for {{ $labels.resource_kind }}. Conflict policy: {{ $labels.conflict_policy }}"
+            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.example.com/runbooks/tenant-conflicts"
