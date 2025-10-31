@@ -47,7 +47,7 @@ cd /path/to/tenant-operator
 ```
 
 **What this does:**
-- ✅ Creates Minikube cluster with 1 CPU, 1GB RAM
+- ✅ Creates Minikube cluster with 2 CPUs, 2GB RAM
 - ✅ Installs cert-manager v1.13.2 for webhook TLS
 - ✅ Installs Tenant Operator CRDs
 - ✅ Creates namespaces: `tenant-operator-system`, `tenant-operator-test`
@@ -59,8 +59,8 @@ cd /path/to/tenant-operator
 Configuration:
   Profile:        tenant-operator
   Driver:         docker
-  CPUs:           1
-  Memory:         1024 MB
+  CPUs:           2
+  Memory:         2048 MB
   Disk Size:      5g
   K8s Version:    v1.28.3
 
