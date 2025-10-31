@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/logo.png" alt="Kubernetes Tenant Operator" width="400">
+<img src="docs/public/logo.png" alt="Kubernetes Tenant Operator" width="400">
 
 # Tenant Operator
 
