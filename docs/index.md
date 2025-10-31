@@ -71,6 +71,7 @@ spec:
       port: 3306
       database: tenants
       table: tenant_data
+      username: tenant_reader
       passwordRef:
         name: mysql-secret
         key: password
