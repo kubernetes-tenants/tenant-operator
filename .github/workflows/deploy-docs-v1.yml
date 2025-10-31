@@ -57,5 +57,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: docs/.vitepress/dist
           # destination_dir: ${{ env.DOCS_VERSION }} # Legacy documentation structure
-          commit_message: "docs: deploy ${DOCS_VERSION}"
+          commit_message: "docs: deploy ${{ env.DOCS_VERSION }}"
           cname: docs.kubernetes-tenants.org
