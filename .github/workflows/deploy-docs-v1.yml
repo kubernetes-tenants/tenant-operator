@@ -30,14 +30,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: docs/package-lock.json
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-docs-npm-${{ hashFiles('docs/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-docs-npm-
 
       - name: Install dependencies
-        run: npm ci --prefix docs
+        working-directory: docs
+        run: npm ci
 
       - name: Build VitePress site
-        run: npm run docs:build --prefix docs
+        working-directory: docs
+        run: npm run docs:build
 
       - name: Prepare publish artifacts
         run: |
