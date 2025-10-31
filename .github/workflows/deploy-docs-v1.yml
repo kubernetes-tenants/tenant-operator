@@ -57,5 +57,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: docs/.vitepress/dist
           # destination_dir: ${{ env.DOCS_VERSION }} # Legacy documentation structure
-          destination_dir: /
           commit_message: "docs: deploy ${DOCS_VERSION}"
