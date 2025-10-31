@@ -1,0 +1,24 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-metrics-service" (include "tenant-operator.managerName" .) }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    control-plane: controller-manager
+    {{ include "tenant-operator.labels" . | nindent 4 }}
+  {{- with .Values.metrics.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.metrics.service.type }}
+  ports:
+    - name: https
+      port: {{ .Values.metrics.service.port }}
+      protocol: TCP
+      targetPort: {{ .Values.metrics.service.port }}
+  selector:
+    control-plane: controller-manager
+    {{ include "tenant-operator.selectorLabels" . | nindent 4 }}
+{{- end }}

@@ -1,0 +1,205 @@
+{{- if and .Values.rbac.create .Values.rbac.additionalClusterRoles }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ printf "%s-tenant-admin-role" (include "tenant-operator.fullname" .) }}
+  labels:
+    {{ include "tenant-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenants
+    verbs:
+      - '*'
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenants/status
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ printf "%s-tenant-editor-role" (include "tenant-operator.fullname" .) }}
+  labels:
+    {{ include "tenant-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenants
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenants/status
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ printf "%s-tenant-viewer-role" (include "tenant-operator.fullname" .) }}
+  labels:
+    {{ include "tenant-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenants
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenants/status
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ printf "%s-tenantregistry-admin-role" (include "tenant-operator.fullname" .) }}
+  labels:
+    {{ include "tenant-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenantregistries
+    verbs:
+      - '*'
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenantregistries/status
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ printf "%s-tenantregistry-editor-role" (include "tenant-operator.fullname" .) }}
+  labels:
+    {{ include "tenant-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenantregistries
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenantregistries/status
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ printf "%s-tenantregistry-viewer-role" (include "tenant-operator.fullname" .) }}
+  labels:
+    {{ include "tenant-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenantregistries
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenantregistries/status
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ printf "%s-tenanttemplate-admin-role" (include "tenant-operator.fullname" .) }}
+  labels:
+    {{ include "tenant-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenanttemplates
+    verbs:
+      - '*'
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenanttemplates/status
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ printf "%s-tenanttemplate-editor-role" (include "tenant-operator.fullname" .) }}
+  labels:
+    {{ include "tenant-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenanttemplates
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenanttemplates/status
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ printf "%s-tenanttemplate-viewer-role" (include "tenant-operator.fullname" .) }}
+  labels:
+    {{ include "tenant-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenanttemplates
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - operator.kubernetes-tenants.org
+    resources:
+      - tenanttemplates/status
+    verbs:
+      - get
+{{- end }}

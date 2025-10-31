@@ -27,6 +27,7 @@ export default withMermaid(
           collapsed: false,
           items: [
             { text: "Installation", link: "/installation" },
+            { text: "Installation with Helm Chart", link: "/helm-chart" },
             { text: "Quick Start", link: "/quickstart" },
             {
               text: "Local Development (Minikube)",

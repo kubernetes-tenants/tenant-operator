@@ -1,0 +1,9 @@
+apiVersion: v2
+name: tenant-operator
+description: Helm chart for deploying the Kubernetes Tenants operator and its webhooks
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/kubernetes-tenants/tenant-operator
+sources:
+  - https://github.com/kubernetes-tenants/tenant-operator

@@ -1,0 +1,121 @@
+{{- if .Values.webhook.enabled }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ printf "%s-mutating-webhook" (include "tenant-operator.fullname" .) }}
+  labels:
+    {{ include "tenant-operator.labels" . | nindent 4 }}
+  {{- if and .Values.webhook.certManager.enabled (not .Values.webhook.existingSecretName) }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ printf "%s/%s" .Release.Namespace (include "tenant-operator.webhookCertificateName" .) }}
+  {{- end }}
+webhooks:
+  - name: mtenantregistry.kb.io
+    failurePolicy: {{ .Values.webhook.failurePolicy }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: {{ include "tenant-operator.webhookServiceName" . }}
+        namespace: {{ .Release.Namespace }}
+        path: /mutate-operator-kubernetes-tenants-org-v1-tenantregistry
+      {{- if and (or (not .Values.webhook.certManager.enabled) .Values.webhook.existingSecretName) .Values.webhook.caBundle }}
+      caBundle: {{ .Values.webhook.caBundle | b64enc }}
+      {{- end }}
+    rules:
+      - apiGroups:
+          - operator.kubernetes-tenants.org
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - tenantregistries
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds }}
+  - name: mtenanttemplate.kb.io
+    failurePolicy: {{ .Values.webhook.failurePolicy }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: {{ include "tenant-operator.webhookServiceName" . }}
+        namespace: {{ .Release.Namespace }}
+        path: /mutate-operator-kubernetes-tenants-org-v1-tenanttemplate
+      {{- if and (or (not .Values.webhook.certManager.enabled) .Values.webhook.existingSecretName) .Values.webhook.caBundle }}
+      caBundle: {{ .Values.webhook.caBundle | b64enc }}
+      {{- end }}
+    rules:
+      - apiGroups:
+          - operator.kubernetes-tenants.org
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - tenanttemplates
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ printf "%s-validating-webhook" (include "tenant-operator.fullname" .) }}
+  labels:
+    {{ include "tenant-operator.labels" . | nindent 4 }}
+  {{- if and .Values.webhook.certManager.enabled (not .Values.webhook.existingSecretName) }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ printf "%s/%s" .Release.Namespace (include "tenant-operator.webhookCertificateName" .) }}
+  {{- end }}
+webhooks:
+  - name: vtenantregistry.kb.io
+    failurePolicy: {{ .Values.webhook.failurePolicy }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: {{ include "tenant-operator.webhookServiceName" . }}
+        namespace: {{ .Release.Namespace }}
+        path: /validate-operator-kubernetes-tenants-org-v1-tenantregistry
+      {{- if and (or (not .Values.webhook.certManager.enabled) .Values.webhook.existingSecretName) .Values.webhook.caBundle }}
+      caBundle: {{ .Values.webhook.caBundle | b64enc }}
+      {{- end }}
+    rules:
+      - apiGroups:
+          - operator.kubernetes-tenants.org
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - tenantregistries
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds }}
+  - name: vtenanttemplate.kb.io
+    failurePolicy: {{ .Values.webhook.failurePolicy }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: {{ include "tenant-operator.webhookServiceName" . }}
+        namespace: {{ .Release.Namespace }}
+        path: /validate-operator-kubernetes-tenants-org-v1-tenanttemplate
+      {{- if and (or (not .Values.webhook.certManager.enabled) .Values.webhook.existingSecretName) .Values.webhook.caBundle }}
+      caBundle: {{ .Values.webhook.caBundle | b64enc }}
+      {{- end }}
+    rules:
+      - apiGroups:
+          - operator.kubernetes-tenants.org
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - tenanttemplates
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds }}
+{{- end }}

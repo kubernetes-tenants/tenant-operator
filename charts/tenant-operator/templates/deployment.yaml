@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tenant-operator.managerName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    control-plane: controller-manager
+    {{ include "tenant-operator.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+      {{ include "tenant-operator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+        {{ include "tenant-operator.selectorLabels" . | nindent 8 }}
+      {{- with .Values.controllerManager.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "tenant-operator.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.controllerManager.securityContext | nindent 8 }}
+      terminationGracePeriodSeconds: 10
+      {{- if .Values.controllerManager.priorityClassName }}
+      priorityClassName: {{ .Values.controllerManager.priorityClassName }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: manager
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /manager
+          args:
+            - --leader-elect
+            - --health-probe-bind-address={{ .Values.controllerManager.healthProbeBindAddress }}
+            {{- if .Values.metrics.enabled }}
+            - --metrics-bind-address={{ .Values.metrics.bindAddress }}
+            {{- end }}
+            {{- range .Values.controllerManager.extraArgs }}
+            - {{ . | quote }}
+            {{- end }}
+          {{- with .Values.controllerManager.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - containerPort: 8443
+              name: https
+              protocol: TCP
+            {{- if .Values.webhook.enabled }}
+            - containerPort: {{ .Values.webhook.service.targetPort }}
+              name: webhook-server
+              protocol: TCP
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.controllerManager.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.controllerManager.containerSecurityContext | nindent 12 }}
+          {{- $extraVolumeMounts := .Values.controllerManager.extraVolumeMounts }}
+          {{- if or .Values.webhook.enabled (not (empty $extraVolumeMounts)) }}
+          volumeMounts:
+            {{- if .Values.webhook.enabled }}
+            - name: cert
+              mountPath: /tmp/k8s-webhook-server/serving-certs
+              readOnly: true
+            {{- end }}
+            {{- with $extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+      {{- $extraVolumes := .Values.controllerManager.extraVolumes }}
+      {{- if or .Values.webhook.enabled (not (empty $extraVolumes)) }}
+      volumes:
+        {{- if .Values.webhook.enabled }}
+        - name: cert
+          secret:
+            secretName: {{ include "tenant-operator.webhookSecretName" . }}
+        {{- end }}
+        {{- with $extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.controllerManager.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controllerManager.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controllerManager.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

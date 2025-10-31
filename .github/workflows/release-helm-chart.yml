@@ -1,0 +1,66 @@
+name: release-helm-chart
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'chart-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch gh-pages branch
+        run: git fetch origin gh-pages --depth=1 || true
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.19.0
+
+      - name: Determine chart version from tag
+        id: version
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#chart-}"
+          version="${version#v}"
+          if [[ -z "${version}" ]]; then
+            echo "Failed to derive version from tag '${tag}'" >&2
+            exit 1
+          fi
+          echo "value=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Prepare chart assets
+        env:
+          CHART_VERSION: ${{ steps.version.outputs.value }}
+          APP_VERSION: ${{ steps.version.outputs.value }}
+          PACKAGE_CHART: "false"
+        run: scripts/package-helm-chart.sh
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.7.0
+        with:
+          charts_dir: charts
+        env:
+          CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CR_SKIP_EXISTING: "true"
+          CR_RELEASE_NAME_TEMPLATE: "tenant-operator-{{ .Version }}"
+
+      - name: Upload packaged chart artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenant-operator-chart
+          path: .cr-release-packages/tenant-operator-${{ steps.version.outputs.value }}.tgz

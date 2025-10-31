@@ -1,0 +1,77 @@
+# Global chart configuration
+nameOverride: ""
+fullnameOverride: ""
+imagePullSecrets: []
+
+image:
+  repository: ghcr.io/kubernetes-tenants/tenant-operator
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+rbac:
+  create: true
+  # Creates helper ClusterRoles that grant admin/editor/viewer access to Tenant CRs.
+  additionalClusterRoles: true
+
+metrics:
+  enabled: true
+  bindAddress: ":8443"
+  service:
+    annotations: {}
+    type: ClusterIP
+    port: 8443
+
+webhook:
+  enabled: true
+  failurePolicy: Fail
+  timeoutSeconds: 10
+  service:
+    annotations: {}
+    type: ClusterIP
+    port: 443
+    targetPort: 9443
+  existingSecretName: ""
+  certManager:
+    enabled: true
+    issuer:
+      create: true
+      name: selfsigned-issuer
+      kind: Issuer
+  # When cert-manager integration is disabled, provide the PEM encoded CA bundle here.
+  caBundle: ""
+
+controllerManager:
+  podAnnotations: {}
+  podLabels: {}
+  priorityClassName: ""
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  extraEnv: []
+  extraArgs: []
+  extraVolumeMounts: []
+  extraVolumes: []
+  healthProbeBindAddress: ":8081"
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  resources:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
