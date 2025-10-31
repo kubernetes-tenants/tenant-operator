@@ -2,17 +2,17 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/tenants.tenants.ecube.dev_tenantregistries.yaml
-- bases/tenants.tenants.ecube.dev_tenanttemplates.yaml
-- bases/tenants.tenants.ecube.dev_tenants.yaml
+- bases/operator.kubernetes-tenants.org_tenantregistries.yaml
+- bases/operator.kubernetes-tenants.org_tenanttemplates.yaml
+- bases/operator.kubernetes-tenants.org_tenants.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
-patches:
+# patches:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
 # +kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [WEBHOOK] To enable webhook, uncomment the following section
 # the following config is for teaching kustomize how to do kustomization for CRDs.
-#configurations:
-#- kustomizeconfig.yaml
+configurations:
+- kustomizeconfig.yaml

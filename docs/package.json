@@ -1,0 +1,17 @@
+{
+  "name": "tenant-operator-docs",
+  "version": "1.0.0",
+  "description": "Tenant Operator Documentation",
+  "type": "module",
+  "scripts": {
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "mermaid": "^11.12.1",
+    "vitepress": "^1.0.0",
+    "vitepress-plugin-mermaid": "^2.0.17"
+  },
+  "packageManager": "npm@10.0.0"
+}
