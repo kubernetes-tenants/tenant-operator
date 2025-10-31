@@ -58,3 +58,4 @@ jobs:
           publish_dir: docs/.vitepress/dist
           # destination_dir: ${{ env.DOCS_VERSION }} # Legacy documentation structure
           commit_message: "docs: deploy ${DOCS_VERSION}"
+          cname: docs.kubernetes-tenants.org
