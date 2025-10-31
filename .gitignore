@@ -30,4 +30,3 @@ go.work
 docs/node_modules/
 docs/.vitepress/cache/
 docs/.vitepress/dist/
-docs/package-lock.json
