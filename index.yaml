@@ -1,0 +1,64 @@
+apiVersion: v1
+entries:
+  tenant-operator:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: Initial Helm chart release
+      artifacthub.io/containsSecurityUpdates: "false"
+      artifacthub.io/crds: |
+        - kind: TenantRegistry
+          version: v1
+          name: tenantregistries.operator.kubernetes-tenants.org
+          displayName: Tenant Registry
+          description: Defines external datasource configuration for tenant data
+        - kind: TenantTemplate
+          version: v1
+          name: tenanttemplates.operator.kubernetes-tenants.org
+          displayName: Tenant Template
+          description: Blueprint for Kubernetes resources to create per tenant
+        - kind: Tenant
+          version: v1
+          name: tenants.operator.kubernetes-tenants.org
+          displayName: Tenant
+          description: Represents a single tenant instance with its resources
+      artifacthub.io/links: |
+        - name: Documentation
+          url: https://kubernetes-tenants.github.io/tenant-operator
+        - name: GitHub
+          url: https://github.com/kubernetes-tenants/tenant-operator
+      artifacthub.io/operator: "true"
+      artifacthub.io/operatorCapabilities: Full Lifecycle
+      artifacthub.io/prerelease: "true"
+      artifacthub.io/recommendations: |
+        - url: https://cert-manager.io
+      category: Infrastructure
+      licenses: Apache-2.0
+    apiVersion: v2
+    appVersion: 1.1.0-alpha.2
+    created: "2025-11-01T00:16:42.720401482Z"
+    description: 'Kubernetes-Native Multi-Tenant Application Provisioning Operator.
+      Automates tenant lifecycle from database to production with template-based resource
+      generation.  IMPORTANT: Requires cert-manager for ALL installations (including
+      local development). Install cert-manager before installing this chart. See chart/CERT-MANAGER.md
+      for details. '
+    digest: 9beedff235426747d71c9ab858fa43aa4fe0d0917b7ee19a55149935184d47bc
+    home: https://github.com/kubernetes-tenants/tenant-operator
+    icon: https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/docs/public/logo.png
+    keywords:
+    - kubernetes
+    - operator
+    - multi-tenant
+    - saas
+    - provisioning
+    maintainers:
+    - name: Tim Kang
+      url: https://github.com/selenehyun
+    name: tenant-operator
+    sources:
+    - https://github.com/kubernetes-tenants/tenant-operator
+    type: application
+    urls:
+    - https://github.com/kubernetes-tenants/tenant-operator/releases/download/v1.1.0-alpha.2/tenant-operator-1.1.0-alpha.2.tgz
+    version: 1.1.0-alpha.2
+generated: "2025-11-01T00:16:42.72041054Z"
