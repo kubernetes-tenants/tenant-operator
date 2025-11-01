@@ -13,6 +13,36 @@ Tenant Operator provides fine-grained control over resource lifecycle through va
 | ConflictPolicy | Ownership conflict handling | `Stuck` | `Stuck`, `Force` |
 | PatchStrategy | How resources are updated | `apply` | `apply`, `merge`, `replace` |
 
+```mermaid
+flowchart TD
+    Start([Tenant Template])
+    Creation{{CreationPolicy}}
+    Deletion{{DeletionPolicy}}
+    Conflict{{ConflictPolicy}}
+    Patch{{PatchStrategy}}
+    Runtime[(Cluster Resources)]
+
+    Start --> Creation --> Conflict --> Patch --> Runtime
+    Creation -.->|Once| Runtime
+    Creation -.->|WhenNeeded| Runtime
+
+    Start --> Deletion --> Runtime
+    Deletion -.->|Delete| Runtime
+    Deletion -.->|Retain| Runtime
+
+    Conflict -.->|"Stuck → Alert"| Runtime
+    Conflict -.->|"Force → SSA force apply"| Runtime
+
+    Patch -.->|apply| Runtime
+    Patch -.->|merge| Runtime
+    Patch -.->|replace| Runtime
+
+    classDef decision fill:#fff3e0,stroke:#ffb74d,stroke-width:2px;
+    classDef runtime fill:#e3f2fd,stroke:#64b5f6,stroke-width:2px;
+    class Creation,Deletion,Conflict,Patch decision;
+    class Runtime runtime;
+```
+
 ## CreationPolicy
 
 Controls when a resource is created or re-applied.
@@ -156,23 +186,40 @@ Deleting a TenantRegistry or TenantTemplate cascades to all Tenant CRs, which in
 
 ### The Problem
 
-```
-TenantRegistry (deleted)
-  └─> Tenant CRs (cascade deleted)
-       └─> All tenant resources (cascade deleted)
+```mermaid
+flowchart TB
+    Registry[TenantRegistry<br/>deleted] --> Tenants[Tenant CRs<br/>finalizers trigger]
+    Tenants --> Resources["Tenant Resources<br/>(Deployments, PVCs, ...)"]
+    style Registry fill:#ffebee,stroke:#ef5350,stroke-width:2px;
+    style Tenants fill:#fff3e0,stroke:#ffb74d,stroke-width:2px;
+    style Resources fill:#f3e5f5,stroke:#ba68c8,stroke-width:2px;
 ```
 
-or
-
-```
-TenantTemplate (deleted)
-  └─> Tenant CRs (cascade deleted)
-       └─> All tenant resources (cascade deleted)
+```mermaid
+flowchart TB
+    Template[TenantTemplate<br/>deleted] --> Tenants2[Tenant CRs<br/>cascade removed]
+    Tenants2 --> Resources2["Tenant Resources<br/>(deleted unless retained)"]
+    style Template fill:#ffebee,stroke:#ef5350,stroke-width:2px;
+    style Tenants2 fill:#fff3e0,stroke:#ffb74d,stroke-width:2px;
+    style Resources2 fill:#f3e5f5,stroke:#ba68c8,stroke-width:2px;
 ```
 
 ### Recommended Solution: Use `Retain` DeletionPolicy
 
 **Before deleting TenantRegistry or TenantTemplate**, ensure all resources in your templates use `deletionPolicy: Retain`:
+
+```mermaid
+flowchart TB
+    Delete["Delete TenantRegistry / Template"]
+    TenantsRetain["Tenant CRs finalize"]
+    Retained["Resources with Retain<br/>deletionPolicy"]
+    Cleanup["Manual review / cleanup"]
+
+    Delete --> TenantsRetain --> Retained --> Cleanup
+
+    classDef safe fill:#e8f5e9,stroke:#81c784,stroke-width:2px;
+    class Retained safe;
+```
 
 ```yaml
 apiVersion: operator.kubernetes-tenants.org/v1

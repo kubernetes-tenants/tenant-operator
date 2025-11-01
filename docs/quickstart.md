@@ -13,6 +13,20 @@ This guide uses automated scripts to set up a complete local environment:
 4. **Sample TenantRegistry** and **TenantTemplate**
 5. **Live tenant provisioning** from database
 
+```mermaid
+flowchart LR
+    Cluster["Minikube Cluster"]
+    Operator["Tenant Operator"]
+    Database["MySQL Test DB"]
+    Templates["Sample Registry & Template"]
+    Tenants["Tenant CRs & Resources"]
+
+    Cluster --> Operator --> Database --> Templates --> Tenants
+
+    classDef stage fill:#e3f2fd,stroke:#64b5f6,stroke-width:2px;
+    class Cluster,Operator,Database,Templates,Tenants stage;
+```
+
 ::: tip Time required
 Full setup typically completes in around 5 minutes.
 :::

@@ -104,6 +104,20 @@ Grant the registry user read-only credentials and limit network access between t
 
 ## Template Configuration
 
+```mermaid
+flowchart TB
+    Template["TenantTemplate<br/>Spec"]
+    Policies["Policies<br/>(Creation/Deletion/Conflict/Patch)"]
+    Renderer["Template Renderer"]
+    Tenant["Tenant CR"]
+    Resources["Applied Resources"]
+
+    Template --> Policies --> Renderer --> Tenant --> Resources
+
+    classDef block fill:#fff8e1,stroke:#ffca28,stroke-width:2px;
+    class Template,Policies,Renderer,Tenant,Resources block;
+```
+
 ### Default Policies
 
 ```yaml

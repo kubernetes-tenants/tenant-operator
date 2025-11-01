@@ -292,6 +292,15 @@ sequenceDiagram
       <li><a href="/troubleshooting">Troubleshooting</a> - Common issues</li>
     </ul>
   </div>
+
+  <div class="custom-block note">
+    <p class="custom-block-title">Integrations</p>
+    <ul>
+      <li><a href="/integration-external-dns">ExternalDNS</a> - Automate DNS lifecycle per tenant</li>
+      <li><a href="/integration-terraform-operator">Terraform Operator</a> - Provision cloud services via GitOps</li>
+      <li><a href="/integration-argocd">Argo CD</a> - 1:1 Tenant ↔ Application GitOps delivery</li>
+    </ul>
+  </div>
 </div>
 
 ## Community
