@@ -8,6 +8,24 @@ This guide shows how to integrate Tenant Operator with ExternalDNS for automatic
 
 **ExternalDNS** synchronizes exposed Kubernetes Services and Ingresses with DNS providers like AWS Route53, Google Cloud DNS, Cloudflare, and more. When integrated with Tenant Operator, each tenant's DNS records are automatically created and deleted as tenants are provisioned.
 
+```mermaid
+flowchart LR
+    Tenant["Tenant CR<br/>(Ingress/Service templates)"]
+    Resource["Kubernetes Ingress/Service"]
+    ExternalDNS["ExternalDNS Controller"]
+    Provider["DNS Provider<br/>(Route53, Cloudflare, ...)"]
+    DNS["DNS Records<br/>(tenant.example.com)"]
+
+    Tenant --> Resource --> ExternalDNS --> Provider --> DNS
+
+    classDef tenant fill:#e3f2fd,stroke:#64b5f6,stroke-width:2px;
+    class Tenant tenant;
+    classDef external fill:#f3e5f5,stroke:#ba68c8,stroke-width:2px;
+    class ExternalDNS external;
+    classDef provider fill:#fff8e1,stroke:#ffca28,stroke-width:2px;
+    class Provider,DNS provider;
+```
+
 ### Use Cases
 
 - **Multi-tenant SaaS**: Automatic subdomain creation per tenant (e.g., `tenant-a.example.com`, `tenant-b.example.com`)

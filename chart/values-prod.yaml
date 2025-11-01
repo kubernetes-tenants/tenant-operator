@@ -1,0 +1,113 @@
+# values-prod.yaml
+# Production-ready configuration with security and monitoring enabled
+#
+# ✅ PRODUCTION BEST PRACTICES:
+# - Webhooks ENABLED (validation & defaulting)
+# - cert-manager REQUIRED (must be pre-installed)
+# - Monitoring enabled (Prometheus ServiceMonitor)
+# - Network policies enabled
+# - High availability configuration
+# - Proper resource limits
+#
+# ⚠️  PREREQUISITE: cert-manager must be installed first
+# kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+# Use specific image tags in production (not latest)
+image:
+  pullPolicy: Always
+  # tag should be set explicitly during deployment
+  # tag: "v1.0.0"
+
+# Production resource limits
+resources:
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# ✅ ENABLE cert-manager integration for webhook certificates
+# cert-manager MUST be pre-installed in the cluster
+certManager:
+  enabled: true
+  install: false  # cert-manager should be pre-installed as a cluster-wide resource
+
+# ✅ ENABLE webhooks for validation and defaulting (PRODUCTION REQUIREMENT)
+webhook:
+  enabled: true
+  certificate:
+    # Change this to your production certificate issuer
+    issuerName: letsencrypt-prod  # Or use "selfsigned-issuer" for testing
+    issuerKind: ClusterIssuer      # Or "Issuer" for namespace-scoped
+    duration: 2160h  # 90 days
+    renewBefore: 720h  # 30 days
+
+# Enable Prometheus monitoring
+monitoring:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 10s
+  labels:
+    prometheus: kube-prometheus
+
+# Enable network policies for security
+networkPolicy:
+  enabled: true
+  metrics:
+    namespaceSelector:
+      matchLabels:
+        monitoring: enabled
+  webhook:
+    namespaceSelector:
+      matchLabels:
+        webhooks: enabled
+
+# High availability setup
+replicaCount: 2
+
+# Pod anti-affinity for better availability
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - tenant-operator
+          topologyKey: kubernetes.io/hostname
+
+# Production tolerations for dedicated nodes
+tolerations:
+  - key: "workload"
+    operator: "Equal"
+    value: "operators"
+    effect: "NoSchedule"
+
+# Production node selector
+nodeSelector:
+  workload-type: "operators"
+
+# Production annotations
+commonAnnotations:
+  environment: "production"
+  managed-by: "helm"
+
+# Production labels
+commonLabels:
+  environment: "production"
+
+# Service annotations for production
+service:
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8443"
+    prometheus.io/scheme: "https"
+
+# Pod annotations for production monitoring
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8081"

@@ -8,6 +8,24 @@ Complete guide for configuring MySQL datasources with Tenant Operator.
 
 Tenant Operator reads tenant data from external MySQL databases and automatically provisions Kubernetes resources. This guide covers database setup, column mappings, and data transformation techniques.
 
+```mermaid
+flowchart LR
+    DB[(MySQL Datasource)]
+    Sync[TenantRegistry<br/>Controller]
+    API[Kubernetes API Server]
+    Tenants[Tenant CRs]
+    Resources["Tenant Resources<br/>(Deployments, Services, ...)"]
+
+    DB -- syncInterval --> Sync
+    Sync -- creates/updates --> API
+    API -- persists --> Tenants
+    Sync -- garbage-collects --> API
+    API -- drives --> Resources
+
+    classDef controller fill:#e3f2fd,stroke:#64b5f6,stroke-width:2px;
+    class Sync controller;
+```
+
 ::: info Scope
 Examples focus on MySQL, but the same patterns apply to other relational sources when they are supported.
 :::
@@ -193,6 +211,20 @@ For Option B (VARCHAR status):
 ## Data Transformation with Views
 
 If your database schema doesn't match the required format, create a MySQL VIEW to transform data.
+
+```mermaid
+flowchart LR
+    subgraph Source["Source Tables"]
+        Raw["tenants_raw"]
+    end
+    View["MySQL VIEW<br/>(SELECT ... CASE ...)"]
+    Operator["TenantRegistry Sync"]
+    Templates["Tenant Templates"]
+
+    Raw -- "normalize columns" --> View
+    View -- "SELECT *" --> Operator
+    Operator -- "renders variables" --> Templates
+```
 
 ### Use Case 1: Transform Status String to Truthy Value
 

@@ -8,6 +8,28 @@ Templates are the core of Tenant Operator's resource generation system. This gui
 
 Tenant Operator uses Go's `text/template` engine with the Sprig function library, providing 200+ built-in functions.
 
+```mermaid
+flowchart LR
+    Registry["TenantRegistry<br/>Row Data"]
+    Template["TenantTemplate<br/>TResource"]
+    Renderer["Template Renderer<br/>(text/template + Sprig)"]
+    Tenant["Tenant CR<br/>resolved spec"]
+    K8s["Kubernetes Resources"]
+
+    Registry -- variables --> Template
+    Template -- inputs --> Renderer
+    Renderer -- renders --> Tenant
+    Tenant -- SSA apply --> K8s
+
+    classDef component fill:#e8f5e9,stroke:#81c784,stroke-width:2px;
+    classDef data fill:#f3e5f5,stroke:#ba68c8,stroke-width:2px;
+    class Registry data;
+    class Template component;
+    class Renderer component;
+    class Tenant component;
+    class K8s data;
+```
+
 ::: v-pre
 
 ### Template Syntax

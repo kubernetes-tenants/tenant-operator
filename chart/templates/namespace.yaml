@@ -1,0 +1,16 @@
+{{- if .Values.namespace.create }}
+{{- $namespaceName := include "tenant-operator.namespace" . }}
+{{- $existingNamespace := lookup "v1" "Namespace" "" $namespaceName }}
+{{- if not $existingNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $namespaceName }}
+  labels:
+    {{- include "tenant-operator.labels" . | nindent 4 }}
+  {{- with include "tenant-operator.annotations" . }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

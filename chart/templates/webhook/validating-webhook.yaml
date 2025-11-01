@@ -1,0 +1,53 @@
+{{- if .Values.webhook.enabled }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ include "tenant-operator.validatingWebhookName" . }}
+  labels:
+    {{- include "tenant-operator.labels" . | nindent 4 }}
+  {{- if .Values.certManager.enabled }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ include "tenant-operator.namespace" . }}/{{ include "tenant-operator.webhookCertificateName" . }}
+  {{- end }}
+webhooks:
+- name: vtenantregistry.kb.io
+  admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "tenant-operator.webhookServiceName" . }}
+      namespace: {{ include "tenant-operator.namespace" . }}
+      path: /validate-operator-kubernetes-tenants-org-v1-tenantregistry
+  failurePolicy: Fail
+  rules:
+  - apiGroups:
+    - operator.kubernetes-tenants.org
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - tenantregistries
+  sideEffects: None
+- name: vtenanttemplate.kb.io
+  admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "tenant-operator.webhookServiceName" . }}
+      namespace: {{ include "tenant-operator.namespace" . }}
+      path: /validate-operator-kubernetes-tenants-org-v1-tenanttemplate
+  failurePolicy: Fail
+  rules:
+  - apiGroups:
+    - operator.kubernetes-tenants.org
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - tenanttemplates
+  sideEffects: None
+{{- end }}

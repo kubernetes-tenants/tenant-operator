@@ -1,0 +1,230 @@
+{{- if .Values.rbac.create -}}
+---
+# Leader Election Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "tenant-operator.leaderElectionRoleName" . }}
+  namespace: {{ include "tenant-operator.namespace" . }}
+  labels:
+    {{- include "tenant-operator.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+# Manager ClusterRole - Main operator permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "tenant-operator.managerRoleName" . }}
+  labels:
+    {{- include "tenant-operator.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - namespaces
+  - persistentvolumeclaims
+  - secrets
+  - serviceaccounts
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  - deployments
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - operator.kubernetes-tenants.org
+  resources:
+  - tenantregistries
+  - tenants
+  - tenanttemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - operator.kubernetes-tenants.org
+  resources:
+  - tenantregistries/finalizers
+  - tenants/finalizers
+  - tenanttemplates/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - operator.kubernetes-tenants.org
+  resources:
+  - tenantregistries/status
+  - tenants/status
+  - tenanttemplates/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+# Metrics Reader ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "tenant-operator.metricsReaderRoleName" . }}
+  labels:
+    {{- include "tenant-operator.labels" . | nindent 4 }}
+rules:
+- nonResourceURLs:
+  - "/metrics"
+  verbs:
+  - get
+---
+# Proxy ClusterRole - For metrics authentication
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "tenant-operator.proxyRoleName" . }}
+  labels:
+    {{- include "tenant-operator.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+# Leader Election RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "tenant-operator.leaderElectionRoleBindingName" . }}
+  namespace: {{ include "tenant-operator.namespace" . }}
+  labels:
+    {{- include "tenant-operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "tenant-operator.leaderElectionRoleName" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "tenant-operator.serviceAccountName" . }}
+  namespace: {{ include "tenant-operator.namespace" . }}
+---
+# Manager ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "tenant-operator.managerRoleBindingName" . }}
+  labels:
+    {{- include "tenant-operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "tenant-operator.managerRoleName" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "tenant-operator.serviceAccountName" . }}
+  namespace: {{ include "tenant-operator.namespace" . }}
+---
+# Proxy ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "tenant-operator.proxyRoleBindingName" . }}
+  labels:
+    {{- include "tenant-operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "tenant-operator.proxyRoleName" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "tenant-operator.serviceAccountName" . }}
+  namespace: {{ include "tenant-operator.namespace" . }}
+{{- end }}

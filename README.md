@@ -195,6 +195,22 @@ sequenceDiagram
    - Smart watch predicates to filter unnecessary reconciliations
    - Event-driven architecture for immediate drift detection
 
+## Supported Kubernetes Versions & Upgrade Policy
+
+- **Compatibility philosophy**: The operator builds on GA/stable Kubernetes APIs and controller-runtime patterns, so it is intentionally decoupled from any single cluster release and targets the upstream version-skew support window.
+- **Validated range**: End-to-end tests and production workloads currently cover Kubernetes v1.28 through v1.33, and we operate live production clusters on v1.33 today. Other versions are expected to work, but validate in staging before rolling out broadly.
+- **Upgrade guidance**: Review the Helm chart `values.yaml` and release notes, then use `helm upgrade --install` for a rolling upgrade. Breaking changes or API removals are always called out in the release notes and CHANGELOG.
+
+| Kubernetes Version | Status |
+|--------------------|--------|
+| v1.28              | ✅ Validated |
+| v1.29              | ✅ Validated |
+| v1.30              | ✅ Validated |
+| v1.31              | ✅ Validated |
+| v1.32              | ✅ Validated |
+| v1.33              | ✅ Validated |
+| Other GA releases  | ⚠️ Expected |
+
 ---
 
 ## 🚀 Quick Start
@@ -213,6 +229,56 @@ sequenceDiagram
 
 ### 1. Install the Operator
 
+#### Option A: Install with Helm (Recommended) 🎯
+
+**Prerequisites:** cert-manager must be installed in all environments (including local development)
+
+**For local development (minikube/kind):**
+
+```bash
+# Step 1: Install cert-manager (REQUIRED)
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+# Wait for cert-manager to be ready
+kubectl wait --for=condition=Available --timeout=300s -n cert-manager \
+  deployment/cert-manager \
+  deployment/cert-manager-webhook \
+  deployment/cert-manager-cainjector
+
+# Step 2: Add Helm repository
+helm repo add tenant-operator https://kubernetes-tenants.github.io/tenant-operator
+helm repo update
+
+# Step 3: Install with local development values
+helm install tenant-operator tenant-operator/tenant-operator \
+  -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/chart/values-local.yaml \
+  --namespace tenant-operator-system \
+  --create-namespace
+```
+
+**For production environments:**
+
+```bash
+# Step 1: Install cert-manager (REQUIRED)
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+# Wait for cert-manager to be ready
+kubectl wait --for=condition=Available --timeout=300s -n cert-manager \
+  deployment/cert-manager \
+  deployment/cert-manager-webhook \
+  deployment/cert-manager-cainjector
+
+# Step 2: Install tenant-operator with production values
+helm install tenant-operator tenant-operator/tenant-operator \
+  -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/chart/values-prod.yaml \
+  --namespace tenant-operator-system \
+  --create-namespace
+```
+
+**See [Helm Chart README](chart/README.md) for detailed configuration options.**
+
+#### Option B: Install with Kustomize
+
 **cert-manager is required** for webhook TLS certificate management.
 
 ```bash
@@ -230,7 +296,7 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-ope
 kubectl apply -k https://github.com/kubernetes-tenants/tenant-operator/config/default
 ```
 
-**Or from source:**
+#### Option C: Install from Source
 
 ```bash
 git clone https://github.com/kubernetes-tenants/tenant-operator.git

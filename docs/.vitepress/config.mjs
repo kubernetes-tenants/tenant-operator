@@ -69,6 +69,10 @@ export default withMermaid(
               text: "Terraform Operator",
               link: "/integration-terraform-operator",
             },
+            {
+              text: "Argo CD",
+              link: "/integration-argocd",
+            },
           ],
         },
         {

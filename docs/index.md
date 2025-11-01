@@ -29,6 +29,10 @@ features:
     title: Server-Side Apply (SSA)
     details: Kubernetes-native declarative resource management with conflict-free updates using SSA field manager
 
+  - icon: 🧩
+    title: Native + Custom Resources
+    details: Provision any API resource—including your own CRDs—alongside core Kubernetes objects with the same template workflow
+
   - icon: 📊
     title: Dependency Management
     details: DAG-based resource ordering with automatic cycle detection and topological sorting
@@ -256,11 +260,28 @@ sequenceDiagram
 ### 🔧 Advanced Capabilities
 
 - **Multi-template support**: One registry → multiple templates
+- **Custom-resource friendly**: Render and apply arbitrary CRs once their CRD exists in the cluster
 - **Garbage collection**: Auto-delete when rows removed or activate=false
 - **Drift detection**: Event-driven watches with auto-correction
 - **Smart requeue**: 30-second intervals for fast status reflection
 - **Resource readiness**: 11+ resource types with custom checks
 - **Finalizers**: Safe cleanup respecting deletion policies
+
+## Supported Versions & Upgrade Policy
+
+- **Compatibility philosophy**: The operator relies only on GA/stable Kubernetes APIs and controller-runtime patterns, so it is not tightly coupled to a specific cluster release and is designed to work across the supported upstream version skew.
+- **Validated range**: End-to-end tests and production verification currently cover Kubernetes clusters from v1.28 through v1.33, with live production tenants running on v1.33 today. Earlier or newer versions are expected to function, but validate in a staging environment before rolling out broadly.
+- **Upgrade guidance**: Review the Helm chart `values.yaml` and the release notes, then use `helm upgrade --install` to perform rolling upgrades. Any breaking changes or API removals are called out explicitly in the release notes and CHANGELOG.
+
+| Kubernetes Version | Status |
+|--------------------|--------|
+| v1.28              | ✅ Validated |
+| v1.29              | ✅ Validated |
+| v1.30              | ✅ Validated |
+| v1.31              | ✅ Validated |
+| v1.32              | ✅ Validated |
+| v1.33              | ✅ Validated |
+| Other GA releases  | ⚠️ Expected |
 
 ## Documentation
 
@@ -290,6 +311,15 @@ sequenceDiagram
       <li><a href="/monitoring">Monitoring</a> - Prometheus metrics & alerts</li>
       <li><a href="/security">Security</a> - RBAC & best practices</li>
       <li><a href="/troubleshooting">Troubleshooting</a> - Common issues</li>
+    </ul>
+  </div>
+
+  <div class="custom-block note">
+    <p class="custom-block-title">Integrations</p>
+    <ul>
+      <li><a href="/integration-external-dns">ExternalDNS</a> - Automate DNS lifecycle per tenant</li>
+      <li><a href="/integration-terraform-operator">Terraform Operator</a> - Provision cloud services via GitOps</li>
+      <li><a href="/integration-argocd">Argo CD</a> - 1:1 Tenant ↔ Application GitOps delivery</li>
     </ul>
   </div>
 </div>

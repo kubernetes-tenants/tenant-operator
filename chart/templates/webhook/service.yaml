@@ -1,0 +1,22 @@
+{{- if .Values.webhook.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tenant-operator.webhookServiceName" . }}
+  namespace: {{ include "tenant-operator.namespace" . }}
+  labels:
+    {{- include "tenant-operator.labels" . | nindent 4 }}
+  {{- with .Values.webhook.serviceAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.webhook.serviceType }}
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: {{ .Values.webhook.port }}
+    name: webhook
+  selector:
+    {{- include "tenant-operator.selectorLabels" . | nindent 4 }}
+{{- end }}
