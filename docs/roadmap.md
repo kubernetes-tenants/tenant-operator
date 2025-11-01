@@ -42,11 +42,10 @@ Additional datasources and operational improvements
   - Connection pooling
   - SSL/TLS support
 
-- [ ] **Helm Chart Distribution**
-  - Official Helm chart
-  - Artifact Hub listing
-  - Customizable values
-  - Easy upgrades
+- ✅ **Helm Chart Distribution**
+  - Helm chart published via GitHub Releases
+  - Public repo: https://kubernetes-tenants.github.io/tenant-operator
+  - Customizable values and upgrade path with `helm upgrade`
 
 - [ ] **OperatorHub Bundle**
   - Ship OLM-compatible bundle manifests
