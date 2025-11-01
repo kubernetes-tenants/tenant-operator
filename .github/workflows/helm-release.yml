@@ -96,6 +96,7 @@ jobs:
             --charts-repo https://kubernetes-tenants.github.io/tenant-operator \
             --index-path ./index.yaml \
             --pages-branch gh-pages \
+            --release-name-template "v{{ .Version }}" \
             --push
 
       - name: Create release summary
