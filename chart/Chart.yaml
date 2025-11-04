@@ -37,22 +37,77 @@ icon: https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/
 
 # Annotations for Artifact Hub
 annotations:
-  category: Infrastructure
-  licenses: Apache-2.0
-  artifacthub.io/changes: |
-    - kind: added
-      description: Initial Helm chart release
+  # Category
+  artifacthub.io/category: integration-delivery
+
+  # License
+  artifacthub.io/license: Apache-2.0
+
+  # Operator metadata
   artifacthub.io/operator: "true"
   artifacthub.io/operatorCapabilities: Full Lifecycle
+
+  # Release status
   artifacthub.io/prerelease: "true"
   artifacthub.io/containsSecurityUpdates: "false"
+
+  # Changelog (will be updated per release)
+  artifacthub.io/changes: |
+    - kind: added
+      description: Initial Helm chart release with full operator support
+    - kind: added
+      description: Support for TenantRegistry, TenantTemplate, and Tenant CRDs
+    - kind: added
+      description: Webhook validation and defaulting
+    - kind: added
+      description: Prometheus metrics and ServiceMonitor support
+
+  # Recommendations
   artifacthub.io/recommendations: |
     - url: https://cert-manager.io
+
+  # Links
   artifacthub.io/links: |
     - name: Documentation
       url: https://docs.kubernetes-tenants.org/
-    - name: GitHub
+    - name: GitHub Repository
       url: https://github.com/kubernetes-tenants/tenant-operator
+    - name: Issues
+      url: https://github.com/kubernetes-tenants/tenant-operator/issues
+    - name: Discussions
+      url: https://github.com/kubernetes-tenants/tenant-operator/discussions
+
+  # Maintainers (additional to Chart maintainers)
+  artifacthub.io/maintainers: |
+    - name: Tim Kang
+      email: rationlunas@gmail.com
+
+  # Installation notes
+  artifacthub.io/install: |
+    # Prerequisites
+
+    ## cert-manager (REQUIRED)
+
+    This chart requires cert-manager to be installed in your cluster:
+
+    ```bash
+    kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+    ```
+
+    ## Installation
+
+    ```bash
+    helm repo add tenant-operator https://kubernetes-tenants.github.io/tenant-operator
+    helm repo update
+    helm install tenant-operator tenant-operator/tenant-operator
+    ```
+
+    See the [installation guide](https://docs.kubernetes-tenants.org/installation.html#installation-methods) for more details.
+
+  # Screenshots (optional - add if available)
+  # artifacthub.io/screenshots: |
+  #   - title: Dashboard
+  #     url: https://example.com/screenshot.png
   # CRITICAL: cert-manager is REQUIRED for ALL installations (production and development)
   # Webhooks (validation/defaulting) require cert-manager for TLS certificate management
   # cert-manager must be installed BEFORE installing this chart

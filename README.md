@@ -257,8 +257,8 @@ helm install tenant-operator tenant-operator/tenant-operator \
 
 # or specific alpha version
 helm install tenant-operator tenant-operator/tenant-operator \
-  -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/v1.1.0-alpha.2/chart/values-local.yaml \
-  --version 1.1.0-alpha.2 \
+  -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/v1.1.0-alpha.3/chart/values-local.yaml \
+  --version 1.1.0-alpha.3 \
   --devel \
   --namespace tenant-operator-system \
   --create-namespace

@@ -1,0 +1,21 @@
+# Artifact Hub repository metadata file
+# This file should be placed in the root of the Helm repository (gh-pages branch)
+# See https://github.com/artifacthub/hub/blob/master/docs/metadata/artifacthub-repo.yml
+#
+# Note: Repository display name, description, logo, and links are configured in Chart.yaml annotations
+# This file only contains ownership and ignore patterns
+
+# Repository ID (assigned by Artifact Hub after first registration)
+# This enables the "Verified Publisher" badge
+repositoryID: 8dbf6f79-a5e9-431d-97cc-4be0211d331a
+
+# Owners (for claiming repository ownership in Artifact Hub)
+owners:
+  - name: Tim Kang
+    email: rationlunas@gmail.com
+
+# Packages to ignore (optional)
+# ignore:
+#   - name: package-name
+#   - name: package-name-2
+#     version: "^1\\..*"  # Regex pattern (omit to ignore all versions)

@@ -47,11 +47,6 @@ Additional datasources and operational improvements
   - Public repo: https://kubernetes-tenants.github.io/tenant-operator
   - Customizable values and upgrade path with `helm upgrade`
 
-- [ ] **OperatorHub Bundle**
-  - Ship OLM-compatible bundle manifests
-  - Publish to community-operators catalog
-  - Streamlined install via OperatorHub UI
-
 - [ ] **Enhanced Metrics Dashboard**
   - Pre-built Grafana dashboards
   - AlertManager rules

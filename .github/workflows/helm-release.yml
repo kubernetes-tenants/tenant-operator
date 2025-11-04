@@ -99,6 +99,28 @@ jobs:
             --release-name-template "v{{ .Version }}" \
             --push
 
+      - name: Deploy Artifact Hub metadata to gh-pages
+        run: |
+          # Clone gh-pages branch
+          git clone --single-branch --branch gh-pages https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/kubernetes-tenants/tenant-operator.git gh-pages-repo
+
+          # Copy artifacthub-repo.yml to gh-pages root
+          cp chart/artifacthub-repo.yml gh-pages-repo/artifacthub-repo.yml
+
+          # Commit and push if changed
+          cd gh-pages-repo
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+          if git diff --quiet artifacthub-repo.yml; then
+            echo "No changes to artifacthub-repo.yml"
+          else
+            git add artifacthub-repo.yml
+            git commit -m "Update Artifact Hub repository metadata"
+            git push origin gh-pages
+            echo "✅ Artifact Hub metadata deployed to gh-pages"
+          fi
+
       - name: Create release summary
         run: |
           VERSION="${{ steps.extract_version.outputs.version }}"
