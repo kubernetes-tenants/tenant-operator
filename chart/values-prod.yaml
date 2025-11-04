@@ -16,7 +16,7 @@
 image:
   pullPolicy: Always
   # tag should be set explicitly during deployment
-  # tag: "v1.0.0"
+  # tag: "1.1.0"
 
 # Production resource limits
 resources:

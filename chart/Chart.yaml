@@ -50,7 +50,7 @@ annotations:
     - url: https://cert-manager.io
   artifacthub.io/links: |
     - name: Documentation
-      url: https://kubernetes-tenants.github.io/tenant-operator
+      url: https://docs.kubernetes-tenants.org/
     - name: GitHub
       url: https://github.com/kubernetes-tenants/tenant-operator
   # CRITICAL: cert-manager is REQUIRED for ALL installations (production and development)

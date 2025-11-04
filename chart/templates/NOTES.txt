@@ -107,7 +107,7 @@ CONFIGURATION:
 {{- end }}
 
 DOCUMENTATION:
-  📚 Docs:    https://kubernetes-tenants.github.io/tenant-operator
+  📚 Docs:    https://docs.kubernetes-tenants.org/
   💻 GitHub:  https://github.com/kubernetes-tenants/tenant-operator
   🐛 Issues:  https://github.com/kubernetes-tenants/tenant-operator/issues
 

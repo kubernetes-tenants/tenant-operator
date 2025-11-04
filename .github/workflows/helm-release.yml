@@ -117,7 +117,7 @@ jobs:
 
           - Chart Version: ${VERSION}
           - App Version: ${VERSION}
-          - Image: ghcr.io/kubernetes-tenants/tenant-operator:v${VERSION}
+          - Image: ghcr.io/kubernetes-tenants/tenant-operator:${VERSION}
 
           ### Files
 

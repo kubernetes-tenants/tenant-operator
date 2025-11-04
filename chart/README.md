@@ -58,6 +58,14 @@ helm install tenant-operator tenant-operator/tenant-operator \
   -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/chart/values-local.yaml \
   --namespace tenant-operator-system \
   --create-namespace
+
+# or specific alpha version
+helm install tenant-operator tenant-operator/tenant-operator \
+  -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/v1.1.0-alpha.2/chart/values-local.yaml \
+  --version 1.1.0-alpha.2 \
+  --devel \
+  --namespace tenant-operator-system \
+  --create-namespace
 ```
 
 **Note**: Local values use lower resource requirements and self-signed certificates, but webhooks remain enabled for consistency with production.
