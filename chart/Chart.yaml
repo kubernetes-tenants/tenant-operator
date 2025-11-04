@@ -45,7 +45,7 @@ annotations:
 
   # Operator metadata
   artifacthub.io/operator: "true"
-  artifacthub.io/operatorCapabilities: Full Lifecycle
+  artifacthub.io/operatorCapabilities: Deep Insights
 
   # Release status
   artifacthub.io/prerelease: "true"
