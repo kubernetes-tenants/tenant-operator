@@ -13,6 +13,8 @@ repositoryID: 8dbf6f79-a5e9-431d-97cc-4be0211d331a
 owners:
   - name: Tim Kang
     email: rationlunas@gmail.com
+  - name: Tim Kang
+    email: sh.kang@ecubelabs.com
 
 # Packages to ignore (optional)
 # ignore:
