@@ -84,6 +84,8 @@ const (
 // +kubebuilder:rbac:groups=batch,resources=jobs;cronjobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
+// NOTE: Cross-namespace resource support requires cluster-wide permissions for resource types
+// The above RBAC rules allow the operator to create resources in any namespace when targetNamespace is specified
 
 // Reconcile applies all resources for a tenant
 func (r *TenantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -626,7 +628,7 @@ func (r *TenantReconciler) collectResourcesFromTenant(tenant *tenantsv1.Tenant) 
 }
 
 // renderResource renders a resource template
-// Note: NameTemplate, LabelsTemplate, AnnotationsTemplate are already rendered by Registry controller
+// Note: NameTemplate, LabelsTemplate, AnnotationsTemplate, TargetNamespace are already rendered by Registry controller
 // We only need to render the spec (unstructured.Unstructured) contents which may contain template variables
 func (r *TenantReconciler) renderResource(ctx context.Context, engine *template.Engine, resource tenantsv1.TResource, vars template.Variables, tenant *tenantsv1.Tenant) (*unstructured.Unstructured, error) {
 	// Get spec (already an unstructured.Unstructured)
@@ -637,9 +639,12 @@ func (r *TenantReconciler) renderResource(ctx context.Context, engine *template.
 		obj.SetName(resource.NameTemplate)
 	}
 
-	// Set namespace to Tenant CR's namespace
-	// All resources are created in the same namespace as the Tenant CR
-	obj.SetNamespace(tenant.Namespace)
+	// Set namespace: use TargetNamespace if specified, otherwise use Tenant CR's namespace
+	targetNamespace := tenant.Namespace
+	if resource.TargetNamespace != "" {
+		targetNamespace = resource.TargetNamespace
+	}
+	obj.SetNamespace(targetNamespace)
 
 	// Set labels
 	labels := resource.LabelsTemplate
@@ -647,8 +652,11 @@ func (r *TenantReconciler) renderResource(ctx context.Context, engine *template.
 		labels = make(map[string]string)
 	}
 
-	// For Namespaces, add tracking labels since they cannot have ownerReferences
-	if obj.GetKind() == "Namespace" {
+	// For cross-namespace resources or Namespaces, add tracking labels
+	// since they cannot have ownerReferences
+	isCrossNamespace := targetNamespace != tenant.Namespace
+	isNamespaceResource := obj.GetKind() == "Namespace"
+	if isCrossNamespace || isNamespaceResource {
 		labels["kubernetes-tenants.org/tenant"] = tenant.Name
 		labels["kubernetes-tenants.org/tenant-namespace"] = tenant.Namespace
 	}
@@ -1096,7 +1104,7 @@ func (r *TenantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&tenantsv1.Tenant{}).
 		Named("tenant").
-		// Watch owned resources for drift detection with predicates
+		// Watch owned resources for drift detection with predicates (same-namespace with ownerReference)
 		// When these resources are modified, the parent Tenant will be reconciled
 		// Predicates ensure we only react to meaningful changes (generation/annotations)
 		Owns(&corev1.ServiceAccount{}, builder.WithPredicates(ownedResourcePredicate)).
@@ -1110,23 +1118,82 @@ func (r *TenantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&batchv1.Job{}, builder.WithPredicates(ownedResourcePredicate)).
 		Owns(&batchv1.CronJob{}, builder.WithPredicates(ownedResourcePredicate)).
 		Owns(&networkingv1.Ingress{}, builder.WithPredicates(ownedResourcePredicate)).
-		// Watch Namespaces created by Tenant using labels
-		// Namespaces cannot have ownerReferences, so we use label-based tracking
+		// Watch resources with label-based tracking (cross-namespace or resources without ownerReference support)
+		// These use labels for tracking: kubernetes-tenants.org/tenant and kubernetes-tenants.org/tenant-namespace
 		Watches(
 			&corev1.Namespace{},
-			handler.EnqueueRequestsFromMapFunc(r.findTenantForNamespace),
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&corev1.ServiceAccount{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&corev1.Service{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&corev1.ConfigMap{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&corev1.PersistentVolumeClaim{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&appsv1.Deployment{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&appsv1.StatefulSet{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&appsv1.DaemonSet{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&batchv1.Job{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&batchv1.CronJob{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&networkingv1.Ingress{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
 			builder.WithPredicates(ownedResourcePredicate),
 		).
 		Complete(r)
 }
 
-// findTenantForNamespace maps a Namespace to its Tenant using labels
-func (r *TenantReconciler) findTenantForNamespace(ctx context.Context, obj client.Object) []ctrl.Request {
-	ns := obj.(*corev1.Namespace)
+// findTenantForLabeledResource maps any resource to its Tenant using tracking labels
+// This supports cross-namespace resources and resources without ownerReference support (like Namespaces)
+func (r *TenantReconciler) findTenantForLabeledResource(ctx context.Context, obj client.Object) []ctrl.Request {
+	// Check if this resource has our tracking labels
+	labels := obj.GetLabels()
+	if labels == nil {
+		return nil
+	}
 
-	// Check if this namespace has our tracking labels
-	tenantName := ns.Labels["kubernetes-tenants.org/tenant"]
-	tenantNamespace := ns.Labels["kubernetes-tenants.org/tenant-namespace"]
+	tenantName := labels["kubernetes-tenants.org/tenant"]
+	tenantNamespace := labels["kubernetes-tenants.org/tenant-namespace"]
 
 	if tenantName == "" || tenantNamespace == "" {
 		return nil

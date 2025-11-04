@@ -35,6 +35,10 @@ import (
 const (
 	// FieldManager is the name used for Server-Side Apply
 	FieldManager = "tenant-operator"
+
+	// Labels for cross-namespace resource tracking
+	LabelTenantName      = "kubernetes-tenants.org/tenant"
+	LabelTenantNamespace = "kubernetes-tenants.org/tenant-namespace"
 )
 
 // ConflictError represents a resource conflict error
@@ -76,11 +80,26 @@ func (a *Applier) ApplyResource(
 	conflictPolicy tenantsv1.ConflictPolicy,
 	patchStrategy tenantsv1.PatchStrategy,
 ) (bool, error) {
-	// Set owner reference for all resources
-	// Note: All resources are expected to be in the same namespace as the owner
+	// Set owner reference or tracking labels based on namespace
 	if owner != nil {
-		if err := controllerutil.SetControllerReference(owner, obj, a.scheme); err != nil {
-			return false, fmt.Errorf("failed to set owner reference: %w", err)
+		isCrossNamespace := obj.GetNamespace() != owner.Namespace
+		isNamespaceResource := obj.GetKind() == "Namespace"
+
+		if isCrossNamespace || isNamespaceResource {
+			// For cross-namespace resources or Namespace resources, use label-based tracking
+			// ownerReferences cannot be used across namespaces in Kubernetes
+			labels := obj.GetLabels()
+			if labels == nil {
+				labels = make(map[string]string)
+			}
+			labels[LabelTenantName] = owner.Name
+			labels[LabelTenantNamespace] = owner.Namespace
+			obj.SetLabels(labels)
+		} else {
+			// For same-namespace resources, use traditional ownerReference
+			if err := controllerutil.SetControllerReference(owner, obj, a.scheme); err != nil {
+				return false, fmt.Errorf("failed to set owner reference: %w", err)
+			}
 		}
 	}
 
@@ -176,8 +195,8 @@ func (a *Applier) DeleteResource(
 	policy tenantsv1.DeletionPolicy,
 ) error {
 	if policy == tenantsv1.DeletionPolicyRetain {
-		// Remove owner references but keep the resource
-		return a.removeOwnerReferences(ctx, obj)
+		// Remove owner references and tracking labels but keep the resource
+		return a.removeOwnerReferencesAndLabels(ctx, obj)
 	}
 
 	// Delete the resource
@@ -209,8 +228,8 @@ func (a *Applier) GetResource(
 	return nil
 }
 
-// removeOwnerReferences removes all owner references from the resource
-func (a *Applier) removeOwnerReferences(ctx context.Context, obj *unstructured.Unstructured) error {
+// removeOwnerReferencesAndLabels removes all owner references and tracking labels from the resource
+func (a *Applier) removeOwnerReferencesAndLabels(ctx context.Context, obj *unstructured.Unstructured) error {
 	// Get current resource
 	key := types.NamespacedName{
 		Name:      obj.GetName(),
@@ -228,9 +247,17 @@ func (a *Applier) removeOwnerReferences(ctx context.Context, obj *unstructured.U
 	// Remove owner references
 	current.SetOwnerReferences(nil)
 
+	// Remove tracking labels
+	labels := current.GetLabels()
+	if labels != nil {
+		delete(labels, LabelTenantName)
+		delete(labels, LabelTenantNamespace)
+		current.SetLabels(labels)
+	}
+
 	// Update the resource
 	if err := a.client.Update(ctx, current); err != nil {
-		return fmt.Errorf("failed to remove owner references: %w", err)
+		return fmt.Errorf("failed to remove owner references and labels: %w", err)
 	}
 
 	return nil

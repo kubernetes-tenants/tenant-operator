@@ -121,7 +121,6 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -139,6 +138,13 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
+                    targetNamespace:
+                      description: |-
+                        TargetNamespace specifies the namespace where the resource should be created
+                        If empty, defaults to the same namespace as the Tenant CR
+                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
+                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
+                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -218,7 +224,6 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -236,6 +241,13 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
+                    targetNamespace:
+                      description: |-
+                        TargetNamespace specifies the namespace where the resource should be created
+                        If empty, defaults to the same namespace as the Tenant CR
+                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
+                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
+                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -315,7 +327,6 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -333,6 +344,13 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
+                    targetNamespace:
+                      description: |-
+                        TargetNamespace specifies the namespace where the resource should be created
+                        If empty, defaults to the same namespace as the Tenant CR
+                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
+                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
+                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -412,7 +430,6 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -430,6 +447,13 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
+                    targetNamespace:
+                      description: |-
+                        TargetNamespace specifies the namespace where the resource should be created
+                        If empty, defaults to the same namespace as the Tenant CR
+                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
+                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
+                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -509,7 +533,6 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -527,6 +550,13 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
+                    targetNamespace:
+                      description: |-
+                        TargetNamespace specifies the namespace where the resource should be created
+                        If empty, defaults to the same namespace as the Tenant CR
+                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
+                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
+                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -608,7 +638,6 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -626,6 +655,13 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
+                    targetNamespace:
+                      description: |-
+                        TargetNamespace specifies the namespace where the resource should be created
+                        If empty, defaults to the same namespace as the Tenant CR
+                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
+                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
+                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -705,7 +741,6 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -723,6 +758,13 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
+                    targetNamespace:
+                      description: |-
+                        TargetNamespace specifies the namespace where the resource should be created
+                        If empty, defaults to the same namespace as the Tenant CR
+                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
+                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
+                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -806,7 +848,6 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -824,6 +865,13 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
+                    targetNamespace:
+                      description: |-
+                        TargetNamespace specifies the namespace where the resource should be created
+                        If empty, defaults to the same namespace as the Tenant CR
+                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
+                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
+                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -903,7 +951,6 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -921,6 +968,13 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
+                    targetNamespace:
+                      description: |-
+                        TargetNamespace specifies the namespace where the resource should be created
+                        If empty, defaults to the same namespace as the Tenant CR
+                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
+                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
+                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -1000,7 +1054,6 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -1018,6 +1071,13 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
+                    targetNamespace:
+                      description: |-
+                        TargetNamespace specifies the namespace where the resource should be created
+                        If empty, defaults to the same namespace as the Tenant CR
+                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
+                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
+                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -1097,7 +1157,6 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -1115,6 +1174,13 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
+                    targetNamespace:
+                      description: |-
+                        TargetNamespace specifies the namespace where the resource should be created
+                        If empty, defaults to the same namespace as the Tenant CR
+                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
+                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
+                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-

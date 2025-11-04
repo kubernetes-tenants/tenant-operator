@@ -119,6 +119,7 @@ type TResource struct {
     DeletionPolicy      DeletionPolicy      // Delete (default) | Retain
     ConflictPolicy      ConflictPolicy      // Stuck (default) | Force
     NameTemplate        string              // Go template for name
+    TargetNamespace     string              // Target namespace for cross-namespace resources
     LabelsTemplate      map[string]string   // Template-enabled labels
     AnnotationsTemplate map[string]string   // Template-enabled annotations
     WaitForReady        *bool               // Default: true
@@ -147,6 +148,48 @@ type TResource struct {
 - `replace` ✅: Full replacement via Update (Priority 2 implementation)
   - Handles create-if-not-exists
   - Preserves resourceVersion for conflict-free updates
+
+### Cross-Namespace Resource Support ✅
+
+**Feature**: Resources can be created in different namespaces from the Tenant CR using `targetNamespace` field.
+
+**Key Implementation Details**:
+- **Same-Namespace Resources**: Use traditional `ownerReferences` for automatic garbage collection
+- **Cross-Namespace Resources**: Use label-based tracking instead (since ownerReferences don't work across namespaces)
+- **Tracking Labels**:
+  - `kubernetes-tenants.org/tenant`: Tenant CR name
+  - `kubernetes-tenants.org/tenant-namespace`: Tenant CR namespace
+- **Automatic Detection**: Operator automatically detects cross-namespace resources and applies appropriate tracking method
+- **Namespace Resources**: Always use label-based tracking (cannot have ownerReferences)
+
+**Usage**:
+```yaml
+spec:
+  targetNamespace: "{{ .uid }}-namespace"  # Templates supported
+```
+
+**Reconciliation Behavior**:
+- **Creation**: Resources created in specified namespace with tracking labels
+- **Updates**: Same-namespace and cross-namespace resources both tracked for drift
+- **Deletion**: Label-based cleanup for cross-namespace resources
+  - `DeletionPolicy: Delete` - removes resource from target namespace
+  - `DeletionPolicy: Retain` - removes tracking labels but keeps resource
+
+**Watch Predicates**:
+- Dual tracking: Both `Owns()` (for same-namespace) and `Watches()` (for label-based) are configured
+- Cross-namespace resource changes trigger Tenant reconciliation via label selectors
+- Smart predicates reduce unnecessary reconciliations (only on Generation/Annotation changes)
+
+**RBAC Requirements**:
+- Operator requires cluster-wide permissions for resource types
+- Default RBAC rules support cross-namespace resource provisioning
+- Resources can be created in any namespace when `targetNamespace` is specified
+
+**Example Use Cases**:
+1. **Multi-Namespace Isolation**: Create tenant resources across multiple namespaces for better isolation
+2. **Shared Infrastructure**: Deploy tenant-specific resources into shared infrastructure namespaces
+3. **Dynamic Namespace Creation**: Create namespace per tenant, then populate it with resources
+4. **Organizational Boundaries**: Align resource placement with organizational namespace structure
 
 ---
 
