@@ -51,6 +51,12 @@ Additional datasources and operational improvements
   - Pre-built Grafana dashboards
   - AlertManager rules
 
+- [ ] **Cross-Namespace Resource Provisioning**
+  - Support creating tenant resources in different namespaces from TenantTemplate
+  - Currently limited to same namespace due to ownerReference constraints (cross-namespace ownership not supported in Kubernetes)
+  - Will use label-based tracking (`kubernetes-tenants.org/tenant`, `kubernetes-tenants.org/tenant-namespace`) similar to current Namespace resource tracking
+  - Enables multi-namespace tenant isolation and organizational boundaries
+
 ### Improvements
 - [ ] Improved error messages
 - [ ] Performance optimizations
