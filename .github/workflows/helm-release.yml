@@ -112,10 +112,13 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
-          if git diff --quiet artifacthub-repo.yml; then
+          # Add the file first to stage any changes
+          git add artifacthub-repo.yml
+
+          # Check if there are staged changes
+          if git diff --cached --quiet; then
             echo "No changes to artifacthub-repo.yml"
           else
-            git add artifacthub-repo.yml
             git commit -m "Update Artifact Hub repository metadata"
             git push origin gh-pages
             echo "✅ Artifact Hub metadata deployed to gh-pages"
