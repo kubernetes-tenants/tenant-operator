@@ -423,16 +423,26 @@ kubectl get tenant <name> -o jsonpath='{.status.appliedResources}'
 # List resources with tenant labels
 kubectl get all -l kubernetes-tenants.org/tenant=<tenant-name>
 
+# Find orphaned resources (retained with DeletionPolicy=Retain)
+kubectl get all -A -l kubernetes-tenants.org/orphaned=true
+
+# Find orphaned resources from this tenant
+kubectl get all -A -l kubernetes-tenants.org/orphaned=true,kubernetes-tenants.org/tenant=<tenant-name>
+
 # Check resource DeletionPolicy
 kubectl get tenanttemplate <name> -o yaml | grep -A2 deletionPolicy
 ```
 
 **Common Causes:**
 
-1. **DeletionPolicy=Retain**: Resource was intentionally retained
+1. **DeletionPolicy=Retain**: Resource was intentionally retained and marked with orphan labels
 2. **Status not syncing**: AppliedResources field not updated
 3. **Manual resource modification**: OwnerReference or labels removed manually
 4. **Operator version**: Upgrade from version without orphan cleanup
+
+::: tip Expected Behavior
+Resources with `DeletionPolicy=Retain` are **intentionally kept** in the cluster and marked with orphan labels for easy identification. This is not a bug - it's the designed behavior!
+:::
 
 **Solutions:**
 

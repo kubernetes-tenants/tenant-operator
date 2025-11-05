@@ -243,10 +243,15 @@ spec:
    - For each orphaned resource:
      - Respect `DeletionPolicy`:
        - `Delete`: Remove resource from cluster
-       - `Retain`: Remove ownerReference/labels, keep resource
-     - Log deletion event with reason "RemovedFromTemplate"
+       - `Retain`: Remove ownerReference/tracking labels, keep resource, add orphan labels
+     - Log deletion/retention event with reason "RemovedFromTemplate"
+   - **Orphan Labels** (for retained resources):
+     - `kubernetes-tenants.org/orphaned: "true"`
+     - `kubernetes-tenants.org/orphaned-at: "<RFC3339 timestamp>"`
+     - `kubernetes-tenants.org/orphaned-reason: "RemovedFromTemplate" | "TenantDeleted"`
    - Runs before applying new resources to prevent conflicts
    - Enables dynamic template evolution without manual cleanup
+   - Easy identification of retained orphan resources via label selectors
 
 7. **For Each Resource in Order**:
    - **Check CreationPolicy** ✅:

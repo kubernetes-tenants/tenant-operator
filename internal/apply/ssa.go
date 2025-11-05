@@ -39,6 +39,11 @@ const (
 	// Labels for cross-namespace resource tracking
 	LabelTenantName      = "kubernetes-tenants.org/tenant"
 	LabelTenantNamespace = "kubernetes-tenants.org/tenant-namespace"
+
+	// Labels for orphaned resources (DeletionPolicy=Retain)
+	LabelOrphaned       = "kubernetes-tenants.org/orphaned"
+	LabelOrphanedAt     = "kubernetes-tenants.org/orphaned-at"
+	LabelOrphanedReason = "kubernetes-tenants.org/orphaned-reason"
 )
 
 // ConflictError represents a resource conflict error
@@ -193,10 +198,12 @@ func (a *Applier) DeleteResource(
 	ctx context.Context,
 	obj *unstructured.Unstructured,
 	policy tenantsv1.DeletionPolicy,
+	orphanReason string,
 ) error {
 	if policy == tenantsv1.DeletionPolicyRetain {
 		// Remove owner references and tracking labels but keep the resource
-		return a.removeOwnerReferencesAndLabels(ctx, obj)
+		// Add orphan labels to mark it as retained orphan
+		return a.removeOwnerReferencesAndLabels(ctx, obj, orphanReason)
 	}
 
 	// Delete the resource
@@ -229,7 +236,8 @@ func (a *Applier) GetResource(
 }
 
 // removeOwnerReferencesAndLabels removes all owner references and tracking labels from the resource
-func (a *Applier) removeOwnerReferencesAndLabels(ctx context.Context, obj *unstructured.Unstructured) error {
+// and adds orphan labels to mark it as a retained orphan resource
+func (a *Applier) removeOwnerReferencesAndLabels(ctx context.Context, obj *unstructured.Unstructured, orphanReason string) error {
 	// Get current resource
 	key := types.NamespacedName{
 		Name:      obj.GetName(),
@@ -247,13 +255,24 @@ func (a *Applier) removeOwnerReferencesAndLabels(ctx context.Context, obj *unstr
 	// Remove owner references
 	current.SetOwnerReferences(nil)
 
-	// Remove tracking labels
+	// Update labels: remove tracking labels and add orphan labels
 	labels := current.GetLabels()
-	if labels != nil {
-		delete(labels, LabelTenantName)
-		delete(labels, LabelTenantNamespace)
-		current.SetLabels(labels)
+	if labels == nil {
+		labels = make(map[string]string)
 	}
+
+	// Remove tracking labels
+	delete(labels, LabelTenantName)
+	delete(labels, LabelTenantNamespace)
+
+	// Add orphan labels
+	labels[LabelOrphaned] = "true"
+	labels[LabelOrphanedAt] = metav1.Now().Format("2006-01-02T15:04:05Z")
+	if orphanReason != "" {
+		labels[LabelOrphanedReason] = orphanReason
+	}
+
+	current.SetLabels(labels)
 
 	// Update the resource
 	if err := a.client.Update(ctx, current); err != nil {

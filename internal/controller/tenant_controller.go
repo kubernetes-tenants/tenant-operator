@@ -1107,22 +1107,24 @@ func (r *TenantReconciler) cleanupTenantResources(ctx context.Context, tenant *t
 		resourceKind := rendered.GetKind()
 
 		// Apply deletion policy
+		orphanReason := "TenantDeleted"
+
 		switch res.DeletionPolicy {
 		case tenantsv1.DeletionPolicyRetain:
 			// Remove ownerReferences but keep resource
-			logger.Info("Retaining resource (removing ownerReferences)",
+			logger.Info("Retaining resource (removing ownerReferences and adding orphan labels)",
 				"resource", resourceName,
 				"kind", resourceKind,
 				"namespace", rendered.GetNamespace())
 
-			if err := applier.DeleteResource(ctx, rendered, tenantsv1.DeletionPolicyRetain); err != nil {
+			if err := applier.DeleteResource(ctx, rendered, tenantsv1.DeletionPolicyRetain, orphanReason); err != nil {
 				logger.Error(err, "Failed to retain resource",
 					"resource", resourceName,
 					"kind", resourceKind)
 				// Continue with other resources
 			} else {
 				r.Recorder.Eventf(tenant, corev1.EventTypeNormal, "ResourceRetained",
-					"Resource %s/%s retained (ownerReferences removed)", resourceKind, resourceName)
+					"Resource %s/%s retained with orphan labels (ownerReferences removed)", resourceKind, resourceName)
 			}
 
 		case tenantsv1.DeletionPolicyDelete, "":
@@ -1132,7 +1134,7 @@ func (r *TenantReconciler) cleanupTenantResources(ctx context.Context, tenant *t
 				"kind", resourceKind,
 				"namespace", rendered.GetNamespace())
 
-			if err := applier.DeleteResource(ctx, rendered, tenantsv1.DeletionPolicyDelete); err != nil {
+			if err := applier.DeleteResource(ctx, rendered, tenantsv1.DeletionPolicyDelete, orphanReason); err != nil {
 				// Log error but continue - ownerReferences will handle cleanup
 				logger.V(1).Info("Resource deletion delegated to ownerReference garbage collection",
 					"resource", resourceName,
@@ -1362,16 +1364,6 @@ func (r *TenantReconciler) deleteOrphanedResource(ctx context.Context, tenant *t
 		}
 	}
 
-	// If DeletionPolicy is Retain, don't delete the orphaned resource
-	if deletionPolicy == tenantsv1.DeletionPolicyRetain {
-		logger.V(1).Info("Orphaned resource has DeletionPolicy=Retain, skipping deletion",
-			"key", key,
-			"kind", kind,
-			"namespace", namespace,
-			"name", name)
-		return nil
-	}
-
 	// Create an unstructured object to represent the resource
 	obj := &unstructured.Unstructured{}
 	obj.SetKind(kind)
@@ -1382,29 +1374,42 @@ func (r *TenantReconciler) deleteOrphanedResource(ctx context.Context, tenant *t
 	apiVersion := r.getAPIVersionForKind(kind)
 	obj.SetAPIVersion(apiVersion)
 
-	// Delete the resource
+	// Delete or retain the resource based on DeletionPolicy
 	applier := apply.NewApplier(r.Client, r.Scheme)
-	if err := applier.DeleteResource(ctx, obj, tenantsv1.DeletionPolicyDelete); err != nil {
+	orphanReason := "RemovedFromTemplate"
+
+	if err := applier.DeleteResource(ctx, obj, deletionPolicy, orphanReason); err != nil {
 		if !errors.IsNotFound(err) {
-			logger.Error(err, "Failed to delete orphaned resource",
+			logger.Error(err, "Failed to handle orphaned resource",
 				"key", key,
 				"kind", kind,
 				"namespace", namespace,
-				"name", name)
+				"name", name,
+				"deletionPolicy", deletionPolicy)
 			return err
 		}
 		// Resource already gone, treat as success
 	}
 
-	logger.Info("Deleted orphaned resource",
-		"key", key,
-		"kind", kind,
-		"namespace", namespace,
-		"name", name,
-		"resourceID", resourceID)
-
-	r.Recorder.Eventf(tenant, corev1.EventTypeNormal, "OrphanedResourceDeleted",
-		"Deleted orphaned resource %s/%s (ID: %s) - removed from template", kind, name, resourceID)
+	if deletionPolicy == tenantsv1.DeletionPolicyRetain {
+		logger.Info("Retained orphaned resource with orphan labels",
+			"key", key,
+			"kind", kind,
+			"namespace", namespace,
+			"name", name,
+			"resourceID", resourceID)
+		r.Recorder.Eventf(tenant, corev1.EventTypeNormal, "OrphanedResourceRetained",
+			"Retained orphaned resource %s/%s (ID: %s) - removed from template, marked with orphan labels", kind, name, resourceID)
+	} else {
+		logger.Info("Deleted orphaned resource",
+			"key", key,
+			"kind", kind,
+			"namespace", namespace,
+			"name", name,
+			"resourceID", resourceID)
+		r.Recorder.Eventf(tenant, corev1.EventTypeNormal, "OrphanedResourceDeleted",
+			"Deleted orphaned resource %s/%s (ID: %s) - removed from template", kind, name, resourceID)
+	}
 
 	return nil
 }

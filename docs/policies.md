@@ -214,11 +214,38 @@ After removing the `worker` deployment from template:
 After removing the `web` deployment from template:
 - `web` deployment: **Deleted from cluster** automatically
 
+**Orphan Labels:**
+
+When resources are retained (DeletionPolicy=Retain), they are automatically marked with special labels for easy identification:
+
+```yaml
+metadata:
+  labels:
+    kubernetes-tenants.org/orphaned: "true"
+    kubernetes-tenants.org/orphaned-at: "2025-01-15T10:30:00Z"
+    kubernetes-tenants.org/orphaned-reason: "RemovedFromTemplate"
+```
+
+**Finding orphaned resources:**
+
+```bash
+# Find all orphaned resources
+kubectl get all -A -l kubernetes-tenants.org/orphaned=true
+
+# Find resources orphaned due to template changes
+kubectl get all -A -l kubernetes-tenants.org/orphaned-reason=RemovedFromTemplate
+
+# Find resources orphaned due to tenant deletion
+kubectl get all -A -l kubernetes-tenants.org/orphaned-reason=TenantDeleted
+```
+
 **Benefits:**
 - ✅ Safe template evolution without manual cleanup
-- ✅ No orphaned resources accumulation
+- ✅ No orphaned resources accumulation (Delete policy)
+- ✅ Easy identification of retained orphans (Retain policy)
 - ✅ DeletionPolicy consistency across all deletion scenarios
 - ✅ Automatic detection during normal reconciliation
+- ✅ Tracking of orphan timestamp and reason
 
 ## Protecting Tenants from Cascade Deletion
 

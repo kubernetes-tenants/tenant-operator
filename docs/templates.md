@@ -536,9 +536,29 @@ deployments:
 ```
 
 **Result:**
-- `worker` deployment: **Retained** in cluster (ownerReference removed)
+- `worker` deployment: **Retained** in cluster with orphan labels (ownerReference removed)
 - `cache` deployment: **Deleted** from cluster
 - `web` deployment: Continues to be managed normally
+
+**Orphan labels added to retained resources:**
+
+```yaml
+metadata:
+  labels:
+    kubernetes-tenants.org/orphaned: "true"
+    kubernetes-tenants.org/orphaned-at: "2025-01-15T10:30:00Z"
+    kubernetes-tenants.org/orphaned-reason: "RemovedFromTemplate"
+```
+
+You can easily find these orphaned resources later:
+
+```bash
+# Find all orphaned resources
+kubectl get all -A -l kubernetes-tenants.org/orphaned=true
+
+# Find resources orphaned due to template changes
+kubectl get all -A -l kubernetes-tenants.org/orphaned-reason=RemovedFromTemplate
+```
 
 **How it works:**
 

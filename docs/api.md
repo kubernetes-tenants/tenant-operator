@@ -248,9 +248,37 @@ kubernetes-tenants.org/created-once: "true"
 ### Resource Tracking Labels
 
 ```yaml
-# For Namespaces (cannot have ownerReferences)
+# For cross-namespace resources (cannot use ownerReferences)
 kubernetes-tenants.org/tenant: tenant-name
 kubernetes-tenants.org/tenant-namespace: tenant-namespace
+
+# For orphaned resources (DeletionPolicy=Retain)
+kubernetes-tenants.org/orphaned: "true"
+kubernetes-tenants.org/orphaned-at: "2025-01-15T10:30:00Z"
+kubernetes-tenants.org/orphaned-reason: "RemovedFromTemplate" | "TenantDeleted"
+```
+
+**Orphan Labels:**
+
+These labels are automatically added to resources when they are retained (not deleted) due to `DeletionPolicy=Retain`:
+
+- **`orphaned`**: Always set to `"true"` to mark the resource as orphaned
+- **`orphaned-at`**: Timestamp (RFC3339) when the resource became orphaned
+- **`orphaned-reason`**: Reason for becoming orphaned:
+  - `RemovedFromTemplate`: Resource was removed from TenantTemplate
+  - `TenantDeleted`: Tenant CR was deleted
+
+**Finding orphaned resources:**
+
+```bash
+# Find all orphaned resources
+kubectl get all -A -l kubernetes-tenants.org/orphaned=true
+
+# Find orphaned resources by reason
+kubectl get all -A -l kubernetes-tenants.org/orphaned-reason=RemovedFromTemplate
+
+# Find orphaned resources from a specific tenant
+kubectl get all -A -l kubernetes-tenants.org/orphaned=true,kubernetes-tenants.org/tenant=my-tenant
 ```
 
 ## Examples
