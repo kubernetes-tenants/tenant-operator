@@ -80,6 +80,7 @@ export default withMermaid(
           collapsed: false,
           items: [
             { text: "Development Guide", link: "/development" },
+            { text: "Contributing a Datasource", link: "/contributing-datasource" },
             { text: "Roadmap", link: "/roadmap" },
           ],
         },

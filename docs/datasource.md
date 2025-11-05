@@ -1,12 +1,25 @@
 # DataSource Configuration Guide
 
-Complete guide for configuring MySQL datasources with Tenant Operator.
+Complete guide for configuring datasources with Tenant Operator.
 
 [[toc]]
 
 ## Overview
 
-Tenant Operator reads tenant data from external MySQL databases and automatically provisions Kubernetes resources. This guide covers database setup, column mappings, and data transformation techniques.
+Tenant Operator reads tenant data from external datasources and automatically provisions Kubernetes resources. This guide covers database setup, column mappings, and data transformation techniques.
+
+## Supported Datasources
+
+| Datasource | Status | Since | Guide |
+|------------|--------|-------|-------|
+| MySQL | ✅ Stable | v1.0 | [MySQL Guide](#mysql-connection) |
+| PostgreSQL | 🚧 Planned | v1.2 | Coming soon |
+| Custom | 💡 Contribute | - | [Contribution Guide](contributing-datasource.md) |
+
+::: tip Want to Add a Datasource?
+Tenant Operator uses a pluggable adapter pattern. Contributing a new datasource is straightforward!
+**See**: [Contributing a New Datasource](contributing-datasource.md)
+:::
 
 ```mermaid
 flowchart LR
@@ -587,9 +600,116 @@ tenant-3       https://gamma.myapp.com         0          free               ap-
 
 **Result:** 2 Tenant CRs created (tenant-1, tenant-2). tenant-3 is skipped because `is_active = "0"`.
 
+## Contributing a New Datasource
+
+Want to add support for PostgreSQL, MongoDB, REST APIs, or other datasources?
+
+Tenant Operator uses a **pluggable adapter pattern** that makes it easy to add new datasources. You only need to:
+
+1. **Implement 2 methods**: `QueryTenants()` and `Close()`
+2. **Register your adapter**: Add it to the factory function
+3. **Add API types**: Define your datasource configuration
+4. **Write tests**: Ensure quality and reliability
+5. **Document**: Help users configure your datasource
+
+### Why Contribute?
+
+- ✅ **Easy to implement** - Clear interface, reference implementation
+- ✅ **Well-structured** - Adapter pattern isolates your code
+- ✅ **Impactful** - Help the community use their preferred datasources
+- ✅ **Recognized** - Contributors listed in release notes and README
+
+### Getting Started
+
+**📚 Full Guide**: [Contributing a New Datasource](contributing-datasource.md)
+
+The guide includes:
+- Step-by-step implementation instructions
+- Complete code examples (including PostgreSQL)
+- Testing strategies
+- Documentation templates
+- PR checklist
+
+### Example Adapters
+
+**MySQL** (reference implementation):
+- Location: `internal/datasource/mysql.go`
+- Lines of code: ~200
+- Features: Connection pooling, filtering, mapping
+
+**PostgreSQL** (example in guide):
+- Full implementation shown
+- Shows SQL dialect differences
+- Demonstrates best practices
+
+### Architecture
+
+```mermaid
+flowchart TB
+    Controller[Registry Controller]
+    Interface[Datasource Interface]
+    MySQL[MySQL Adapter]
+    Postgres[PostgreSQL Adapter]
+    Your[Your Adapter]
+
+    Controller -->|uses| Interface
+    Interface -.implements.-> MySQL
+    Interface -.implements.-> Postgres
+    Interface -.implements.-> Your
+
+    classDef interface fill:#fff3e0,stroke:#ffb74d
+    classDef adapter fill:#e3f2fd,stroke:#64b5f6
+    class Interface interface
+    class MySQL,Postgres,Your adapter
+```
+
+### Quick Start
+
+```go
+// 1. Create your adapter file
+// internal/datasource/your_adapter.go
+
+package datasource
+
+type YourAdapter struct {
+    conn *YourConnection
+}
+
+func NewYourAdapter(config Config) (*YourAdapter, error) {
+    // Connect to your datasource
+    return &YourAdapter{conn: conn}, nil
+}
+
+func (a *YourAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]TenantRow, error) {
+    // Query and return tenant data
+    return tenants, nil
+}
+
+func (a *YourAdapter) Close() error {
+    // Cleanup
+    return a.conn.Close()
+}
+
+// 2. Register in factory (internal/datasource/interface.go)
+case SourceTypeYours:
+    return NewYourAdapter(config)
+```
+
+### Community Support
+
+Need help? We're here!
+
+- 💬 [GitHub Discussions](https://github.com/kubernetes-tenants/tenant-operator/discussions) - Ask questions
+- 📖 [Full Guide](contributing-datasource.md) - Detailed instructions
+- 🐛 [Issues](https://github.com/kubernetes-tenants/tenant-operator/issues) - Report problems
+- 📧 [Email](mailto:rationlunas@gmail.com) - Direct contact
+
+Start contributing today and make Tenant Operator work with your favorite datasource! 🚀
+
 ## See Also
 
 - [Configuration Guide](configuration.md) - Registry and template configuration
 - [Templates Guide](templates.md) - Using template variables
 - [Security Guide](security.md) - Securing database credentials
 - [Troubleshooting Guide](troubleshooting.md) - Common issues and solutions
+- [Contributing a New Datasource](contributing-datasource.md) - Full contribution guide

@@ -604,6 +604,18 @@ make test-coverage
 
 We welcome contributions! Whether it's bug reports, feature requests, documentation improvements, or code contributions.
 
+### 🌟 Want to Add a New Datasource?
+
+Tenant Operator uses a **pluggable adapter pattern** that makes it easy to add support for new datasources (PostgreSQL, MongoDB, REST APIs, etc.).
+
+**Why contribute a datasource?**
+- ✅ Only 2 methods to implement
+- ✅ MySQL reference implementation to follow
+- ✅ Complete step-by-step guide provided
+- ✅ Recognition in release notes
+
+📚 **Full Guide**: [Contributing a New Datasource](docs/contributing-datasource.md)
+
 ### How to Contribute
 
 1. **Fork** the repository
