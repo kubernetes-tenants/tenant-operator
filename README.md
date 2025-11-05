@@ -23,7 +23,7 @@
 
 ## 📖 Overview
 
-**Tenant Operator** is a Kubernetes operator that automates the provisioning, configuration, and lifecycle management of multi-tenant applications. It reads tenant data from external data sources (MySQL, PostgreSQL) and dynamically creates, updates, and manages Kubernetes resources using template-based declarative configuration.
+**Tenant Operator** is a Kubernetes operator that automates the provisioning, configuration, and lifecycle management of multi-tenant applications. It reads tenant data from external data sources (MySQL, with PostgreSQL planned for v1.2) and dynamically creates, updates, and manages Kubernetes resources using template-based declarative configuration.
 
 ### Why Tenant Operator?
 
@@ -49,7 +49,7 @@ Multi-tenant SaaS platforms face common challenges:
 
 | Feature | Description |
 |---------|-------------|
-| **🗄️ Database-Driven** | Read tenant configurations from MySQL (PostgreSQL planned) |
+| **🗄️ Database-Driven** | Read tenant configurations from MySQL (PostgreSQL planned for v1.2) |
 | **📝 Declarative Templates** | Go templates with 200+ Sprig functions for dynamic resource generation |
 | **🔄 Server-Side Apply** | Kubernetes SSA for conflict-free, efficient resource management |
 | **📊 Dependency Management** | DAG-based resource ordering with automatic dependency resolution |
@@ -88,7 +88,7 @@ Multi-tenant SaaS platforms face common challenges:
 ```mermaid
 flowchart TB
     subgraph External["External Data Source"]
-        DB[(MySQL / PostgreSQL)]
+        DB[(MySQL / PostgreSQL*)]
     end
 
     subgraph Cluster["Kubernetes Cluster"]
@@ -141,6 +141,8 @@ flowchart TB
     style SSA fill:#fce4ec,stroke:#f06292,stroke-width:2px
     style DB fill:#f3e5f5,stroke:#ba68c8,stroke-width:2px
 ```
+
+> \* **MySQL**: Fully supported (v1.0+) | **PostgreSQL**: Planned for v1.2
 
 ### Reconciliation Flow
 
@@ -226,7 +228,7 @@ sequenceDiagram
   - Automatically provisions and renews TLS certificates
   - Required for validating/mutating webhooks
   - Installation: `kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml`
-- **MySQL database** (optional) - for tenant data source (PostgreSQL support planned for v1.1)
+- **MySQL database** (optional) - for tenant data source (PostgreSQL support planned for v1.2)
 
 ### 1. Install the Operator
 
@@ -638,10 +640,13 @@ See [full roadmap](docs/roadmap.md) for details.
 | Webhooks | ✅ Stable | 100% | Validation complete |
 | Performance Optimizations | ✅ Stable | 100% | Fast reconciliation, smart predicates |
 | Multi-Template Support | ✅ Stable | 100% | One registry, multiple templates |
-| PostgreSQL | 🚧 Planned | - | Q2 2025 |
-| REST API Source | 🚧 Planned | - | Q2 2025 |
+| Cross-Namespace Provisioning | ✅ Stable | 100% | v1.1 - Label-based tracking |
+| Orphan Resource Cleanup | ✅ Stable | 100% | v1.1 - Automatic detection & cleanup |
+| PostgreSQL | 🚧 Planned | - | v1.2 |
+| Enhanced Metrics Dashboard | 🚧 Planned | - | v1.2 |
+| REST API Source | 🚧 Planned | - | Future |
 
-**Current Version:** v1.0.0
+**Current Version:** v1.1.0
 **Kubernetes Compatibility:** v1.11.3+
 **Production Status:** ✅ Ready
 

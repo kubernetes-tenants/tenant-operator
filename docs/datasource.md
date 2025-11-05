@@ -27,7 +27,7 @@ flowchart LR
 ```
 
 ::: info Scope
-Examples focus on MySQL, but the same patterns apply to other relational sources when they are supported.
+Examples focus on MySQL (currently supported). PostgreSQL support is planned for v1.2, and the same patterns will apply to other relational sources.
 :::
 
 ## MySQL Connection

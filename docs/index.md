@@ -145,7 +145,7 @@ status:
 ```mermaid
 flowchart TB
     subgraph External["External Data Source"]
-        DB[(MySQL / PostgreSQL)]
+        DB[(MySQL / PostgreSQL*)]
     end
 
     subgraph Cluster["Kubernetes Cluster"]
@@ -198,6 +198,11 @@ flowchart TB
     style SSA fill:#fce4ec,stroke:#f06292,stroke-width:2px
     style DB fill:#f3e5f5,stroke:#ba68c8,stroke-width:2px
 ```
+
+::: info Database Support
+\* **MySQL**: Fully supported (v1.0+)
+\* **PostgreSQL**: Planned for v1.2
+:::
 
 ### Reconciliation Flow
 

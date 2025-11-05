@@ -31,7 +31,7 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 
 ### Optional
 
-- **MySQL database** for tenant data source (PostgreSQL support planned for v1.1)
+- **MySQL database** for tenant data source (PostgreSQL support planned for v1.2)
 
 ## Installation Methods
 

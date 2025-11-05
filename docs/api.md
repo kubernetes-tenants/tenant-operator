@@ -23,7 +23,7 @@ metadata:
 spec:
   # Data source configuration
   source:
-    type: mysql                      # mysql (postgresql planned)
+    type: mysql                      # mysql (postgresql planned for v1.2)
     mysql:
       host: string                   # Database host (required)
       port: int                      # Database port (default: 3306)

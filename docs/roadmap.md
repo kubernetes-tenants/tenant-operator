@@ -4,7 +4,7 @@ Future plans and feature roadmap for Tenant Operator.
 
 [[toc]]
 
-## v1.0 (Current) ✅
+## v1.0 ✅
 
 ::: info Status
 Released
@@ -30,26 +30,18 @@ Released
 - ✅ Label-based namespace tracking
 - ✅ Efficient database querying
 
-## v1.1
+## v1.1 (Current) ✅
 
 ::: info Focus
-Additional datasources and operational improvements
+Cross-namespace support and operational improvements
 :::
 
 ### New Features
-- [ ] **PostgreSQL Datasource**
-  - Full PostgreSQL support
-  - Connection pooling
-  - SSL/TLS support
 
 - ✅ **Helm Chart Distribution**
   - Helm chart published via GitHub Releases
   - Public repo: https://kubernetes-tenants.github.io/tenant-operator
   - Customizable values and upgrade path with `helm upgrade`
-
-- [ ] **Enhanced Metrics Dashboard**
-  - Pre-built Grafana dashboards
-  - AlertManager rules
 
 - ✅ **Cross-Namespace Resource Provisioning**
   - Support creating tenant resources in different namespaces using `targetNamespace` field
@@ -57,6 +49,37 @@ Additional datasources and operational improvements
   - Automatic detection: same-namespace uses ownerReferences, cross-namespace uses labels
   - Dual watch system: `Owns()` for same-namespace + `Watches()` with label selectors for cross-namespace
   - Enables multi-namespace tenant isolation and organizational boundaries
+
+- ✅ **Orphan Resource Cleanup**
+  - Automatic detection and cleanup of resources removed from templates
+  - Status-based tracking with `appliedResources` field
+  - Respects DeletionPolicy (Delete/Retain)
+  - Orphan labels for retained resources for easy identification
+
+### Improvements
+- ✅ Fast reconciliation (30s requeue)
+- ✅ Smart watch predicates
+- ✅ Event-driven architecture optimizations
+
+## v1.2
+
+::: info Focus
+Additional datasources and enhanced observability
+:::
+
+### New Features
+
+- [ ] **PostgreSQL Datasource**
+  - Full PostgreSQL support
+  - Connection pooling
+  - SSL/TLS support
+  - Query optimization
+
+- [ ] **Enhanced Metrics Dashboard**
+  - Pre-built Grafana dashboards
+  - Comprehensive AlertManager rules
+  - Multi-tenant metrics visualization
+  - Performance analytics
 
 ### Improvements
 - [ ] Improved error messages
