@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
-	"github.com/kubernetes-tenants/tenant-operator/internal/database"
+	"github.com/kubernetes-tenants/tenant-operator/internal/datasource"
 	"github.com/kubernetes-tenants/tenant-operator/internal/metrics"
 	"github.com/kubernetes-tenants/tenant-operator/internal/template"
 )
@@ -147,7 +147,7 @@ func (r *TenantRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 	desired := make(map[TenantKey]struct {
 		Template *tenantsv1.TenantTemplate
-		Row      database.TenantRow
+		Row      datasource.TenantRow
 	})
 
 	for _, tmpl := range templates {
@@ -158,7 +158,7 @@ func (r *TenantRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			}
 			desired[key] = struct {
 				Template *tenantsv1.TenantTemplate
-				Row      database.TenantRow
+				Row      datasource.TenantRow
 			}{
 				Template: tmpl,
 				Row:      row,
@@ -242,52 +242,74 @@ func (r *TenantRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 }
 
 // queryDatabase connects to database and retrieves tenant rows
-func (r *TenantRegistryReconciler) queryDatabase(ctx context.Context, registry *tenantsv1.TenantRegistry) ([]database.TenantRow, error) {
-	if registry.Spec.Source.Type != tenantsv1.SourceTypeMySQL {
-		return nil, fmt.Errorf("unsupported source type: %s", registry.Spec.Source.Type)
-	}
+func (r *TenantRegistryReconciler) queryDatabase(ctx context.Context, registry *tenantsv1.TenantRegistry) ([]datasource.TenantRow, error) {
+	// Determine datasource type
+	sourceType := datasource.SourceType(registry.Spec.Source.Type)
 
-	mysql := registry.Spec.Source.MySQL
-	if mysql == nil {
-		return nil, fmt.Errorf("MySQL configuration is nil")
-	}
-
-	// Get password from Secret
+	// Get password from Secret (MySQL/PostgreSQL specific)
 	password := ""
-	if mysql.PasswordRef != nil {
+	if registry.Spec.Source.MySQL != nil && registry.Spec.Source.MySQL.PasswordRef != nil {
 		secret := &corev1.Secret{}
 		if err := r.Get(ctx, types.NamespacedName{
-			Name:      mysql.PasswordRef.Name,
+			Name:      registry.Spec.Source.MySQL.PasswordRef.Name,
 			Namespace: registry.Namespace,
 		}, secret); err != nil {
 			return nil, fmt.Errorf("failed to get password secret: %w", err)
 		}
-		password = string(secret.Data[mysql.PasswordRef.Key])
+		password = string(secret.Data[registry.Spec.Source.MySQL.PasswordRef.Key])
 	}
 
-	// Connect to MySQL
-	dbClient, err := database.NewMySQLClient(database.MySQLConfig{
-		Host:     mysql.Host,
-		Port:     mysql.Port,
-		Username: mysql.Username,
-		Password: password,
-		Database: mysql.Database,
-	})
+	// Build datasource config
+	config, table, err := r.buildDatasourceConfig(registry, password)
 	if err != nil {
 		return nil, err
 	}
+
+	// Create datasource adapter
+	ds, err := datasource.NewDatasource(sourceType, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create datasource: %w", err)
+	}
 	defer func() {
-		_ = dbClient.Close() // Best effort close
+		_ = ds.Close() // Best effort close
 	}()
 
 	// Query tenants
-	valueMappings := database.ValueMappings{
-		UID:       registry.Spec.ValueMappings.UID,
-		HostOrURL: registry.Spec.ValueMappings.HostOrURL,
-		Activate:  registry.Spec.ValueMappings.Activate,
+	queryConfig := datasource.QueryConfig{
+		Table: table,
+		ValueMappings: datasource.ValueMappings{
+			UID:       registry.Spec.ValueMappings.UID,
+			HostOrURL: registry.Spec.ValueMappings.HostOrURL,
+			Activate:  registry.Spec.ValueMappings.Activate,
+		},
+		ExtraMappings: registry.Spec.ExtraValueMappings,
 	}
 
-	return dbClient.QueryTenants(ctx, mysql.Table, valueMappings, registry.Spec.ExtraValueMappings)
+	return ds.QueryTenants(ctx, queryConfig)
+}
+
+// buildDatasourceConfig builds datasource configuration from TenantRegistry spec
+func (r *TenantRegistryReconciler) buildDatasourceConfig(registry *tenantsv1.TenantRegistry, password string) (datasource.Config, string, error) {
+	switch registry.Spec.Source.Type {
+	case tenantsv1.SourceTypeMySQL:
+		mysql := registry.Spec.Source.MySQL
+		if mysql == nil {
+			return datasource.Config{}, "", fmt.Errorf("MySQL configuration is nil")
+		}
+
+		config := datasource.Config{
+			Host:     mysql.Host,
+			Port:     mysql.Port,
+			Username: mysql.Username,
+			Password: password,
+			Database: mysql.Database,
+		}
+
+		return config, mysql.Table, nil
+
+	default:
+		return datasource.Config{}, "", fmt.Errorf("unsupported source type: %s", registry.Spec.Source.Type)
+	}
 }
 
 // getTemplatesForRegistry retrieves all TenantTemplates that reference this registry
@@ -471,7 +493,7 @@ func (r *TenantRegistryReconciler) renderResource(
 }
 
 // createTenant creates a new Tenant CR
-func (r *TenantRegistryReconciler) createTenant(ctx context.Context, registry *tenantsv1.TenantRegistry, tmpl *tenantsv1.TenantTemplate, row database.TenantRow) error {
+func (r *TenantRegistryReconciler) createTenant(ctx context.Context, registry *tenantsv1.TenantRegistry, tmpl *tenantsv1.TenantTemplate, row datasource.TenantRow) error {
 	logger := log.FromContext(ctx)
 
 	// 1. Build template variables
@@ -527,7 +549,7 @@ func (r *TenantRegistryReconciler) createTenant(ctx context.Context, registry *t
 }
 
 // shouldUpdateTenant checks if a tenant needs to be updated based on data changes or template changes
-func (r *TenantRegistryReconciler) shouldUpdateTenant(ctx context.Context, registry *tenantsv1.TenantRegistry, tenant *tenantsv1.Tenant, row database.TenantRow) bool {
+func (r *TenantRegistryReconciler) shouldUpdateTenant(ctx context.Context, registry *tenantsv1.TenantRegistry, tenant *tenantsv1.Tenant, row datasource.TenantRow) bool {
 	// Check if stored data differs from current row data
 	storedHostOrURL := tenant.Annotations["kubernetes-tenants.org/hostOrUrl"]
 	storedActivate := tenant.Annotations["kubernetes-tenants.org/activate"]
@@ -563,7 +585,7 @@ func (r *TenantRegistryReconciler) shouldUpdateTenant(ctx context.Context, regis
 }
 
 // updateTenant updates an existing Tenant CR with new data from database
-func (r *TenantRegistryReconciler) updateTenant(ctx context.Context, registry *tenantsv1.TenantRegistry, tmpl *tenantsv1.TenantTemplate, tenant *tenantsv1.Tenant, row database.TenantRow) error {
+func (r *TenantRegistryReconciler) updateTenant(ctx context.Context, registry *tenantsv1.TenantRegistry, tmpl *tenantsv1.TenantTemplate, tenant *tenantsv1.Tenant, row datasource.TenantRow) error {
 	logger := log.FromContext(ctx)
 
 	// Check what triggered the update

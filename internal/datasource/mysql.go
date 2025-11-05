@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package database
+package datasource
 
 import (
 	"context"
@@ -25,30 +25,13 @@ import (
 	_ "github.com/go-sql-driver/mysql" // MySQL driver
 )
 
-// MySQLClient wraps a MySQL database connection
-type MySQLClient struct {
+// MySQLAdapter implements the Datasource interface for MySQL
+type MySQLAdapter struct {
 	db *sql.DB
 }
 
-// TenantRow represents a row from the tenant table
-type TenantRow struct {
-	UID       string
-	HostOrURL string
-	Activate  string
-	Extra     map[string]string
-}
-
-// MySQLConfig holds MySQL connection configuration
-type MySQLConfig struct {
-	Host     string
-	Port     int32
-	Username string
-	Password string
-	Database string
-}
-
-// NewMySQLClient creates a new MySQL client
-func NewMySQLClient(config MySQLConfig) (*MySQLClient, error) {
+// NewMySQLAdapter creates a new MySQL datasource adapter
+func NewMySQLAdapter(config Config) (*MySQLAdapter, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true",
 		config.Username,
 		config.Password,
@@ -63,9 +46,25 @@ func NewMySQLClient(config MySQLConfig) (*MySQLClient, error) {
 	}
 
 	// Set connection pool settings
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(5 * time.Minute)
+	maxOpenConns := config.MaxOpenConns
+	if maxOpenConns == 0 {
+		maxOpenConns = 25 // Default
+	}
+	db.SetMaxOpenConns(maxOpenConns)
+
+	maxIdleConns := config.MaxIdleConns
+	if maxIdleConns == 0 {
+		maxIdleConns = 5 // Default
+	}
+	db.SetMaxIdleConns(maxIdleConns)
+
+	connMaxLifetime := 5 * time.Minute // Default
+	if config.ConnMaxLifetime != "" {
+		if parsed, err := time.ParseDuration(config.ConnMaxLifetime); err == nil {
+			connMaxLifetime = parsed
+		}
+	}
+	db.SetConnMaxLifetime(connMaxLifetime)
 
 	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -76,38 +75,30 @@ func NewMySQLClient(config MySQLConfig) (*MySQLClient, error) {
 		return nil, fmt.Errorf("failed to ping MySQL: %w", err)
 	}
 
-	return &MySQLClient{db: db}, nil
+	return &MySQLAdapter{db: db}, nil
 }
 
-// Close closes the database connection
-func (c *MySQLClient) Close() error {
-	if c.db != nil {
-		return c.db.Close()
-	}
-	return nil
-}
-
-// QueryTenants queries active tenants from the database
-func (c *MySQLClient) QueryTenants(ctx context.Context, table string, valueMappings ValueMappings, extraMappings map[string]string) ([]TenantRow, error) {
+// QueryTenants queries active tenants from the MySQL database
+func (a *MySQLAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]TenantRow, error) {
 	// Build column list
 	columns := []string{
-		valueMappings.UID,
-		valueMappings.HostOrURL,
-		valueMappings.Activate,
+		config.ValueMappings.UID,
+		config.ValueMappings.HostOrURL,
+		config.ValueMappings.Activate,
 	}
 
 	// Add extra columns
-	extraColumns := make([]string, 0, len(extraMappings))
-	for _, col := range extraMappings {
+	extraColumns := make([]string, 0, len(config.ExtraMappings))
+	for _, col := range config.ExtraMappings {
 		columns = append(columns, col)
 		extraColumns = append(extraColumns, col)
 	}
 
 	// Build query
-	query := fmt.Sprintf("SELECT %s FROM %s", joinColumns(columns), table)
+	query := fmt.Sprintf("SELECT %s FROM %s", joinColumns(columns), config.Table)
 
 	// Execute query
-	rows, err := c.db.QueryContext(ctx, query)
+	rows, err := a.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tenants: %w", err)
 	}
@@ -142,7 +133,7 @@ func (c *MySQLClient) QueryTenants(ctx context.Context, table string, valueMappi
 		}
 
 		// Map extra values using stable indices
-		for key, col := range extraMappings {
+		for key, col := range config.ExtraMappings {
 			idx, ok := colIndex[col]
 			if !ok {
 				// Column not in result set (shouldn't happen)
@@ -169,11 +160,12 @@ func (c *MySQLClient) QueryTenants(ctx context.Context, table string, valueMappi
 	return tenants, nil
 }
 
-// ValueMappings defines required column mappings
-type ValueMappings struct {
-	UID       string
-	HostOrURL string
-	Activate  string
+// Close closes the database connection
+func (a *MySQLAdapter) Close() error {
+	if a.db != nil {
+		return a.db.Close()
+	}
+	return nil
 }
 
 // Helper functions
