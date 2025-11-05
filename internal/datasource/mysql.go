@@ -113,8 +113,11 @@ func (a *MySQLAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]
 			Extra: make(map[string]string),
 		}
 
+		// Use NullString for required fields to handle NULL values
+		var uid, hostOrURL, activate sql.NullString
+
 		// Prepare scan destinations
-		scanDest := []interface{}{&row.UID, &row.HostOrURL, &row.Activate}
+		scanDest := []interface{}{&uid, &hostOrURL, &activate}
 
 		// Add extra column destinations
 		extraValues := make([]sql.NullString, len(extraColumns))
@@ -124,6 +127,17 @@ func (a *MySQLAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]
 
 		if err := rows.Scan(scanDest...); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+
+		// Convert NullString to string (NULL becomes empty string)
+		if uid.Valid {
+			row.UID = uid.String
+		}
+		if hostOrURL.Valid {
+			row.HostOrURL = hostOrURL.String
+		}
+		if activate.Valid {
+			row.Activate = activate.String
 		}
 
 		// Map extra values - Build column index map first for stable mapping
