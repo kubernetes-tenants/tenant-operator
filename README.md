@@ -10,6 +10,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/kubernetes-tenants/tenant-operator)](https://goreportcard.com/report/github.com/kubernetes-tenants/tenant-operator)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/tenant-operator)](https://artifacthub.io/packages/search?repo=tenant-operator)
 [![Build Status](https://github.com/kubernetes-tenants/tenant-operator/actions/workflows/build-push.yml/badge.svg)](https://github.com/kubernetes-tenants/tenant-operator/actions/workflows/build-push.yml)
 [![Container Image](https://img.shields.io/badge/container-ghcr.io-blue)](https://github.com/kubernetes-tenants/tenant-operator/pkgs/container/tenant-operator)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/kubernetes-tenants/tenant-operator)](go.mod)
@@ -22,7 +23,7 @@
 
 ## 📖 Overview
 
-**Tenant Operator** is a Kubernetes operator that automates the provisioning, configuration, and lifecycle management of multi-tenant applications. It reads tenant data from external data sources (MySQL, PostgreSQL) and dynamically creates, updates, and manages Kubernetes resources using template-based declarative configuration.
+**Tenant Operator** is a Kubernetes operator that automates the provisioning, configuration, and lifecycle management of multi-tenant applications. It reads tenant data from external data sources (MySQL, with PostgreSQL planned for v1.2) and dynamically creates, updates, and manages Kubernetes resources using template-based declarative configuration.
 
 ### Why Tenant Operator?
 
@@ -48,7 +49,7 @@ Multi-tenant SaaS platforms face common challenges:
 
 | Feature | Description |
 |---------|-------------|
-| **🗄️ Database-Driven** | Read tenant configurations from MySQL (PostgreSQL planned) |
+| **🗄️ Database-Driven** | Read tenant configurations from MySQL (PostgreSQL planned for v1.2) |
 | **📝 Declarative Templates** | Go templates with 200+ Sprig functions for dynamic resource generation |
 | **🔄 Server-Side Apply** | Kubernetes SSA for conflict-free, efficient resource management |
 | **📊 Dependency Management** | DAG-based resource ordering with automatic dependency resolution |
@@ -87,7 +88,7 @@ Multi-tenant SaaS platforms face common challenges:
 ```mermaid
 flowchart TB
     subgraph External["External Data Source"]
-        DB[(MySQL / PostgreSQL)]
+        DB[(MySQL / PostgreSQL*)]
     end
 
     subgraph Cluster["Kubernetes Cluster"]
@@ -140,6 +141,8 @@ flowchart TB
     style SSA fill:#fce4ec,stroke:#f06292,stroke-width:2px
     style DB fill:#f3e5f5,stroke:#ba68c8,stroke-width:2px
 ```
+
+> \* **MySQL**: Fully supported (v1.0+) | **PostgreSQL**: Planned for v1.2
 
 ### Reconciliation Flow
 
@@ -195,6 +198,22 @@ sequenceDiagram
    - Smart watch predicates to filter unnecessary reconciliations
    - Event-driven architecture for immediate drift detection
 
+## Supported Kubernetes Versions & Upgrade Policy
+
+- **Compatibility philosophy**: The operator builds on GA/stable Kubernetes APIs and controller-runtime patterns, so it is intentionally decoupled from any single cluster release and targets the upstream version-skew support window.
+- **Validated range**: End-to-end tests and production workloads currently cover Kubernetes v1.28 through v1.33, and we operate live production clusters on v1.33 today. Other versions are expected to work, but validate in staging before rolling out broadly.
+- **Upgrade guidance**: Review the Helm chart `values.yaml` and release notes, then use `helm upgrade --install` for a rolling upgrade. Breaking changes or API removals are always called out in the release notes and CHANGELOG.
+
+| Kubernetes Version | Status |
+|--------------------|--------|
+| v1.28              | ✅ Validated |
+| v1.29              | ✅ Validated |
+| v1.30              | ✅ Validated |
+| v1.31              | ✅ Validated |
+| v1.32              | ✅ Validated |
+| v1.33              | ✅ Validated |
+| Other GA releases  | ⚠️ Expected |
+
 ---
 
 ## 🚀 Quick Start
@@ -209,9 +228,67 @@ sequenceDiagram
   - Automatically provisions and renews TLS certificates
   - Required for validating/mutating webhooks
   - Installation: `kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml`
-- **MySQL database** (optional) - for tenant data source (PostgreSQL support planned for v1.1)
+- **MySQL database** (optional) - for tenant data source (PostgreSQL support planned for v1.2)
 
 ### 1. Install the Operator
+
+#### Option A: Install with Helm (Recommended) 🎯
+
+**Prerequisites:** cert-manager must be installed in all environments (including local development)
+
+**For local development (minikube/kind):**
+
+```bash
+# Step 1: Install cert-manager (REQUIRED)
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+# Wait for cert-manager to be ready
+kubectl wait --for=condition=Available --timeout=300s -n cert-manager \
+  deployment/cert-manager \
+  deployment/cert-manager-webhook \
+  deployment/cert-manager-cainjector
+
+# Step 2: Add Helm repository
+helm repo add tenant-operator https://kubernetes-tenants.github.io/tenant-operator
+helm repo update
+
+# Step 3: Install with local development values
+helm install tenant-operator tenant-operator/tenant-operator \
+  -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/chart/values-local.yaml \
+  --namespace tenant-operator-system \
+  --create-namespace
+
+# or specific alpha version
+helm install tenant-operator tenant-operator/tenant-operator \
+  -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/v1.1.0-alpha.3/chart/values-local.yaml \
+  --version 1.1.0-alpha.3 \
+  --devel \
+  --namespace tenant-operator-system \
+  --create-namespace
+```
+
+**For production environments:**
+
+```bash
+# Step 1: Install cert-manager (REQUIRED)
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+# Wait for cert-manager to be ready
+kubectl wait --for=condition=Available --timeout=300s -n cert-manager \
+  deployment/cert-manager \
+  deployment/cert-manager-webhook \
+  deployment/cert-manager-cainjector
+
+# Step 2: Install tenant-operator with production values
+helm install tenant-operator tenant-operator/tenant-operator \
+  -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/chart/values-prod.yaml \
+  --namespace tenant-operator-system \
+  --create-namespace
+```
+
+**See [Helm Chart README](chart/README.md) for detailed configuration options.**
+
+#### Option B: Install with Kustomize
 
 **cert-manager is required** for webhook TLS certificate management.
 
@@ -230,7 +307,7 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-ope
 kubectl apply -k https://github.com/kubernetes-tenants/tenant-operator/config/default
 ```
 
-**Or from source:**
+#### Option C: Install from Source
 
 ```bash
 git clone https://github.com/kubernetes-tenants/tenant-operator.git
@@ -527,6 +604,18 @@ make test-coverage
 
 We welcome contributions! Whether it's bug reports, feature requests, documentation improvements, or code contributions.
 
+### 🌟 Want to Add a New Datasource?
+
+Tenant Operator uses a **pluggable adapter pattern** that makes it easy to add support for new datasources (PostgreSQL, MongoDB, REST APIs, etc.).
+
+**Why contribute a datasource?**
+- ✅ Only 2 methods to implement
+- ✅ MySQL reference implementation to follow
+- ✅ Complete step-by-step guide provided
+- ✅ Recognition in release notes
+
+📚 **Full Guide**: [Contributing a New Datasource](docs/contributing-datasource.md)
+
 ### How to Contribute
 
 1. **Fork** the repository
@@ -563,10 +652,13 @@ See [full roadmap](docs/roadmap.md) for details.
 | Webhooks | ✅ Stable | 100% | Validation complete |
 | Performance Optimizations | ✅ Stable | 100% | Fast reconciliation, smart predicates |
 | Multi-Template Support | ✅ Stable | 100% | One registry, multiple templates |
-| PostgreSQL | 🚧 Planned | - | Q2 2025 |
-| REST API Source | 🚧 Planned | - | Q2 2025 |
+| Cross-Namespace Provisioning | ✅ Stable | 100% | v1.1 - Label-based tracking |
+| Orphan Resource Cleanup | ✅ Stable | 100% | v1.1 - Automatic detection & cleanup |
+| PostgreSQL | 🚧 Planned | - | v1.2 |
+| Enhanced Metrics Dashboard | 🚧 Planned | - | v1.2 |
+| REST API Source | 🚧 Planned | - | Future |
 
-**Current Version:** v1.0.0
+**Current Version:** v1.1.0
 **Kubernetes Compatibility:** v1.11.3+
 **Production Status:** ✅ Ready
 

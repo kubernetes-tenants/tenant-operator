@@ -1,0 +1,223 @@
+# Default values for tenant-operator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# -- Number of replicas for the operator deployment
+replicaCount: 1
+
+image:
+  # -- Container image registry
+  registry: ghcr.io
+  # -- Container image repository
+  repository: kubernetes-tenants/tenant-operator
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+  # -- Overrides the image tag whose default is the chart appVersion
+  tag: ""
+
+# -- Image pull secrets for private registries
+imagePullSecrets: []
+
+# -- Override the name of the chart
+nameOverride: ""
+
+# -- Override the full name of the release
+fullnameOverride: ""
+
+# -- Namespace where the operator will be installed
+# If not set, uses the Release.Namespace
+namespace:
+  # -- Whether to create the namespace
+  create: true
+  # -- Namespace name
+  name: "tenant-operator-system"
+
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: true
+  # -- Automatically mount a ServiceAccount's API credentials
+  automount: true
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# -- Annotations to add to the operator pods
+podAnnotations: {}
+
+# -- Labels to add to the operator pods
+podLabels: {}
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - "ALL"
+
+# Operator manager configuration
+manager:
+  # -- Enable leader election for controller manager
+  leaderElection: true
+  # -- Health probe bind address
+  healthProbeBindAddress: ":8081"
+  # -- Metrics bind address (0 disables metrics)
+  metricsBindAddress: ":8443"
+  # -- Additional command-line arguments
+  args: []
+  # -- Additional environment variables
+  env: []
+  # -- Additional volume mounts
+  volumeMounts: []
+  # -- Additional volumes
+  volumes: []
+
+# Service configuration for metrics
+service:
+  # -- Service type
+  type: ClusterIP
+  # -- Metrics port
+  metricsPort: 8443
+  # -- Metrics port name
+  metricsPortName: https
+  # -- Annotations to add to the service
+  annotations: {}
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 10m
+    memory: 64Mi
+
+# Liveness probe configuration
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8081
+  initialDelaySeconds: 15
+  periodSeconds: 20
+
+# Readiness probe configuration
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: 8081
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+# Node selector for pod assignment
+nodeSelector: {}
+
+# Tolerations for pod assignment
+tolerations: []
+
+# Affinity for pod assignment
+affinity: {}
+
+# RBAC configuration
+rbac:
+  # -- Whether to create RBAC resources
+  create: true
+
+# CRD configuration
+crds:
+  # -- Whether to install CRDs
+  install: true
+  # -- Whether to keep CRDs when the chart is deleted
+  keep: true
+  # -- Annotations to add to CRDs
+  annotations: {}
+
+# Webhook configuration
+# ⚠️  CRITICAL: Webhooks require cert-manager to be installed in the cluster
+# Webhooks are ENABLED by default for all environments (including local development)
+webhook:
+  # -- Enable webhooks (requires cert-manager pre-installed in cluster)
+  # cert-manager MUST be installed before installing this chart
+  # Install cert-manager: kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+  # Disabling webhooks is NOT SUPPORTED and will remove important validation
+  enabled: true
+  # -- Webhook service port
+  port: 9443
+  # -- Webhook service type
+  serviceType: ClusterIP
+  # -- Annotations to add to the webhook service
+  serviceAnnotations: {}
+  # -- Certificate configuration
+  certificate:
+    # -- Certificate issuer name (if using cert-manager)
+    issuerName: selfsigned-issuer
+    # -- Certificate issuer kind
+    issuerKind: Issuer
+    # -- Certificate duration
+    duration: 2160h  # 90 days
+    # -- Certificate renewal before expiration
+    renewBefore: 360h  # 15 days
+
+# cert-manager integration
+# ⚠️  CRITICAL DEPENDENCY: cert-manager must be installed in the cluster BEFORE installing this chart
+# This is REQUIRED for all installations (production, staging, development, local)
+certManager:
+  # -- Enable cert-manager integration (for webhook TLS certificates)
+  # This assumes cert-manager is already installed in the cluster
+  # If this is false but webhook.enabled is true, the chart installation will fail
+  # DO NOT DISABLE unless you are providing certificates manually (not recommended)
+  enabled: true
+  # -- Install cert-manager as a sub-chart dependency (NOT RECOMMENDED AND NOT SUPPORTED)
+  # cert-manager should be installed separately as a cluster-wide resource
+  # Multiple operators may depend on cert-manager, so it should not be tied to a single chart
+  install: false
+  # Installation command (run BEFORE helm install):
+  # kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+# Monitoring configuration
+monitoring:
+  # -- Enable Prometheus ServiceMonitor
+  enabled: false
+  # -- ServiceMonitor namespace (defaults to Release.Namespace if empty)
+  namespace: ""
+  # -- Additional labels for ServiceMonitor
+  labels: {}
+  # -- ServiceMonitor scrape interval
+  interval: 30s
+  # -- ServiceMonitor scrape timeout
+  scrapeTimeout: 10s
+  # -- ServiceMonitor relabelings
+  relabelings: []
+  # -- ServiceMonitor metric relabelings
+  metricRelabelings: []
+
+# Network Policy configuration
+networkPolicy:
+  # -- Enable network policies
+  enabled: false
+  # -- Ingress rules for the metrics endpoint
+  metrics:
+    # -- Pod selectors allowed to access metrics
+    podSelector: {}
+    # -- Namespace selectors allowed to access metrics
+    namespaceSelector:
+      matchLabels:
+        metrics: enabled
+  # -- Ingress rules for the webhook server
+  webhook:
+    # -- Namespace selectors allowed to access webhook
+    namespaceSelector:
+      matchLabels:
+        webhooks: enabled
+
+# Additional labels to add to all resources
+commonLabels: {}
+
+# Additional annotations to add to all resources
+commonAnnotations: {}

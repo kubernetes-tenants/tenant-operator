@@ -69,6 +69,10 @@ export default withMermaid(
               text: "Terraform Operator",
               link: "/integration-terraform-operator",
             },
+            {
+              text: "Argo CD",
+              link: "/integration-argocd",
+            },
           ],
         },
         {
@@ -76,6 +80,7 @@ export default withMermaid(
           collapsed: false,
           items: [
             { text: "Development Guide", link: "/development" },
+            { text: "Contributing a Datasource", link: "/contributing-datasource" },
             { text: "Roadmap", link: "/roadmap" },
           ],
         },

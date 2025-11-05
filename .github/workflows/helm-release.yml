@@ -1,0 +1,167 @@
+name: Release Helm Chart
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+  pages: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.13.0
+
+      - name: Extract version from tag
+        id: extract_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Update Chart.yaml versions
+        run: |
+          VERSION="${{ steps.extract_version.outputs.version }}"
+          sed -i "s/^version: .*/version: $VERSION/" chart/Chart.yaml
+          sed -i "s/^appVersion: .*/appVersion: \"$VERSION\"/" chart/Chart.yaml
+          echo "Updated Chart.yaml:"
+          cat chart/Chart.yaml | grep -E "^(version|appVersion):"
+
+      - name: Lint Helm chart
+        run: |
+          helm lint chart/
+          echo "Chart linting passed!"
+
+      - name: Validate chart templates
+        run: |
+          echo "Testing with default values..."
+          helm template test-release chart/ > /dev/null
+
+          echo "Testing with values-local.yaml..."
+          helm template test-release chart/ -f chart/values-local.yaml > /dev/null
+
+          echo "Testing with values-prod.yaml..."
+          helm template test-release chart/ -f chart/values-prod.yaml > /dev/null
+
+          echo "All template validations passed!"
+
+      - name: Install chart-releaser
+        uses: helm/chart-releaser-action@v1.6.0
+        with:
+          install_only: true
+
+      - name: Package Helm chart
+        run: |
+          mkdir -p .cr-release-packages
+          helm package chart/ -d .cr-release-packages
+          echo "Packaged charts:"
+          ls -lh .cr-release-packages/
+
+      - name: Upload chart to GitHub Release
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          CR_SKIP_EXISTING: "true"
+        run: |
+          cr upload \
+            --owner kubernetes-tenants \
+            --git-repo tenant-operator \
+            --release-name-template "v{{ .Version }}" \
+            --packages-with-index
+
+      - name: Update Helm repository index
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          cr index \
+            --owner kubernetes-tenants \
+            --git-repo tenant-operator \
+            --charts-repo https://kubernetes-tenants.github.io/tenant-operator \
+            --index-path ./index.yaml \
+            --pages-branch gh-pages \
+            --release-name-template "v{{ .Version }}" \
+            --push
+
+      - name: Deploy Artifact Hub metadata to gh-pages
+        run: |
+          # Clone gh-pages branch
+          git clone --single-branch --branch gh-pages https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/kubernetes-tenants/tenant-operator.git gh-pages-repo
+
+          # Copy artifacthub-repo.yml to gh-pages root
+          cp chart/artifacthub-repo.yml gh-pages-repo/artifacthub-repo.yml
+
+          # Commit and push if changed
+          cd gh-pages-repo
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+          # Add the file first to stage any changes
+          git add artifacthub-repo.yml
+
+          # Check if there are staged changes
+          if git diff --cached --quiet; then
+            echo "No changes to artifacthub-repo.yml"
+          else
+            git commit -m "Update Artifact Hub repository metadata"
+            git push origin gh-pages
+            echo "✅ Artifact Hub metadata deployed to gh-pages"
+          fi
+
+      - name: Create release summary
+        run: |
+          VERSION="${{ steps.extract_version.outputs.version }}"
+          cat << EOF > release-summary.md
+          ## Helm Chart Release v${VERSION}
+
+          ### Installation
+
+          \`\`\`bash
+          helm repo add tenant-operator https://kubernetes-tenants.github.io/tenant-operator
+          helm repo update
+          helm install tenant-operator tenant-operator/tenant-operator --version ${VERSION}
+          \`\`\`
+
+          ### What's Included
+
+          - Chart Version: ${VERSION}
+          - App Version: ${VERSION}
+          - Image: ghcr.io/kubernetes-tenants/tenant-operator:${VERSION}
+
+          ### Files
+
+          - \`tenant-operator-${VERSION}.tgz\` - Helm chart package
+
+          ### Documentation
+
+          - [Chart README](https://github.com/kubernetes-tenants/tenant-operator/blob/main/chart/README.md)
+          - [Installation Guide](https://kubernetes-tenants.github.io/tenant-operator)
+          EOF
+          cat release-summary.md
+
+      - name: Summary
+        run: |
+          echo "✅ Helm chart release completed successfully!"
+          echo ""
+          echo "📦 Chart version: ${{ steps.extract_version.outputs.version }}"
+          echo "🏷️  Git tag: ${{ github.ref }}"
+          echo "📥 Install command:"
+          echo "   helm repo add tenant-operator https://kubernetes-tenants.github.io/tenant-operator"
+          echo "   helm repo update"
+          echo "   helm install tenant-operator tenant-operator/tenant-operator --version ${{ steps.extract_version.outputs.version }}"

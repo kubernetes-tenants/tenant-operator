@@ -4,32 +4,40 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.18.0
-  name: tenanttemplates.operator.kubernetes-tenants.org
+  name: tenants.operator.kubernetes-tenants.org
 spec:
   group: operator.kubernetes-tenants.org
   names:
-    kind: TenantTemplate
-    listKind: TenantTemplateList
-    plural: tenanttemplates
-    singular: tenanttemplate
+    kind: Tenant
+    listKind: TenantList
+    plural: tenants
+    singular: tenant
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - description: TenantRegistry reference
-      jsonPath: .spec.registryId
-      name: Registry
+    - description: Tenant unique identifier
+      jsonPath: .spec.uid
+      name: UID
       type: string
-    - description: Total tenants using template
-      jsonPath: .status.totalTenants
-      name: Total
-      type: integer
-    - description: Ready tenants
-      jsonPath: .status.readyTenants
+    - description: TenantTemplate reference
+      jsonPath: .spec.templateRef
+      name: Template
+      type: string
+    - description: Number of ready resources
+      jsonPath: .status.readyResources
       name: Ready
       type: integer
-    - description: Applied status
-      jsonPath: .status.conditions[?(@.type=='Applied')].status
-      name: Applied
+    - description: Total number of resources
+      jsonPath: .status.desiredResources
+      name: Desired
+      type: integer
+    - description: Conflict status
+      jsonPath: .status.conditions[?(@.type=='Conflicted')].status
+      name: Conflicted
+      type: string
+    - description: Condition reason
+      jsonPath: .status.conditions[?(@.type=='Ready')].reason
+      name: Conditions
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -37,7 +45,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: TenantTemplate is the Schema for the tenanttemplates API.
+        description: Tenant is the Schema for the tenants API.
         properties:
           apiVersion:
             description: |-
@@ -58,12 +66,11 @@ spec:
             type: object
           spec:
             description: |-
-              TenantTemplateSpec defines the desired state of TenantTemplate.
-              Note: Namespace management has been removed. All resources are created in the same namespace as the Tenant CR.
-              Users must create the target namespace before deploying the Tenant CR.
+              TenantSpec defines the desired state of Tenant.
+              Note: All resources are created in the same namespace as this Tenant CR.
             properties:
               configMaps:
-                description: ConfigMaps defines ConfigMap resources to create
+                description: ConfigMaps are the resolved ConfigMap resources
                 items:
                   description: TResource defines a Kubernetes resource template with
                     policies and dependencies
@@ -121,6 +128,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -138,13 +146,6 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
-                    targetNamespace:
-                      description: |-
-                        TargetNamespace specifies the namespace where the resource should be created
-                        If empty, defaults to the same namespace as the Tenant CR
-                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
-                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
-                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -166,7 +167,7 @@ spec:
                   type: object
                 type: array
               cronJobs:
-                description: CronJobs defines CronJob resources to create
+                description: CronJobs are the resolved CronJob resources
                 items:
                   description: TResource defines a Kubernetes resource template with
                     policies and dependencies
@@ -224,6 +225,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -241,13 +243,6 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
-                    targetNamespace:
-                      description: |-
-                        TargetNamespace specifies the namespace where the resource should be created
-                        If empty, defaults to the same namespace as the Tenant CR
-                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
-                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
-                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -269,7 +264,7 @@ spec:
                   type: object
                 type: array
               deployments:
-                description: Deployments defines Deployment resources to create
+                description: Deployments are the resolved Deployment resources
                 items:
                   description: TResource defines a Kubernetes resource template with
                     policies and dependencies
@@ -327,6 +322,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -344,13 +340,6 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
-                    targetNamespace:
-                      description: |-
-                        TargetNamespace specifies the namespace where the resource should be created
-                        If empty, defaults to the same namespace as the Tenant CR
-                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
-                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
-                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -372,7 +361,7 @@ spec:
                   type: object
                 type: array
               ingresses:
-                description: Ingresses defines Ingress resources to create
+                description: Ingresses are the resolved Ingress resources
                 items:
                   description: TResource defines a Kubernetes resource template with
                     policies and dependencies
@@ -430,6 +419,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -447,13 +437,6 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
-                    targetNamespace:
-                      description: |-
-                        TargetNamespace specifies the namespace where the resource should be created
-                        If empty, defaults to the same namespace as the Tenant CR
-                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
-                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
-                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -475,7 +458,7 @@ spec:
                   type: object
                 type: array
               jobs:
-                description: Jobs defines Job resources to create
+                description: Jobs are the resolved Job resources
                 items:
                   description: TResource defines a Kubernetes resource template with
                     policies and dependencies
@@ -533,6 +516,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -550,13 +534,6 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
-                    targetNamespace:
-                      description: |-
-                        TargetNamespace specifies the namespace where the resource should be created
-                        If empty, defaults to the same namespace as the Tenant CR
-                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
-                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
-                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -578,9 +555,7 @@ spec:
                   type: object
                 type: array
               manifests:
-                description: |-
-                  Manifests defines arbitrary Kubernetes resources as raw manifests
-                  Use this for any resource type not explicitly supported above
+                description: Manifests are the resolved arbitrary resources
                 items:
                   description: TResource defines a Kubernetes resource template with
                     policies and dependencies
@@ -638,6 +613,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -655,13 +631,6 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
-                    targetNamespace:
-                      description: |-
-                        TargetNamespace specifies the namespace where the resource should be created
-                        If empty, defaults to the same namespace as the Tenant CR
-                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
-                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
-                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -683,7 +652,7 @@ spec:
                   type: object
                 type: array
               persistentVolumeClaims:
-                description: PersistentVolumeClaims defines PVC resources to create
+                description: PersistentVolumeClaims are the resolved PVC resources
                 items:
                   description: TResource defines a Kubernetes resource template with
                     policies and dependencies
@@ -741,6 +710,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -758,13 +728,6 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
-                    targetNamespace:
-                      description: |-
-                        TargetNamespace specifies the namespace where the resource should be created
-                        If empty, defaults to the same namespace as the Tenant CR
-                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
-                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
-                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -785,12 +748,8 @@ spec:
                   - spec
                   type: object
                 type: array
-              registryId:
-                description: RegistryID references the TenantRegistry that this template
-                  is associated with
-                type: string
               secrets:
-                description: Secrets defines Secret resources to create
+                description: Secrets are the resolved Secret resources
                 items:
                   description: TResource defines a Kubernetes resource template with
                     policies and dependencies
@@ -848,6 +807,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -865,13 +825,6 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
-                    targetNamespace:
-                      description: |-
-                        TargetNamespace specifies the namespace where the resource should be created
-                        If empty, defaults to the same namespace as the Tenant CR
-                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
-                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
-                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -893,7 +846,7 @@ spec:
                   type: object
                 type: array
               serviceAccounts:
-                description: ServiceAccounts defines ServiceAccount resources to create
+                description: ServiceAccounts are the resolved ServiceAccount resources
                 items:
                   description: TResource defines a Kubernetes resource template with
                     policies and dependencies
@@ -951,6 +904,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -968,13 +922,6 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
-                    targetNamespace:
-                      description: |-
-                        TargetNamespace specifies the namespace where the resource should be created
-                        If empty, defaults to the same namespace as the Tenant CR
-                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
-                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
-                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -996,7 +943,7 @@ spec:
                   type: object
                 type: array
               services:
-                description: Services defines Service resources to create
+                description: Services are the resolved Service resources
                 items:
                   description: TResource defines a Kubernetes resource template with
                     policies and dependencies
@@ -1054,6 +1001,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -1071,13 +1019,6 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
-                    targetNamespace:
-                      description: |-
-                        TargetNamespace specifies the namespace where the resource should be created
-                        If empty, defaults to the same namespace as the Tenant CR
-                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
-                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
-                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -1099,7 +1040,7 @@ spec:
                   type: object
                 type: array
               statefulSets:
-                description: StatefulSets defines StatefulSet resources to create
+                description: StatefulSets are the resolved StatefulSet resources
                 items:
                   description: TResource defines a Kubernetes resource template with
                     policies and dependencies
@@ -1157,6 +1098,7 @@ spec:
                       description: |-
                         NameTemplate is a Go template for the resource name
                         Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
+                        Note: All resources are created in the same namespace as the Tenant CR
                       type: string
                     patchStrategy:
                       default: apply
@@ -1174,13 +1116,6 @@ spec:
                         Can be any Kubernetes native resource or custom resource
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
-                    targetNamespace:
-                      description: |-
-                        TargetNamespace specifies the namespace where the resource should be created
-                        If empty, defaults to the same namespace as the Tenant CR
-                        For cross-namespace resources, label-based tracking is used instead of ownerReferences
-                        Supports Go template syntax (e.g., "{{ .uid }}-namespace")
-                      type: string
                     timeoutSeconds:
                       default: 300
                       description: |-
@@ -1201,15 +1136,22 @@ spec:
                   - spec
                   type: object
                 type: array
+              templateRef:
+                description: TemplateRef references the TenantTemplate to use
+                type: string
+              uid:
+                description: UID is the unique identifier from the registry data source
+                type: string
             required:
-            - registryId
+            - templateRef
+            - uid
             type: object
           status:
-            description: TenantTemplateStatus defines the observed state of TenantTemplate.
+            description: TenantStatus defines the observed state of Tenant.
             properties:
               conditions:
                 description: Conditions represent the latest available observations
-                  of the template's state
+                  of the tenant's state
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -1265,19 +1207,21 @@ spec:
                   - type
                   type: object
                 type: array
+              desiredResources:
+                description: DesiredResources is the total number of resources
+                format: int32
+                type: integer
+              failedResources:
+                description: FailedResources is the number of resources that failed
+                format: int32
+                type: integer
               observedGeneration:
                 description: ObservedGeneration is the generation observed by the
                   controller
                 format: int64
                 type: integer
-              readyTenants:
-                description: ReadyTenants is the number of Ready Tenants using this
-                  template
-                format: int32
-                type: integer
-              totalTenants:
-                description: TotalTenants is the total number of Tenants using this
-                  template
+              readyResources:
+                description: ReadyResources is the number of resources that are ready
                 format: int32
                 type: integer
             type: object

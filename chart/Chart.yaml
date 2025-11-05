@@ -1,0 +1,139 @@
+apiVersion: v2
+name: tenant-operator
+description: |
+  Kubernetes-Native Multi-Tenant Application Provisioning Operator.
+  Automates tenant lifecycle from database to production with template-based resource generation.
+
+  IMPORTANT: Requires cert-manager for ALL installations (including local development).
+  Install cert-manager before installing this chart. See chart/CERT-MANAGER.md for details.
+type: application
+
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the app version.
+# Versions are expected to follow Semantic Versioning (https://semver.org/)
+version: 0.0.1
+
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application. Versions are not expected to
+# follow Semantic Versioning. They should reflect the version the application is using.
+appVersion: "0.0.1"
+
+keywords:
+  - kubernetes
+  - operator
+  - multi-tenant
+  - saas
+  - provisioning
+
+home: https://github.com/kubernetes-tenants/tenant-operator
+sources:
+  - https://github.com/kubernetes-tenants/tenant-operator
+
+maintainers:
+  - name: Tim Kang
+    url: https://github.com/selenehyun
+
+icon: https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/docs/public/logo.png
+
+# Annotations for Artifact Hub
+annotations:
+  # Category
+  artifacthub.io/category: integration-delivery
+
+  # License
+  artifacthub.io/license: Apache-2.0
+
+  # Operator metadata
+  artifacthub.io/operator: "true"
+  artifacthub.io/operatorCapabilities: Deep Insights
+
+  # Release status
+  artifacthub.io/prerelease: "true"
+  artifacthub.io/containsSecurityUpdates: "false"
+
+  # Changelog (will be updated per release)
+  artifacthub.io/changes: |
+    - kind: added
+      description: Initial Helm chart release with full operator support
+    - kind: added
+      description: Support for TenantRegistry, TenantTemplate, and Tenant CRDs
+    - kind: added
+      description: Webhook validation and defaulting
+    - kind: added
+      description: Prometheus metrics and ServiceMonitor support
+
+  # Recommendations
+  artifacthub.io/recommendations: |
+    - url: https://cert-manager.io
+
+  # Links
+  artifacthub.io/links: |
+    - name: Documentation
+      url: https://docs.kubernetes-tenants.org/
+    - name: GitHub Repository
+      url: https://github.com/kubernetes-tenants/tenant-operator
+    - name: Issues
+      url: https://github.com/kubernetes-tenants/tenant-operator/issues
+    - name: Discussions
+      url: https://github.com/kubernetes-tenants/tenant-operator/discussions
+
+  # Maintainers (additional to Chart maintainers)
+  artifacthub.io/maintainers: |
+    - name: Tim Kang
+      email: rationlunas@gmail.com
+
+  # Installation notes
+  artifacthub.io/install: |
+    # Prerequisites
+
+    ## cert-manager (REQUIRED)
+
+    This chart requires cert-manager to be installed in your cluster:
+
+    ```bash
+    kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+    ```
+
+    ## Installation
+
+    ```bash
+    helm repo add tenant-operator https://kubernetes-tenants.github.io/tenant-operator
+    helm repo update
+    helm install tenant-operator tenant-operator/tenant-operator
+    ```
+
+    See the [installation guide](https://docs.kubernetes-tenants.org/installation.html#installation-methods) for more details.
+
+  # Screenshots (optional - add if available)
+  # artifacthub.io/screenshots: |
+  #   - title: Dashboard
+  #     url: https://example.com/screenshot.png
+  # CRITICAL: cert-manager is REQUIRED for ALL installations (production and development)
+  # Webhooks (validation/defaulting) require cert-manager for TLS certificate management
+  # cert-manager must be installed BEFORE installing this chart
+  # Installation: kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+  artifacthub.io/crds: |
+    - kind: TenantRegistry
+      version: v1
+      name: tenantregistries.operator.kubernetes-tenants.org
+      displayName: Tenant Registry
+      description: Defines external datasource configuration for tenant data
+    - kind: TenantTemplate
+      version: v1
+      name: tenanttemplates.operator.kubernetes-tenants.org
+      displayName: Tenant Template
+      description: Blueprint for Kubernetes resources to create per tenant
+    - kind: Tenant
+      version: v1
+      name: tenants.operator.kubernetes-tenants.org
+      displayName: Tenant
+      description: Represents a single tenant instance with its resources
+
+# Dependencies (optional)
+# cert-manager is recommended but not required
+# Users can install cert-manager separately if needed
+# dependencies:
+#   - name: cert-manager
+#     version: "~1.13.0"
+#     repository: https://charts.jetstack.io
+#     condition: certManager.install

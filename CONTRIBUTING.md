@@ -71,6 +71,27 @@ How you envision it working
 Other approaches you've considered
 ```
 
+### Contributing a New Datasource
+
+Want to add support for a new datasource (PostgreSQL, MongoDB, REST API, etc.)?
+
+**📚 Full Guide**: [Contributing a New Datasource](docs/contributing-datasource.md)
+
+**Quick Overview:**
+1. Implement the `Datasource` interface (2 methods)
+2. Register your adapter in the factory
+3. Add API types and validation
+4. Write tests (>80% coverage)
+5. Document configuration and examples
+6. Submit PR
+
+**Example Datasources:**
+- ✅ MySQL (reference implementation)
+- 🚧 PostgreSQL (coming in v1.2)
+- 💡 Your datasource here!
+
+The adapter pattern makes it easy - check out the [detailed guide](docs/contributing-datasource.md) for step-by-step instructions with code examples.
+
 ### Contributing Code
 
 #### Prerequisites
