@@ -178,6 +178,48 @@ persistentVolumeClaims:
 
 **Example:** PersistentVolumeClaims, backup resources, audit logs
 
+### Orphan Resource Cleanup
+
+::: tip Dynamic Template Evolution
+DeletionPolicy applies not only when a Tenant CR is deleted, but also when resources are **removed from the TenantTemplate**.
+:::
+
+**How it works:**
+
+The operator tracks all applied resources in `status.appliedResources` with keys in format `kind/namespace/name@id`. During each reconciliation:
+
+1. **Detect Orphans**: Compares current template resources with previously applied resources
+2. **Respect Policy**: Applies the resource's `deletionPolicy` setting:
+   - `Delete`: Removes the orphaned resource from cluster
+   - `Retain`: Removes ownerReference/labels but keeps the resource
+3. **Update Status**: Tracks the new set of applied resources
+
+**Example scenario:**
+
+```yaml
+# Initial template
+deployments:
+  - id: web
+    nameTemplate: "{{ .uid }}-web"
+    deletionPolicy: Delete  # Will be removed when deleted from template
+  - id: worker
+    nameTemplate: "{{ .uid }}-worker"
+    deletionPolicy: Retain  # Will be kept when deleted from template
+```
+
+After removing the `worker` deployment from template:
+- `web` deployment: Still managed normally
+- `worker` deployment: **Retained in cluster** (ownerReference removed, resource kept)
+
+After removing the `web` deployment from template:
+- `web` deployment: **Deleted from cluster** automatically
+
+**Benefits:**
+- ✅ Safe template evolution without manual cleanup
+- ✅ No orphaned resources accumulation
+- ✅ DeletionPolicy consistency across all deletion scenarios
+- ✅ Automatic detection during normal reconciliation
+
 ## Protecting Tenants from Cascade Deletion
 
 ::: danger Cascading deletions are immediate

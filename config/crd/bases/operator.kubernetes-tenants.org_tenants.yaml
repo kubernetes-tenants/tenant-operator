@@ -1215,6 +1215,14 @@ spec:
           status:
             description: TenantStatus defines the observed state of Tenant.
             properties:
+              appliedResources:
+                description: |-
+                  AppliedResources tracks the keys of resources that were successfully applied
+                  Format: "kind/namespace/name@id" (e.g., "Deployment/default/myapp@app-deployment")
+                  This enables detection and cleanup of orphaned resources when removed from template
+                items:
+                  type: string
+                type: array
               conditions:
                 description: Conditions represent the latest available observations
                   of the tenant's state

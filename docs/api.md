@@ -178,6 +178,9 @@ status:
   desiredResources: int32            # Total resources
   readyResources: int32              # Ready resources
   failedResources: int32             # Failed resources
+  appliedResources: []string         # Tracked resource keys for orphan detection
+                                     # Format: "kind/namespace/name@id"
+                                     # Example: ["Deployment/default/app@deploy-1", "Service/default/app@svc-1"]
   conditions:
   - type: Ready
     status: "True"

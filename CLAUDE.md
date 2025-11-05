@@ -99,8 +99,10 @@ Tenant Controller -> Reconciles each Tenant -> SSA applies resources
 - Created automatically by TenantRegistry controller
 - Contains resolved resource arrays (templates already evaluated)
 - Status tracks `readyResources`, `desiredResources`, `failedResources`
+- Status tracks `appliedResources` for orphan detection (format: `kind/namespace/name@id`)
 - `Ready` condition requires ALL resources to be ready
 - Users typically don't edit Tenant specs directly (managed by operator)
+- Supports dynamic template evolution with automatic orphan cleanup
 
 ---
 
@@ -234,7 +236,19 @@ spec:
 5. **Topological Sort**:
    - Determine apply order based on dependency graph
 
-6. **For Each Resource in Order**:
+6. **Orphan Resource Cleanup** ✅ (Implemented):
+   - Detect resources that were previously applied but removed from template
+   - Compare `status.AppliedResources` (previous) with current desired resources
+   - Resource key format: `kind/namespace/name@id` (e.g., `Deployment/default/myapp@app-deployment`)
+   - For each orphaned resource:
+     - Respect `DeletionPolicy`:
+       - `Delete`: Remove resource from cluster
+       - `Retain`: Remove ownerReference/labels, keep resource
+     - Log deletion event with reason "RemovedFromTemplate"
+   - Runs before applying new resources to prevent conflicts
+   - Enables dynamic template evolution without manual cleanup
+
+7. **For Each Resource in Order**:
    - **Check CreationPolicy** ✅:
      - `Once`: Skip if already created (check annotation `kubernetes-tenants.org/created-once`)
      - `WhenNeeded` (default): Proceed with apply
@@ -250,12 +264,13 @@ spec:
    - If `waitForReady=true`: Wait for resource Ready condition (with timeout)
    - Track success/failure with metrics
 
-7. **Update Tenant Status**:
+8. **Update Tenant Status**:
    - Aggregate resource states
    - Update `readyResources`, `failedResources`, `desiredResources`
+   - Update `appliedResources` with successfully applied resource keys
    - Set `Ready` condition
 
-8. **Requeue for Fast Status Reflection** ✅ (Implemented - Optimized):
+9. **Requeue for Fast Status Reflection** ✅ (Implemented - Optimized):
    - Return with `RequeueAfter: 30 * time.Second` (changed from 5 minutes)
    - Ensures rapid detection of child resource status changes
    - Combined with event-driven watches for immediate reaction to changes

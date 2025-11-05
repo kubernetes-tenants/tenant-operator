@@ -474,6 +474,113 @@ env:
 
 :::
 
+## Template Evolution
+
+::: tip Dynamic Updates
+TenantTemplates can be safely modified at runtime. The operator automatically handles resource additions, modifications, and removals.
+:::
+
+### Adding Resources
+
+New resources are automatically created during the next reconciliation:
+
+```yaml
+# Add a new service to existing template
+services:
+  - id: api-service
+    nameTemplate: "{{ .uid }}-api"
+    spec:
+      apiVersion: v1
+      kind: Service
+      # ... service spec
+```
+
+**Result:** Service is created for all existing Tenants using this template.
+
+### Modifying Resources
+
+Existing resources are updated according to their `patchStrategy`:
+
+```yaml
+deployments:
+  - id: web
+    patchStrategy: apply  # SSA updates managed fields only
+    spec:
+      # Modified spec here
+```
+
+**Result:** Resources are updated while preserving unmanaged fields.
+
+### Removing Resources
+
+::: warning Orphan Cleanup
+Removed resources are automatically deleted or retained based on their `deletionPolicy`.
+:::
+
+**Example:**
+
+```yaml
+# Before: Template has 3 deployments
+deployments:
+  - id: web
+    deletionPolicy: Delete
+  - id: worker
+    deletionPolicy: Retain
+  - id: cache
+    deletionPolicy: Delete
+
+# After: Removed worker and cache
+deployments:
+  - id: web
+    deletionPolicy: Delete
+```
+
+**Result:**
+- `worker` deployment: **Retained** in cluster (ownerReference removed)
+- `cache` deployment: **Deleted** from cluster
+- `web` deployment: Continues to be managed normally
+
+**How it works:**
+
+1. Operator tracks applied resources in `Tenant.status.appliedResources`
+2. During reconciliation, compares current template with previous state
+3. Detects orphaned resources (in status but not in template)
+4. Applies each resource's `deletionPolicy`:
+   - `Delete`: Removes from cluster
+   - `Retain`: Removes ownerReference/labels, keeps resource
+
+**Benefits:**
+- ✅ Safe template evolution without manual intervention
+- ✅ No accumulation of orphaned resources
+- ✅ Consistent behavior across all deletion scenarios
+- ✅ Automatic during normal reconciliation (no special operation needed)
+
+### Best Practices for Template Changes
+
+1. **Test in non-production first**: Validate template changes in dev/staging
+2. **Use appropriate deletion policies**:
+   - `Delete` for stateless resources (Deployments, Services)
+   - `Retain` for stateful resources (PVCs, databases)
+3. **Review `appliedResources` status**: Check what resources are currently tracked
+4. **Monitor reconciliation**: Watch operator logs during template updates
+5. **Use `creationPolicy: Once`** for resources that shouldn't be updated
+
+**Example workflow:**
+
+```bash
+# 1. Check current applied resources
+kubectl get tenant my-tenant -o jsonpath='{.status.appliedResources}'
+
+# 2. Update template
+kubectl apply -f updated-template.yaml
+
+# 3. Monitor reconciliation
+kubectl logs -n tenant-operator-system deployment/tenant-operator-controller-manager -f
+
+# 4. Verify changes
+kubectl get tenant my-tenant -o yaml
+```
+
 ## See Also
 
 - [Policies Guide](policies.md) - Creation/deletion/conflict policies

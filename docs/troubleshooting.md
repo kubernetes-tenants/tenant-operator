@@ -405,6 +405,78 @@ spec:
   registryId: my-registry  # Must match exactly
 ```
 
+### 11. Orphaned Resources Not Cleaning Up
+
+**Symptoms:**
+- Resources removed from TenantTemplate still exist in cluster
+- `appliedResources` status not updating
+- Unexpected resources with tenant labels/ownerReferences
+
+**Diagnosis:**
+
+```bash
+# Check current applied resources
+kubectl get tenant <name> -o jsonpath='{.status.appliedResources}'
+
+# Should show: ["Deployment/default/app@deploy-1", "Service/default/app@svc-1"]
+
+# List resources with tenant labels
+kubectl get all -l kubernetes-tenants.org/tenant=<tenant-name>
+
+# Check resource DeletionPolicy
+kubectl get tenanttemplate <name> -o yaml | grep -A2 deletionPolicy
+```
+
+**Common Causes:**
+
+1. **DeletionPolicy=Retain**: Resource was intentionally retained
+2. **Status not syncing**: AppliedResources field not updated
+3. **Manual resource modification**: OwnerReference or labels removed manually
+4. **Operator version**: Upgrade from version without orphan cleanup
+
+**Solutions:**
+
+**A. Verify DeletionPolicy:**
+```yaml
+# Check template definition
+deployments:
+  - id: old-deployment
+    deletionPolicy: Delete  # Should be Delete, not Retain
+```
+
+**B. Force reconciliation:**
+```bash
+# Trigger reconciliation by updating an annotation
+kubectl annotate tenant <name> force-sync="$(date +%s)" --overwrite
+
+# Watch logs
+kubectl logs -n tenant-operator-system deployment/tenant-operator-controller-manager -f
+```
+
+**C. Manual cleanup (if needed):**
+```bash
+# Delete orphaned resource manually
+kubectl delete deployment <orphaned-resource>
+
+# Or remove owner reference if you want to keep it
+kubectl patch deployment <name> --type=json -p='[{"op": "remove", "path": "/metadata/ownerReferences"}]'
+```
+
+**D. Check status update:**
+```bash
+# Verify appliedResources is being updated
+kubectl get tenant <name> -o jsonpath='{.status.appliedResources}' | jq
+
+# Should reflect current template resources only
+```
+
+**Prevention:**
+
+1. Use `deletionPolicy: Delete` for resources that should be cleaned up
+2. Monitor `appliedResources` status field regularly
+3. Test template changes in non-production first
+4. Review orphan cleanup behavior in [Policies Guide](policies.md#orphan-resource-cleanup)
+
 ## Debugging Workflows
 
 ### Debug Template Rendering

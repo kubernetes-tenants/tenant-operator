@@ -97,6 +97,12 @@ type TenantStatus struct {
 	// +optional
 	FailedResources int32 `json:"failedResources,omitempty"`
 
+	// AppliedResources tracks the keys of resources that were successfully applied
+	// Format: "kind/namespace/name@id" (e.g., "Deployment/default/myapp@app-deployment")
+	// This enables detection and cleanup of orphaned resources when removed from template
+	// +optional
+	AppliedResources []string `json:"appliedResources,omitempty"`
+
 	// Conditions represent the latest available observations of the tenant's state
 	// +optional
 	// +patchMergeKey=type
