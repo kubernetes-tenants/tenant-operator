@@ -91,9 +91,15 @@ type TResource struct {
 
 	// NameTemplate is a Go template for the resource name
 	// Template variables: .uid, .host, .hostOrUrl, and extraValueMappings
-	// Note: All resources are created in the same namespace as the Tenant CR
 	// +optional
 	NameTemplate string `json:"nameTemplate,omitempty"`
+
+	// TargetNamespace specifies the namespace where the resource should be created
+	// If empty, defaults to the same namespace as the Tenant CR
+	// For cross-namespace resources, label-based tracking is used instead of ownerReferences
+	// Supports Go template syntax (e.g., "{{ .uid }}-namespace")
+	// +optional
+	TargetNamespace string `json:"targetNamespace,omitempty"`
 
 	// LabelsTemplate defines labels to apply to the resource (supports templates)
 	// +optional

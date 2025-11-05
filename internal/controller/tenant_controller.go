@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	errorsStd "errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -84,6 +85,8 @@ const (
 // +kubebuilder:rbac:groups=batch,resources=jobs;cronjobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
+// NOTE: Cross-namespace resource support requires cluster-wide permissions for resource types
+// The above RBAC rules allow the operator to create resources in any namespace when targetNamespace is specified
 
 // Reconcile applies all resources for a tenant
 func (r *TenantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -169,6 +172,32 @@ func (r *TenantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
+	// Detect and cleanup orphaned resources (resources removed from template)
+	// Build current desired resource keys
+	currentKeys, err := r.buildAppliedResourceKeys(ctx, tenant)
+	if err != nil {
+		logger.Error(err, "Failed to build applied resource keys")
+		// Continue with reconciliation even if orphan detection fails
+		currentKeys = make(map[string]bool)
+	}
+
+	// Get previously applied resource keys from status
+	previousKeys := tenant.Status.AppliedResources
+
+	// Find orphaned resources
+	orphanedKeys := r.findOrphanedResources(previousKeys, currentKeys)
+
+	// Delete orphaned resources
+	if len(orphanedKeys) > 0 {
+		logger.Info("Found orphaned resources", "count", len(orphanedKeys))
+		for _, orphanKey := range orphanedKeys {
+			if err := r.deleteOrphanedResource(ctx, tenant, orphanKey); err != nil {
+				logger.Error(err, "Failed to delete orphaned resource", "key", orphanKey)
+				// Continue with other orphans even if one fails
+			}
+		}
+	}
+
 	// Apply resources and track changes
 	readyCount, failedCount, changedCount, conflictedCount := r.applyResources(ctx, tenant, sortedNodes, vars)
 	totalResources := int32(len(sortedNodes))
@@ -198,6 +227,33 @@ func (r *TenantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// Always update status after reconciliation with actual counts
 	// This ensures status reflects reality without unnecessary resets
 	r.updateStatus(ctx, tenant, totalResources, readyCount, failedCount, failedCount == 0, "Reconciled", "Successfully reconciled all resources")
+
+	// Update AppliedResources in status to enable orphan detection
+	// Convert map keys to slice
+	appliedResourceKeys := make([]string, 0, len(currentKeys))
+	for key := range currentKeys {
+		appliedResourceKeys = append(appliedResourceKeys, key)
+	}
+
+	// Update status with applied resource keys using retry
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Get fresh copy
+		fresh := &tenantsv1.Tenant{}
+		if err := r.Get(ctx, client.ObjectKeyFromObject(tenant), fresh); err != nil {
+			return err
+		}
+
+		// Update AppliedResources field
+		fresh.Status.AppliedResources = appliedResourceKeys
+
+		// Update status
+		return r.Status().Update(ctx, fresh)
+	})
+
+	if err != nil {
+		logger.Error(err, "Failed to update AppliedResources in status")
+		// Non-fatal error, continue with reconciliation
+	}
 
 	// Emit completion event if resources were changed
 	if changedCount > 0 {
@@ -626,7 +682,7 @@ func (r *TenantReconciler) collectResourcesFromTenant(tenant *tenantsv1.Tenant) 
 }
 
 // renderResource renders a resource template
-// Note: NameTemplate, LabelsTemplate, AnnotationsTemplate are already rendered by Registry controller
+// Note: NameTemplate, LabelsTemplate, AnnotationsTemplate, TargetNamespace are already rendered by Registry controller
 // We only need to render the spec (unstructured.Unstructured) contents which may contain template variables
 func (r *TenantReconciler) renderResource(ctx context.Context, engine *template.Engine, resource tenantsv1.TResource, vars template.Variables, tenant *tenantsv1.Tenant) (*unstructured.Unstructured, error) {
 	// Get spec (already an unstructured.Unstructured)
@@ -637,9 +693,12 @@ func (r *TenantReconciler) renderResource(ctx context.Context, engine *template.
 		obj.SetName(resource.NameTemplate)
 	}
 
-	// Set namespace to Tenant CR's namespace
-	// All resources are created in the same namespace as the Tenant CR
-	obj.SetNamespace(tenant.Namespace)
+	// Set namespace: use TargetNamespace if specified, otherwise use Tenant CR's namespace
+	targetNamespace := tenant.Namespace
+	if resource.TargetNamespace != "" {
+		targetNamespace = resource.TargetNamespace
+	}
+	obj.SetNamespace(targetNamespace)
 
 	// Set labels
 	labels := resource.LabelsTemplate
@@ -647,8 +706,11 @@ func (r *TenantReconciler) renderResource(ctx context.Context, engine *template.
 		labels = make(map[string]string)
 	}
 
-	// For Namespaces, add tracking labels since they cannot have ownerReferences
-	if obj.GetKind() == "Namespace" {
+	// For cross-namespace resources or Namespaces, add tracking labels
+	// since they cannot have ownerReferences
+	isCrossNamespace := targetNamespace != tenant.Namespace
+	isNamespaceResource := obj.GetKind() == "Namespace"
+	if isCrossNamespace || isNamespaceResource {
 		labels["kubernetes-tenants.org/tenant"] = tenant.Name
 		labels["kubernetes-tenants.org/tenant-namespace"] = tenant.Namespace
 	}
@@ -1045,22 +1107,24 @@ func (r *TenantReconciler) cleanupTenantResources(ctx context.Context, tenant *t
 		resourceKind := rendered.GetKind()
 
 		// Apply deletion policy
+		orphanReason := "TenantDeleted"
+
 		switch res.DeletionPolicy {
 		case tenantsv1.DeletionPolicyRetain:
 			// Remove ownerReferences but keep resource
-			logger.Info("Retaining resource (removing ownerReferences)",
+			logger.Info("Retaining resource (removing ownerReferences and adding orphan labels)",
 				"resource", resourceName,
 				"kind", resourceKind,
 				"namespace", rendered.GetNamespace())
 
-			if err := applier.DeleteResource(ctx, rendered, tenantsv1.DeletionPolicyRetain); err != nil {
+			if err := applier.DeleteResource(ctx, rendered, tenantsv1.DeletionPolicyRetain, orphanReason); err != nil {
 				logger.Error(err, "Failed to retain resource",
 					"resource", resourceName,
 					"kind", resourceKind)
 				// Continue with other resources
 			} else {
 				r.Recorder.Eventf(tenant, corev1.EventTypeNormal, "ResourceRetained",
-					"Resource %s/%s retained (ownerReferences removed)", resourceKind, resourceName)
+					"Resource %s/%s retained with orphan labels (ownerReferences removed)", resourceKind, resourceName)
 			}
 
 		case tenantsv1.DeletionPolicyDelete, "":
@@ -1070,7 +1134,7 @@ func (r *TenantReconciler) cleanupTenantResources(ctx context.Context, tenant *t
 				"kind", resourceKind,
 				"namespace", rendered.GetNamespace())
 
-			if err := applier.DeleteResource(ctx, rendered, tenantsv1.DeletionPolicyDelete); err != nil {
+			if err := applier.DeleteResource(ctx, rendered, tenantsv1.DeletionPolicyDelete, orphanReason); err != nil {
 				// Log error but continue - ownerReferences will handle cleanup
 				logger.V(1).Info("Resource deletion delegated to ownerReference garbage collection",
 					"resource", resourceName,
@@ -1096,7 +1160,7 @@ func (r *TenantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&tenantsv1.Tenant{}).
 		Named("tenant").
-		// Watch owned resources for drift detection with predicates
+		// Watch owned resources for drift detection with predicates (same-namespace with ownerReference)
 		// When these resources are modified, the parent Tenant will be reconciled
 		// Predicates ensure we only react to meaningful changes (generation/annotations)
 		Owns(&corev1.ServiceAccount{}, builder.WithPredicates(ownedResourcePredicate)).
@@ -1110,23 +1174,82 @@ func (r *TenantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&batchv1.Job{}, builder.WithPredicates(ownedResourcePredicate)).
 		Owns(&batchv1.CronJob{}, builder.WithPredicates(ownedResourcePredicate)).
 		Owns(&networkingv1.Ingress{}, builder.WithPredicates(ownedResourcePredicate)).
-		// Watch Namespaces created by Tenant using labels
-		// Namespaces cannot have ownerReferences, so we use label-based tracking
+		// Watch resources with label-based tracking (cross-namespace or resources without ownerReference support)
+		// These use labels for tracking: kubernetes-tenants.org/tenant and kubernetes-tenants.org/tenant-namespace
 		Watches(
 			&corev1.Namespace{},
-			handler.EnqueueRequestsFromMapFunc(r.findTenantForNamespace),
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&corev1.ServiceAccount{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&corev1.Service{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&corev1.ConfigMap{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&corev1.PersistentVolumeClaim{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&appsv1.Deployment{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&appsv1.StatefulSet{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&appsv1.DaemonSet{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&batchv1.Job{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&batchv1.CronJob{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&networkingv1.Ingress{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
 			builder.WithPredicates(ownedResourcePredicate),
 		).
 		Complete(r)
 }
 
-// findTenantForNamespace maps a Namespace to its Tenant using labels
-func (r *TenantReconciler) findTenantForNamespace(ctx context.Context, obj client.Object) []ctrl.Request {
-	ns := obj.(*corev1.Namespace)
+// findTenantForLabeledResource maps any resource to its Tenant using tracking labels
+// This supports cross-namespace resources and resources without ownerReference support (like Namespaces)
+func (r *TenantReconciler) findTenantForLabeledResource(ctx context.Context, obj client.Object) []ctrl.Request {
+	// Check if this resource has our tracking labels
+	labels := obj.GetLabels()
+	if labels == nil {
+		return nil
+	}
 
-	// Check if this namespace has our tracking labels
-	tenantName := ns.Labels["kubernetes-tenants.org/tenant"]
-	tenantNamespace := ns.Labels["kubernetes-tenants.org/tenant-namespace"]
+	tenantName := labels["kubernetes-tenants.org/tenant"]
+	tenantNamespace := labels["kubernetes-tenants.org/tenant-namespace"]
 
 	if tenantName == "" || tenantNamespace == "" {
 		return nil
@@ -1139,5 +1262,171 @@ func (r *TenantReconciler) findTenantForNamespace(ctx context.Context, obj clien
 				Namespace: tenantNamespace,
 			},
 		},
+	}
+}
+
+// buildResourceKey generates a unique key for a resource
+// Format: "kind/namespace/name@id"
+// Example: "Deployment/default/myapp@app-deployment"
+func buildResourceKey(obj *unstructured.Unstructured, resourceID string) string {
+	kind := obj.GetKind()
+	namespace := obj.GetNamespace()
+	name := obj.GetName()
+	return fmt.Sprintf("%s/%s/%s@%s", kind, namespace, name, resourceID)
+}
+
+// parseResourceKey parses a resource key into its components
+// Returns: kind, namespace, name, resourceID, error
+func parseResourceKey(key string) (string, string, string, string, error) {
+	// Split by '@' first to separate resource ID
+	parts := strings.Split(key, "@")
+	if len(parts) != 2 {
+		return "", "", "", "", fmt.Errorf("invalid resource key format: %s (expected format: kind/namespace/name@id)", key)
+	}
+	resourceID := parts[1]
+
+	// Split the first part by '/' to get kind/namespace/name
+	resourceParts := strings.Split(parts[0], "/")
+	if len(resourceParts) != 3 {
+		return "", "", "", "", fmt.Errorf("invalid resource key format: %s (expected format: kind/namespace/name@id)", key)
+	}
+
+	kind := resourceParts[0]
+	namespace := resourceParts[1]
+	name := resourceParts[2]
+
+	return kind, namespace, name, resourceID, nil
+}
+
+// buildAppliedResourceKeys builds a set of resource keys from current Tenant.Spec
+func (r *TenantReconciler) buildAppliedResourceKeys(ctx context.Context, tenant *tenantsv1.Tenant) (map[string]bool, error) {
+	keys := make(map[string]bool)
+	templateEngine := template.NewEngine()
+
+	// Build template variables
+	vars, err := r.buildTemplateVariablesFromAnnotations(tenant)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build template variables: %w", err)
+	}
+
+	// Collect all resources
+	allResources := r.collectResourcesFromTenant(tenant)
+
+	// Render each resource and build key
+	for _, res := range allResources {
+		rendered, err := r.renderResource(ctx, templateEngine, res, vars, tenant)
+		if err != nil {
+			// Skip resources that fail to render (they won't be applied)
+			continue
+		}
+
+		key := buildResourceKey(rendered, res.ID)
+		keys[key] = true
+	}
+
+	return keys, nil
+}
+
+// findOrphanedResources finds resources that were previously applied but are no longer in the spec
+func (r *TenantReconciler) findOrphanedResources(previousKeys []string, currentKeys map[string]bool) []string {
+	var orphans []string
+
+	for _, prevKey := range previousKeys {
+		if !currentKeys[prevKey] {
+			orphans = append(orphans, prevKey)
+		}
+	}
+
+	return orphans
+}
+
+// deleteOrphanedResource deletes a resource identified by its key
+func (r *TenantReconciler) deleteOrphanedResource(ctx context.Context, tenant *tenantsv1.Tenant, key string) error {
+	logger := log.FromContext(ctx)
+
+	// Parse the key
+	kind, namespace, name, resourceID, err := parseResourceKey(key)
+	if err != nil {
+		logger.Error(err, "Failed to parse resource key", "key", key)
+		return err
+	}
+
+	// Find the resource definition in the tenant spec to get DeletionPolicy
+	// If not found, default to Delete policy
+	deletionPolicy := tenantsv1.DeletionPolicyDelete
+	allResources := r.collectResourcesFromTenant(tenant)
+	for _, res := range allResources {
+		if res.ID == resourceID {
+			if res.DeletionPolicy != "" {
+				deletionPolicy = res.DeletionPolicy
+			}
+			break
+		}
+	}
+
+	// Create an unstructured object to represent the resource
+	obj := &unstructured.Unstructured{}
+	obj.SetKind(kind)
+	obj.SetNamespace(namespace)
+	obj.SetName(name)
+
+	// Set appropriate API version based on kind
+	apiVersion := r.getAPIVersionForKind(kind)
+	obj.SetAPIVersion(apiVersion)
+
+	// Delete or retain the resource based on DeletionPolicy
+	applier := apply.NewApplier(r.Client, r.Scheme)
+	orphanReason := "RemovedFromTemplate"
+
+	if err := applier.DeleteResource(ctx, obj, deletionPolicy, orphanReason); err != nil {
+		if !errors.IsNotFound(err) {
+			logger.Error(err, "Failed to handle orphaned resource",
+				"key", key,
+				"kind", kind,
+				"namespace", namespace,
+				"name", name,
+				"deletionPolicy", deletionPolicy)
+			return err
+		}
+		// Resource already gone, treat as success
+	}
+
+	if deletionPolicy == tenantsv1.DeletionPolicyRetain {
+		logger.Info("Retained orphaned resource with orphan labels",
+			"key", key,
+			"kind", kind,
+			"namespace", namespace,
+			"name", name,
+			"resourceID", resourceID)
+		r.Recorder.Eventf(tenant, corev1.EventTypeNormal, "OrphanedResourceRetained",
+			"Retained orphaned resource %s/%s (ID: %s) - removed from template, marked with orphan labels", kind, name, resourceID)
+	} else {
+		logger.Info("Deleted orphaned resource",
+			"key", key,
+			"kind", kind,
+			"namespace", namespace,
+			"name", name,
+			"resourceID", resourceID)
+		r.Recorder.Eventf(tenant, corev1.EventTypeNormal, "OrphanedResourceDeleted",
+			"Deleted orphaned resource %s/%s (ID: %s) - removed from template", kind, name, resourceID)
+	}
+
+	return nil
+}
+
+// getAPIVersionForKind returns the API version for a given kind string
+func (r *TenantReconciler) getAPIVersionForKind(kind string) string {
+	switch kind {
+	case "Namespace", "ServiceAccount", "Service", "ConfigMap", "Secret", "PersistentVolumeClaim":
+		return "v1"
+	case "Deployment", "StatefulSet", "DaemonSet":
+		return "apps/v1"
+	case "Job", "CronJob":
+		return "batch/v1"
+	case "Ingress":
+		return "networking.k8s.io/v1"
+	default:
+		// For unknown kinds, return v1 as default
+		return "v1"
 	}
 }

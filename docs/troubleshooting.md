@@ -41,13 +41,63 @@ kubectl get tenant <tenant-name> -o jsonpath='{.status}'
 open /tmp/k8s-webhook-server/serving-certs/tls.crt: no such file or directory
 ```
 
-**Cause:** Webhook TLS certificates not found
+**Cause:** Webhook TLS certificates not found. cert-manager is **REQUIRED** for all installations.
+
+::: danger cert-manager Required
+cert-manager v1.13.0+ is **REQUIRED** for ALL installations including local development. Webhooks provide validation and defaulting at admission time.
+:::
+
+**Diagnosis:**
+
+```bash
+# Check if cert-manager is installed
+kubectl get pods -n cert-manager
+
+# Check if Certificate resource exists
+kubectl get certificate -n tenant-operator-system
+
+# Check Certificate details
+kubectl describe certificate -n tenant-operator-system
+
+# Check if secret was created
+kubectl get secret -n tenant-operator-system | grep webhook-server-cert
+```
 
 **Solutions:**
 
-Install cert-manager:
+**A. Install cert-manager** (if not installed):
 ```bash
+# Install cert-manager
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+# Wait for cert-manager to be ready
+kubectl wait --for=condition=Available --timeout=300s -n cert-manager \
+  deployment/cert-manager \
+  deployment/cert-manager-webhook \
+  deployment/cert-manager-cainjector
+
+# Verify cert-manager is running
+kubectl get pods -n cert-manager
+```
+
+**B. Restart operator** (after cert-manager is ready):
+```bash
+kubectl rollout restart -n tenant-operator-system deployment/tenant-operator-controller-manager
+
+# Watch rollout status
+kubectl rollout status -n tenant-operator-system deployment/tenant-operator-controller-manager
+```
+
+**C. Check Certificate issuance**:
+```bash
+# Check if Certificate is Ready
+kubectl get certificate -n tenant-operator-system
+
+# If not ready, check cert-manager logs
+kubectl logs -n cert-manager -l app=cert-manager
+
+# Check if Issuer exists
+kubectl get issuer -n tenant-operator-system
 ```
 
 ### 2. Tenant Not Creating Resources
@@ -354,6 +404,88 @@ Ensure all templates correctly reference the registry:
 spec:
   registryId: my-registry  # Must match exactly
 ```
+
+### 11. Orphaned Resources Not Cleaning Up
+
+**Symptoms:**
+- Resources removed from TenantTemplate still exist in cluster
+- `appliedResources` status not updating
+- Unexpected resources with tenant labels/ownerReferences
+
+**Diagnosis:**
+
+```bash
+# Check current applied resources
+kubectl get tenant <name> -o jsonpath='{.status.appliedResources}'
+
+# Should show: ["Deployment/default/app@deploy-1", "Service/default/app@svc-1"]
+
+# List resources with tenant labels
+kubectl get all -l kubernetes-tenants.org/tenant=<tenant-name>
+
+# Find orphaned resources (retained with DeletionPolicy=Retain)
+kubectl get all -A -l kubernetes-tenants.org/orphaned=true
+
+# Find orphaned resources from this tenant
+kubectl get all -A -l kubernetes-tenants.org/orphaned=true,kubernetes-tenants.org/tenant=<tenant-name>
+
+# Check resource DeletionPolicy
+kubectl get tenanttemplate <name> -o yaml | grep -A2 deletionPolicy
+```
+
+**Common Causes:**
+
+1. **DeletionPolicy=Retain**: Resource was intentionally retained and marked with orphan labels
+2. **Status not syncing**: AppliedResources field not updated
+3. **Manual resource modification**: OwnerReference or labels removed manually
+4. **Operator version**: Upgrade from version without orphan cleanup
+
+::: tip Expected Behavior
+Resources with `DeletionPolicy=Retain` are **intentionally kept** in the cluster and marked with orphan labels for easy identification. This is not a bug - it's the designed behavior!
+:::
+
+**Solutions:**
+
+**A. Verify DeletionPolicy:**
+```yaml
+# Check template definition
+deployments:
+  - id: old-deployment
+    deletionPolicy: Delete  # Should be Delete, not Retain
+```
+
+**B. Force reconciliation:**
+```bash
+# Trigger reconciliation by updating an annotation
+kubectl annotate tenant <name> force-sync="$(date +%s)" --overwrite
+
+# Watch logs
+kubectl logs -n tenant-operator-system deployment/tenant-operator-controller-manager -f
+```
+
+**C. Manual cleanup (if needed):**
+```bash
+# Delete orphaned resource manually
+kubectl delete deployment <orphaned-resource>
+
+# Or remove owner reference if you want to keep it
+kubectl patch deployment <name> --type=json -p='[{"op": "remove", "path": "/metadata/ownerReferences"}]'
+```
+
+**D. Check status update:**
+```bash
+# Verify appliedResources is being updated
+kubectl get tenant <name> -o jsonpath='{.status.appliedResources}' | jq
+
+# Should reflect current template resources only
+```
+
+**Prevention:**
+
+1. Use `deletionPolicy: Delete` for resources that should be cleaned up
+2. Monitor `appliedResources` status field regularly
+3. Test template changes in non-production first
+4. Review orphan cleanup behavior in [Policies Guide](policies.md#orphan-resource-cleanup)
 
 ## Debugging Workflows
 

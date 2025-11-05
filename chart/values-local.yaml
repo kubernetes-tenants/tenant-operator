@@ -1,0 +1,71 @@
+# values-local.yaml
+# Configuration optimized for local development (minikube, kind, k3d)
+#
+# ℹ️  LOCAL DEVELOPMENT CONFIGURATION
+# - Webhooks are ENABLED (same as production for consistency)
+# - cert-manager is REQUIRED (must be installed first)
+# - Lower resource requirements
+# - Faster probe settings
+#
+# PREREQUISITE: Install cert-manager before using this configuration
+# kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+# Use local image tag for faster iteration
+image:
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+# Reduced resource requirements for local development
+resources:
+  limits:
+    cpu: 200m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+# ✅ ENABLE cert-manager integration (REQUIRED)
+# cert-manager must be installed in your local cluster
+certManager:
+  enabled: true
+
+# ✅ ENABLE webhooks (provides validation & defaulting)
+# Uses self-signed certificates via cert-manager
+webhook:
+  enabled: true
+  certificate:
+    issuerName: selfsigned-issuer
+    issuerKind: Issuer
+    duration: 2160h  # 90 days
+    renewBefore: 360h  # 15 days
+
+# Disable monitoring for local development
+monitoring:
+  enabled: false
+
+# Disable network policies for local development
+networkPolicy:
+  enabled: false
+
+# Faster probe settings for local development
+livenessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  initialDelaySeconds: 3
+  periodSeconds: 5
+
+# Use default namespace for simpler setup
+namespace:
+  create: false
+  name: "tenant-operator-system"
+
+# Local development annotations
+commonAnnotations:
+  environment: "local"
+  managed-by: "helm"
+
+# Local development labels
+commonLabels:
+  environment: "local"

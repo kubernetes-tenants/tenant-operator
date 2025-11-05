@@ -26,8 +26,12 @@ This guide covers the **development workflow** for making code changes to Tenant
 ::: info Prerequisites
 Complete the [Quick Start guide](quickstart.md) first. You should have:
 - ✅ Minikube cluster running (`tenant-operator` profile)
-- ✅ Tenant Operator deployed
+- ✅ **cert-manager installed** (automatically by setup script)
+- ✅ Tenant Operator deployed with webhooks enabled
 - ✅ MySQL test database (optional, for full testing)
+
+::: warning cert-manager Required
+cert-manager is **REQUIRED** for all installations. The automated setup scripts install it automatically. If setting up manually, install cert-manager before deploying the operator.
 :::
 
 Additional development tools:
@@ -130,7 +134,9 @@ make run
 :::
 
 ::: warning Limitations
-- ⚠️ Webhooks unavailable (TLS requires in-cluster deployment)
+- ⚠️ **Webhooks unavailable** (TLS certificates require in-cluster deployment with cert-manager)
+- ⚠️ **No validation at admission time** (changes are only validated at reconciliation)
+- ⚠️ **No automatic defaulting** (must specify all fields manually)
 - ⚠️ Runtime differs from production environment
 :::
 
@@ -140,9 +146,17 @@ make run
 - Debugging with delve
 
 **When NOT to use:**
-- Testing webhooks
+- Testing webhooks (requires full deployment with cert-manager)
+- Testing validation/defaulting behavior
 - Verifying in-cluster networking
 - Final testing before PR
+
+::: tip Testing with Webhooks
+For complete testing including webhooks, always deploy to cluster:
+```bash
+./scripts/deploy-to-minikube.sh  # Includes cert-manager and webhooks
+```
+:::
 
 **Testing with local run:**
 ```bash
@@ -456,10 +470,39 @@ kubectl get pods -n tenant-operator-system
 kubectl logs -n tenant-operator-system -l control-plane=controller-manager
 
 # Common issues:
-# - cert-manager not ready: kubectl get pods -n cert-manager
-# - Image not loaded: minikube -p tenant-operator image ls | grep tenant-operator
-# - CRDs not installed: kubectl get crd | grep tenant
+
+# 1. cert-manager not ready
+kubectl get pods -n cert-manager
+# If pods are not running, wait or check:
+kubectl describe pods -n cert-manager
+
+# 2. Webhook certificates not ready
+kubectl get certificate -n tenant-operator-system
+# Should show "Ready=True"
+
+# 3. Image not loaded
+minikube -p tenant-operator image ls | grep tenant-operator
+
+# 4. CRDs not installed
+kubectl get crd | grep tenant
 ```
+
+::: danger cert-manager is Critical
+If the operator pod fails to start with webhook certificate errors, cert-manager is likely not installed or not ready. Check:
+
+```bash
+# Verify cert-manager installation
+kubectl get pods -n cert-manager
+
+# Check certificate status
+kubectl get certificate -n tenant-operator-system
+kubectl describe certificate -n tenant-operator-system
+
+# If missing, install cert-manager:
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+kubectl wait --for=condition=Available --timeout=300s -n cert-manager deployment/cert-manager-webhook
+```
+:::
 
 ### Tests Failing
 

@@ -8,6 +8,23 @@ This guide shows how to integrate Tenant Operator with Terraform Operator for pr
 
 **Terraform Operator** allows you to manage Terraform resources as Kubernetes Custom Resources. When integrated with Tenant Operator, each tenant can automatically provision **any infrastructure resource** that Terraform supports - from cloud services to on-premises systems.
 
+```mermaid
+flowchart LR
+    Tenant["Tenant CR"]
+    Template["Terraform<br/>manifest"]
+    Tofu["tofu-controller<br/>Terraform CR"]
+    Cloud["Cloud / On-Prem Resources"]
+
+    Tenant --> Template --> Tofu --> Cloud
+
+    classDef tenant fill:#e3f2fd,stroke:#64b5f6,stroke-width:2px;
+    class Tenant tenant;
+    classDef terraform fill:#e8f5e9,stroke:#81c784,stroke-width:2px;
+    class Template,Tofu terraform;
+    classDef cloud fill:#fff8e1,stroke:#ffca28,stroke-width:2px;
+    class Cloud cloud;
+```
+
 ### Key Benefits
 
 **Universal Resource Provisioning**: Terraform supports 3,000+ providers, enabling you to provision virtually any infrastructure:

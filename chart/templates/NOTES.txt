@@ -1,0 +1,118 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named {{ .Release.Name }}.
+Namespace: {{ include "tenant-operator.namespace" . }}
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }} -n {{ include "tenant-operator.namespace" . }}
+  $ helm get all {{ .Release.Name }} -n {{ include "tenant-operator.namespace" . }}
+
+================================================================================
+TENANT OPERATOR INSTALLATION SUCCESSFUL
+================================================================================
+
+The Tenant Operator has been deployed to your cluster.
+
+DEPLOYMENT STATUS:
+  Release Name:      {{ .Release.Name }}
+  Namespace:         {{ include "tenant-operator.namespace" . }}
+  Chart Version:     {{ .Chart.Version }}
+  App Version:       {{ .Chart.AppVersion }}
+  Image:             {{ include "tenant-operator.image" . }}
+
+INSTALLED COMPONENTS:
+  ✓ CustomResourceDefinitions (CRDs)
+    - TenantRegistry
+    - TenantTemplate
+    - Tenant
+  ✓ Operator Deployment ({{ .Values.replicaCount }} replica{{ if ne (int .Values.replicaCount) 1 }}s{{ end }})
+  ✓ RBAC (ServiceAccount, Roles, RoleBindings)
+  ✓ Metrics Service
+{{- if .Values.webhook.enabled }}
+  ✓ Webhook Server
+  ✓ Webhook Certificates (cert-manager)
+{{- end }}
+{{- if .Values.monitoring.enabled }}
+  ✓ Prometheus ServiceMonitor
+{{- end }}
+
+NEXT STEPS:
+
+1. Verify the operator is running:
+   $ kubectl get pods -n {{ include "tenant-operator.namespace" . }} -l control-plane=controller-manager
+
+2. Check the operator logs:
+   $ kubectl logs -n {{ include "tenant-operator.namespace" . }} -l control-plane=controller-manager -f
+
+3. Verify CRDs are installed:
+   $ kubectl get crd | grep operator.kubernetes-tenants.org
+
+4. Create your first TenantRegistry:
+   $ kubectl apply -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/config/samples/operator_v1_tenantregistry.yaml
+
+5. Create a TenantTemplate:
+   $ kubectl apply -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/config/samples/operator_v1_tenanttemplate.yaml
+
+CONFIGURATION:
+
+{{- if not .Values.webhook.enabled }}
+⚠️  WEBHOOKS DISABLED
+    Webhooks are currently disabled. For production use, enable webhooks for validation and defaulting:
+
+    helm upgrade {{ .Release.Name }} tenant-operator/tenant-operator \
+      --set webhook.enabled=true \
+      --set certManager.enabled=true \
+      -n {{ include "tenant-operator.namespace" . }}
+
+{{- end }}
+
+{{- if not .Values.monitoring.enabled }}
+ℹ️  MONITORING DISABLED
+    Prometheus monitoring is currently disabled. To enable:
+
+    helm upgrade {{ .Release.Name }} tenant-operator/tenant-operator \
+      --set monitoring.enabled=true \
+      -n {{ include "tenant-operator.namespace" . }}
+
+{{- end }}
+
+{{- if and .Values.webhook.enabled (not .Values.certManager.enabled) }}
+⚠️  CRITICAL: WEBHOOK REQUIRES CERT-MANAGER
+    Webhooks are enabled but cert-manager integration is disabled.
+    This configuration will FAIL unless cert-manager is already installed in the cluster.
+
+    To install cert-manager:
+    kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+    Or disable webhooks (not recommended for production):
+    helm upgrade {{ .Release.Name }} tenant-operator/tenant-operator \
+      --set webhook.enabled=false \
+      --set certManager.enabled=false \
+      -n {{ include "tenant-operator.namespace" . }}
+
+{{- end }}
+
+{{- if and .Values.webhook.enabled .Values.certManager.enabled }}
+✅ WEBHOOKS ENABLED (cert-manager required)
+    Admission webhooks are enabled for validation and defaulting.
+    Ensure cert-manager v1.13+ is installed in the cluster.
+
+    Verify cert-manager:
+    kubectl get pods -n cert-manager
+
+    Check webhook certificates:
+    kubectl get certificate -n {{ include "tenant-operator.namespace" . }}
+
+{{- end }}
+
+DOCUMENTATION:
+  📚 Docs:    https://docs.kubernetes-tenants.org/
+  💻 GitHub:  https://github.com/kubernetes-tenants/tenant-operator
+  🐛 Issues:  https://github.com/kubernetes-tenants/tenant-operator/issues
+
+SUPPORT:
+  For help and support, please visit:
+  https://github.com/kubernetes-tenants/tenant-operator/discussions
+
+================================================================================
