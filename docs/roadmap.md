@@ -87,6 +87,37 @@ Additional datasources and enhanced observability
 - [ ] Extended template functions
 - [ ] Better documentation examples
 
+## v1.3
+
+::: info Focus
+Scalability and advanced multi-tenancy features
+:::
+
+### New Features
+
+- [ ] **Tenant Sharding for Large-Scale Deployments**
+  - Horizontal sharding of tenant workloads across multiple operator instances
+  - Shard key-based tenant distribution
+  - Load balancing across shards
+  - Shard rebalancing and migration support
+  - Use cases:
+    - Supporting 10,000+ tenants per cluster
+    - Isolating tenant failures to specific shards
+    - Reducing controller resource consumption
+    - Enabling independent scaling of operator replicas
+
+- [ ] **Advanced Multi-Tenancy Isolation**
+  - Tenant priority and resource quotas
+  - Per-tenant rate limiting
+  - Tenant lifecycle hooks
+  - Custom tenant tagging and filtering
+
+### Improvements
+- [ ] Enhanced reconciliation performance for large tenant counts
+- [ ] Improved status reporting and aggregation
+- [ ] Optimized database query batching
+- [ ] Better scaling metrics and recommendations
+
 ## Contributing to Roadmap
 
 Want to influence the roadmap?
