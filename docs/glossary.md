@@ -59,7 +59,7 @@ A Custom Resource representing a single tenant instance. Automatically created b
 - Created/deleted automatically (users typically don't create manually)
 - Contains resolved resource specifications (templates already evaluated)
 - Tracks status of all provisioned resources
-- Owns all created Kubernetes resources via ownerReferences
+- Owns created resources via ownerReferences (Delete policy) or labels (Retain policy)
 
 ## Data Source Concepts
 
@@ -258,9 +258,9 @@ The base structure for all resources in TenantTemplate. Contains:
 A Kubernetes metadata field that establishes parent-child relationships between resources.
 
 **In Tenant Operator:**
-- All created resources have `ownerReference` pointing to their Tenant CR
-- Enables automatic garbage collection when Tenant is deleted
-- Exception: Resources with `deletionPolicy: Retain`
+- Resources with `deletionPolicy: Delete` (default) have `ownerReference` pointing to their Tenant CR
+- Enables automatic garbage collection by Kubernetes when Tenant is deleted
+- Resources with `deletionPolicy: Retain` use label-based tracking instead (NO ownerReference)
 
 ### Drift Detection
 
@@ -300,11 +300,11 @@ Controls when resources are created/updated.
 
 ### DeletionPolicy
 
-Controls what happens to resources when Tenant CR is deleted.
+Controls resource lifecycle and tracking mechanism. Evaluated at resource **creation time**, not deletion time.
 
 **Values:**
-- `Delete` (default) - Remove resource from cluster
-- `Retain` - Remove ownerReference, keep resource in cluster
+- `Delete` (default) - Uses ownerReference for automatic cleanup when Tenant is deleted
+- `Retain` - Uses label-based tracking only (no ownerReference), resource persists after Tenant deletion
 
 **Use cases for `Retain`:**
 - Persistent data (PVCs, Databases)

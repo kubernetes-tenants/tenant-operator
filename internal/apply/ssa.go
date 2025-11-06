@@ -19,7 +19,9 @@ package apply
 import (
 	"context"
 	"fmt"
+	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
 )
@@ -40,10 +43,18 @@ const (
 	LabelTenantName      = "kubernetes-tenants.org/tenant"
 	LabelTenantNamespace = "kubernetes-tenants.org/tenant-namespace"
 
-	// Labels for orphaned resources (DeletionPolicy=Retain)
-	LabelOrphaned       = "kubernetes-tenants.org/orphaned"
-	LabelOrphanedAt     = "kubernetes-tenants.org/orphaned-at"
-	LabelOrphanedReason = "kubernetes-tenants.org/orphaned-reason"
+	// Label for orphaned resources (DeletionPolicy=Retain) - used for selectors
+	LabelOrphaned = "kubernetes-tenants.org/orphaned"
+
+	// Annotations for orphaned resources - detailed information
+	AnnotationOrphanedAt     = "kubernetes-tenants.org/orphaned-at"
+	AnnotationOrphanedReason = "kubernetes-tenants.org/orphaned-reason"
+
+	// Annotation for storing DeletionPolicy on resources
+	AnnotationDeletionPolicy = "kubernetes-tenants.org/deletion-policy"
+
+	// OrphanedLabelValue is the value for orphaned label
+	OrphanedLabelValue = "true"
 )
 
 // ConflictError represents a resource conflict error
@@ -84,15 +95,20 @@ func (a *Applier) ApplyResource(
 	owner *tenantsv1.Tenant,
 	conflictPolicy tenantsv1.ConflictPolicy,
 	patchStrategy tenantsv1.PatchStrategy,
+	deletionPolicy tenantsv1.DeletionPolicy,
 ) (bool, error) {
-	// Set owner reference or tracking labels based on namespace
+	// Set owner reference or tracking labels based on namespace and deletion policy
 	if owner != nil {
 		isCrossNamespace := obj.GetNamespace() != owner.Namespace
 		isNamespaceResource := obj.GetKind() == "Namespace"
+		isRetainPolicy := deletionPolicy == tenantsv1.DeletionPolicyRetain
 
-		if isCrossNamespace || isNamespaceResource {
-			// For cross-namespace resources or Namespace resources, use label-based tracking
-			// ownerReferences cannot be used across namespaces in Kubernetes
+		// Use label-based tracking for:
+		// 1. Cross-namespace resources (ownerReferences don't work across namespaces)
+		// 2. Namespace resources (cannot have ownerReferences)
+		// 3. Retain policy resources (to prevent automatic deletion by garbage collector)
+		if isCrossNamespace || isNamespaceResource || isRetainPolicy {
+			// Use label-based tracking instead of ownerReference
 			labels := obj.GetLabels()
 			if labels == nil {
 				labels = make(map[string]string)
@@ -101,7 +117,8 @@ func (a *Applier) ApplyResource(
 			labels[LabelTenantNamespace] = owner.Namespace
 			obj.SetLabels(labels)
 		} else {
-			// For same-namespace resources, use traditional ownerReference
+			// For same-namespace resources with Delete policy, use traditional ownerReference
+			// This enables automatic garbage collection when Tenant is deleted
 			if err := controllerutil.SetControllerReference(owner, obj, a.scheme); err != nil {
 				return false, fmt.Errorf("failed to set owner reference: %w", err)
 			}
@@ -125,6 +142,17 @@ func (a *Applier) ApplyResource(
 		}
 	} else {
 		beforeResourceVersion = existing.GetResourceVersion()
+
+		// Remove orphan markers if present (resource is being re-added to management)
+		// This must be done on the actual cluster resource, not just the in-memory object
+		removed, err := a.removeOrphanMarkersFromCluster(ctx, existing)
+		if err != nil {
+			// Log but don't fail - orphan markers are metadata, not critical
+			// The resource will still be applied correctly
+			logger := log.FromContext(ctx)
+			logger.V(1).Info("Failed to remove orphan markers, continuing anyway", "error", err)
+		}
+		_ = removed // Will be used for event logging in controller
 	}
 
 	// Apply resource based on patch strategy
@@ -255,7 +283,7 @@ func (a *Applier) removeOwnerReferencesAndLabels(ctx context.Context, obj *unstr
 	// Remove owner references
 	current.SetOwnerReferences(nil)
 
-	// Update labels: remove tracking labels and add orphan labels
+	// Update labels: remove tracking labels and add orphan label
 	labels := current.GetLabels()
 	if labels == nil {
 		labels = make(map[string]string)
@@ -265,21 +293,156 @@ func (a *Applier) removeOwnerReferencesAndLabels(ctx context.Context, obj *unstr
 	delete(labels, LabelTenantName)
 	delete(labels, LabelTenantNamespace)
 
-	// Add orphan labels
-	labels[LabelOrphaned] = "true"
-	labels[LabelOrphanedAt] = metav1.Now().Format("2006-01-02T15:04:05Z")
-	if orphanReason != "" {
-		labels[LabelOrphanedReason] = orphanReason
-	}
+	// Add orphan label (for selector queries)
+	labels[LabelOrphaned] = OrphanedLabelValue
 
 	current.SetLabels(labels)
+
+	// Update annotations: add orphan metadata
+	annotations := current.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+
+	// Add orphan annotations with timestamp and reason
+	annotations[AnnotationOrphanedAt] = metav1.Now().Format(time.RFC3339)
+	if orphanReason != "" {
+		annotations[AnnotationOrphanedReason] = orphanReason
+	}
+
+	current.SetAnnotations(annotations)
 
 	// Update the resource
 	if err := a.client.Update(ctx, current); err != nil {
 		return fmt.Errorf("failed to remove owner references and labels: %w", err)
 	}
 
+	// Log the orphaning
+	logger := log.FromContext(ctx)
+	logger.Info("Orphan markers added - resource retained",
+		"kind", current.GetKind(),
+		"name", current.GetName(),
+		"namespace", current.GetNamespace(),
+		"reason", orphanReason)
+
+	// Create event on the resource
+	message := fmt.Sprintf("Resource retained with orphan markers (reason: %s)", orphanReason)
+	a.createEventForResource(ctx, current, corev1.EventTypeNormal, "OrphanMarkersAdded", message)
+
 	return nil
+}
+
+// removeOrphanMarkersFromCluster removes orphan label and annotations from a cluster resource
+// This is called when a previously orphaned resource is being re-added to management
+// Returns true if markers were removed and resource was updated
+func (a *Applier) removeOrphanMarkersFromCluster(ctx context.Context, obj *unstructured.Unstructured) (bool, error) {
+	// Check if orphan markers are present
+	labels := obj.GetLabels()
+	annotations := obj.GetAnnotations()
+
+	hasOrphanLabel := labels != nil && labels[LabelOrphaned] == OrphanedLabelValue
+	hasOrphanAnnotations := annotations != nil && (annotations[AnnotationOrphanedAt] != "" || annotations[AnnotationOrphanedReason] != "")
+
+	// If no orphan markers, nothing to do
+	if !hasOrphanLabel && !hasOrphanAnnotations {
+		return false, nil
+	}
+
+	// Get the current resource from cluster
+	key := types.NamespacedName{
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
+	}
+	current := obj.DeepCopy()
+	if err := a.client.Get(ctx, key, current); err != nil {
+		if errors.IsNotFound(err) {
+			// Resource doesn't exist, nothing to clean
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to get resource for orphan marker cleanup: %w", err)
+	}
+
+	// Track if we made changes
+	changed := false
+
+	// Remove orphan label
+	labels = current.GetLabels()
+	if labels != nil && labels[LabelOrphaned] == OrphanedLabelValue {
+		delete(labels, LabelOrphaned)
+		current.SetLabels(labels)
+		changed = true
+	}
+
+	// Remove orphan annotations
+	annotations = current.GetAnnotations()
+	if annotations != nil {
+		if annotations[AnnotationOrphanedAt] != "" || annotations[AnnotationOrphanedReason] != "" {
+			delete(annotations, AnnotationOrphanedAt)
+			delete(annotations, AnnotationOrphanedReason)
+			current.SetAnnotations(annotations)
+			changed = true
+		}
+	}
+
+	// Update the resource if we made changes
+	if changed {
+		if err := a.client.Update(ctx, current); err != nil {
+			return false, fmt.Errorf("failed to remove orphan markers: %w", err)
+		}
+
+		// Log the re-adoption
+		logger := log.FromContext(ctx)
+		logger.Info("Orphan markers removed - resource re-adopted into management",
+			"kind", current.GetKind(),
+			"name", current.GetName(),
+			"namespace", current.GetNamespace())
+
+		// Create event on the resource
+		a.createEventForResource(ctx, current, corev1.EventTypeNormal, "OrphanMarkersRemoved",
+			"Resource re-adopted into management - orphan markers removed")
+	}
+
+	return changed, nil
+}
+
+// createEventForResource creates a Kubernetes Event for a resource
+func (a *Applier) createEventForResource(ctx context.Context, obj *unstructured.Unstructured, eventType, reason, message string) {
+	logger := log.FromContext(ctx)
+
+	// Create Event object
+	now := metav1.Now()
+	event := &corev1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s.%x", obj.GetName(), now.Unix()),
+			Namespace: obj.GetNamespace(),
+		},
+		InvolvedObject: corev1.ObjectReference{
+			APIVersion: obj.GetAPIVersion(),
+			Kind:       obj.GetKind(),
+			Name:       obj.GetName(),
+			Namespace:  obj.GetNamespace(),
+			UID:        obj.GetUID(),
+		},
+		Reason:  reason,
+		Message: message,
+		Source: corev1.EventSource{
+			Component: "tenant-operator",
+		},
+		FirstTimestamp: now,
+		LastTimestamp:  now,
+		Count:          1,
+		Type:           eventType,
+	}
+
+	// Try to create the event
+	if err := a.client.Create(ctx, event); err != nil {
+		// Log but don't fail - events are best-effort
+		logger.V(1).Info("Failed to create event for resource",
+			"kind", obj.GetKind(),
+			"name", obj.GetName(),
+			"reason", reason,
+			"error", err.Error())
+	}
 }
 
 // ResourceExists checks if a resource exists

@@ -151,7 +151,7 @@ spec:
 | Policy | Effect | Default |
 | --- | --- | --- |
 | `creationPolicy` | When `Once`, the controller never recreates deleted resources. `WhenNeeded` reconciles on every sync. | `WhenNeeded` |
-| `deletionPolicy` | `Retain` keeps objects after a tenant is deleted; `Delete` cleans them up. | `Delete` |
+| `deletionPolicy` | `Retain` keeps objects (no ownerReference, label-based tracking); `Delete` cleans them up (with ownerReference). | `Delete` |
 | `conflictPolicy` | `Force` overwrites conflicting fields; `Stuck` marks the resource as failed for manual intervention. | `Stuck` |
 | `patchStrategy` | Determines how the resource spec is applied. Use `merge` for strategic merge resources. | `apply` |
 :::

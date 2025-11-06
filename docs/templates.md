@@ -536,28 +536,52 @@ deployments:
 ```
 
 **Result:**
-- `worker` deployment: **Retained** in cluster with orphan labels (ownerReference removed)
-- `cache` deployment: **Deleted** from cluster
+- `worker` deployment: **Retained** in cluster with orphan labels (no ownerReference was set initially)
+- `cache` deployment: **Deleted** from cluster (via ownerReference)
 - `web` deployment: Continues to be managed normally
 
-**Orphan labels added to retained resources:**
+**Orphan markers added to retained resources:**
 
 ```yaml
 metadata:
   labels:
-    kubernetes-tenants.org/orphaned: "true"
-    kubernetes-tenants.org/orphaned-at: "2025-01-15T10:30:00Z"
+    kubernetes-tenants.org/orphaned: "true"  # Label for selector queries
+  annotations:
+    kubernetes-tenants.org/orphaned-at: "2025-01-15T10:30:00Z"  # RFC3339 timestamp
     kubernetes-tenants.org/orphaned-reason: "RemovedFromTemplate"
+```
+
+**Why label + annotation?**
+- Label values must be RFC 1123 compliant (no colons), so we use simple `"true"` for selectors
+- Annotations can store detailed metadata like timestamps without format restrictions
+
+**Re-adoption of Orphaned Resources:**
+
+When you re-add a previously removed resource back to the template:
+- Operator automatically detects and removes all orphan markers
+- Resource smoothly transitions back to managed state
+- No manual intervention needed
+
+This enables safe experimentation:
+```yaml
+# Day 1: Remove worker deployment
+deployments:
+  - id: web  # worker removed
+
+# Day 2: Re-add worker deployment
+deployments:
+  - id: web
+  - id: worker  # Re-added! Orphan markers auto-removed
 ```
 
 You can easily find these orphaned resources later:
 
 ```bash
-# Find all orphaned resources
+# Find all orphaned resources (using label selector)
 kubectl get all -A -l kubernetes-tenants.org/orphaned=true
 
-# Find resources orphaned due to template changes
-kubectl get all -A -l kubernetes-tenants.org/orphaned-reason=RemovedFromTemplate
+# Find resources orphaned due to template changes (filter by annotation)
+kubectl get all -A -l kubernetes-tenants.org/orphaned=true -o jsonpath='{range .items[?(@.metadata.annotations.kubernetes-tenants\.org/orphaned-reason=="RemovedFromTemplate")]}{.kind}/{.metadata.name}{"\n"}{end}'
 ```
 
 **How it works:**
@@ -566,8 +590,8 @@ kubectl get all -A -l kubernetes-tenants.org/orphaned-reason=RemovedFromTemplate
 2. During reconciliation, compares current template with previous state
 3. Detects orphaned resources (in status but not in template)
 4. Applies each resource's `deletionPolicy`:
-   - `Delete`: Removes from cluster
-   - `Retain`: Removes ownerReference/labels, keeps resource
+   - `Delete`: Removes from cluster (automatic via ownerReference)
+   - `Retain`: Removes tracking labels, adds orphan labels, keeps resource (no ownerReference to remove)
 
 **Benefits:**
 - ✅ Safe template evolution without manual intervention

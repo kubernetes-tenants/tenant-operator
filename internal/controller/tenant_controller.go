@@ -345,7 +345,12 @@ func (r *TenantReconciler) applyResources(ctx context.Context, tenant *tenantsv1
 		}
 
 		// Apply resource with specified patch strategy and track changes
-		changed, applyErr := applier.ApplyResource(ctx, obj, tenant, resource.ConflictPolicy, resource.PatchStrategy)
+		// Pass deletionPolicy to prevent ownerReference for Retain policy resources
+		deletionPolicy := resource.DeletionPolicy
+		if deletionPolicy == "" {
+			deletionPolicy = tenantsv1.DeletionPolicyDelete // Default
+		}
+		changed, applyErr := applier.ApplyResource(ctx, obj, tenant, resource.ConflictPolicy, resource.PatchStrategy, deletionPolicy)
 
 		// Track changes and emit events on first change
 		if changed {
@@ -719,8 +724,22 @@ func (r *TenantReconciler) renderResource(ctx context.Context, engine *template.
 		obj.SetLabels(labels)
 	}
 
-	if len(resource.AnnotationsTemplate) > 0 {
-		obj.SetAnnotations(resource.AnnotationsTemplate)
+	// Set annotations (including DeletionPolicy for orphan cleanup)
+	annotations := resource.AnnotationsTemplate
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+
+	// Add DeletionPolicy annotation to enable correct orphan cleanup
+	// This is critical because orphaned resources no longer exist in the template
+	deletionPolicy := string(resource.DeletionPolicy)
+	if deletionPolicy == "" {
+		deletionPolicy = string(tenantsv1.DeletionPolicyDelete) // Default
+	}
+	annotations[apply.AnnotationDeletionPolicy] = deletionPolicy
+
+	if len(annotations) > 0 {
+		obj.SetAnnotations(annotations)
 	}
 
 	// Render spec recursively (for template variables inside the unstructured object)
@@ -1351,18 +1370,10 @@ func (r *TenantReconciler) deleteOrphanedResource(ctx context.Context, tenant *t
 		return err
 	}
 
-	// Find the resource definition in the tenant spec to get DeletionPolicy
-	// If not found, default to Delete policy
-	deletionPolicy := tenantsv1.DeletionPolicyDelete
-	allResources := r.collectResourcesFromTenant(tenant)
-	for _, res := range allResources {
-		if res.ID == resourceID {
-			if res.DeletionPolicy != "" {
-				deletionPolicy = res.DeletionPolicy
-			}
-			break
-		}
-	}
+	// Get DeletionPolicy from the resource's annotation
+	// This is necessary because orphaned resources are no longer in the template
+	// We stored DeletionPolicy as an annotation during resource creation
+	deletionPolicy := tenantsv1.DeletionPolicyDelete // Default
 
 	// Create an unstructured object to represent the resource
 	obj := &unstructured.Unstructured{}
@@ -1373,6 +1384,23 @@ func (r *TenantReconciler) deleteOrphanedResource(ctx context.Context, tenant *t
 	// Set appropriate API version based on kind
 	apiVersion := r.getAPIVersionForKind(kind)
 	obj.SetAPIVersion(apiVersion)
+
+	// Try to get the resource to read DeletionPolicy from annotation
+	existingObj := obj.DeepCopy()
+	if err := r.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, existingObj); err == nil {
+		// Resource exists, read DeletionPolicy from annotation
+		if annotations := existingObj.GetAnnotations(); annotations != nil {
+			if policyStr, ok := annotations[apply.AnnotationDeletionPolicy]; ok {
+				deletionPolicy = tenantsv1.DeletionPolicy(policyStr)
+				logger.V(1).Info("Read DeletionPolicy from resource annotation",
+					"resource", name,
+					"deletionPolicy", policyStr)
+			}
+		}
+	} else if !errors.IsNotFound(err) {
+		logger.Error(err, "Failed to get resource for DeletionPolicy check", "resource", name)
+		// Continue with default policy if we can't read the resource
+	}
 
 	// Delete or retain the resource based on DeletionPolicy
 	applier := apply.NewApplier(r.Client, r.Scheme)

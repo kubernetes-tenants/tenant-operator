@@ -29,51 +29,74 @@ import (
 type TenantTemplateSpec struct {
 	// RegistryID references the TenantRegistry that this template is associated with
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="registryId is immutable"
 	RegistryID string `json:"registryId"`
 
 	// ServiceAccounts defines ServiceAccount resources to create
 	// +optional
+	// +listType=map
+	// +listMapKey=id
 	ServiceAccounts []TResource `json:"serviceAccounts,omitempty"`
 
 	// Deployments defines Deployment resources to create
 	// +optional
+	// +listType=map
+	// +listMapKey=id
 	Deployments []TResource `json:"deployments,omitempty"`
 
 	// StatefulSets defines StatefulSet resources to create
 	// +optional
+	// +listType=map
+	// +listMapKey=id
 	StatefulSets []TResource `json:"statefulSets,omitempty"`
 
 	// Services defines Service resources to create
 	// +optional
+	// +listType=map
+	// +listMapKey=id
 	Services []TResource `json:"services,omitempty"`
 
 	// Ingresses defines Ingress resources to create
 	// +optional
+	// +listType=map
+	// +listMapKey=id
 	Ingresses []TResource `json:"ingresses,omitempty"`
 
 	// ConfigMaps defines ConfigMap resources to create
 	// +optional
+	// +listType=map
+	// +listMapKey=id
 	ConfigMaps []TResource `json:"configMaps,omitempty"`
 
 	// Secrets defines Secret resources to create
 	// +optional
+	// +listType=map
+	// +listMapKey=id
 	Secrets []TResource `json:"secrets,omitempty"`
 
 	// PersistentVolumeClaims defines PVC resources to create
 	// +optional
+	// +listType=map
+	// +listMapKey=id
 	PersistentVolumeClaims []TResource `json:"persistentVolumeClaims,omitempty"`
 
 	// Jobs defines Job resources to create
 	// +optional
+	// +listType=map
+	// +listMapKey=id
 	Jobs []TResource `json:"jobs,omitempty"`
 
 	// CronJobs defines CronJob resources to create
 	// +optional
+	// +listType=map
+	// +listMapKey=id
 	CronJobs []TResource `json:"cronJobs,omitempty"`
 
 	// Manifests defines arbitrary Kubernetes resources as raw manifests
 	// Use this for any resource type not explicitly supported above
 	// +optional
+	// +listType=map
+	// +listMapKey=id
 	Manifests []TResource `json:"manifests,omitempty"`
 }
 
