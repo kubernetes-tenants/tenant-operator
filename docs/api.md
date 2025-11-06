@@ -213,8 +213,8 @@ Examples: `30s`, `1m`, `2h`
 
 ### DeletionPolicy
 
-- `Delete`: Delete resource on Tenant deletion (default)
-- `Retain`: Keep resource, remove ownerReference
+- `Delete`: Delete resource on Tenant deletion (default) - uses ownerReference for automatic cleanup
+- `Retain`: Keep resource on deletion - uses label-based tracking only (NO ownerReference set at creation)
 
 ### ConflictPolicy
 
@@ -247,26 +247,41 @@ kubernetes-tenants.org/created-once: "true"
 
 ### Resource Tracking Labels
 
+**Label-based tracking** is used instead of ownerReferences for:
+- Cross-namespace resources (ownerReferences don't work across namespaces)
+- Namespace resources (cannot have ownerReferences)
+- **DeletionPolicy=Retain resources** (to prevent automatic garbage collection)
+
 ```yaml
-# For cross-namespace resources (cannot use ownerReferences)
+# Tracking labels (set at resource creation)
 kubernetes-tenants.org/tenant: tenant-name
 kubernetes-tenants.org/tenant-namespace: tenant-namespace
 
-# For orphaned resources (DeletionPolicy=Retain)
+# Orphan label (added when resource becomes orphaned - for selector queries)
 kubernetes-tenants.org/orphaned: "true"
-kubernetes-tenants.org/orphaned-at: "2025-01-15T10:30:00Z"
-kubernetes-tenants.org/orphaned-reason: "RemovedFromTemplate" | "TenantDeleted"
 ```
 
-**Orphan Labels:**
+**Orphan Markers:**
 
-These labels are automatically added to resources when they are retained (not deleted) due to `DeletionPolicy=Retain`:
+When resources are retained (not deleted) due to `DeletionPolicy=Retain`, the operator adds:
 
-- **`orphaned`**: Always set to `"true"` to mark the resource as orphaned
-- **`orphaned-at`**: Timestamp (RFC3339) when the resource became orphaned
-- **`orphaned-reason`**: Reason for becoming orphaned:
+- **Label** `orphaned: "true"` - For easy filtering with label selectors
+- **Annotation** `orphaned-at` - RFC3339 timestamp when the resource became orphaned
+- **Annotation** `orphaned-reason` - Reason for becoming orphaned:
   - `RemovedFromTemplate`: Resource was removed from TenantTemplate
   - `TenantDeleted`: Tenant CR was deleted
+
+**Why split label/annotation?**
+- **Label**: Simple value for selector queries (Kubernetes label values must be RFC 1123 compliant)
+- **Annotations**: Detailed metadata like timestamps (no value restrictions)
+
+**Orphan Marker Lifecycle:**
+
+1. **Resource removed from template** → Orphan markers added (label + annotations)
+2. **Resource re-added to template** → Orphan markers automatically removed during apply
+3. **No manual cleanup needed** → Operator manages the full lifecycle
+
+This enables safe template evolution: you can freely add/remove resources from templates, and previously orphaned resources will be cleanly re-adopted if you add them back.
 
 **Finding orphaned resources:**
 
@@ -274,11 +289,40 @@ These labels are automatically added to resources when they are retained (not de
 # Find all orphaned resources
 kubectl get all -A -l kubernetes-tenants.org/orphaned=true
 
-# Find orphaned resources by reason
-kubectl get all -A -l kubernetes-tenants.org/orphaned-reason=RemovedFromTemplate
+# Find orphaned resources by reason (using annotation)
+kubectl get all -A -l kubernetes-tenants.org/orphaned=true -o jsonpath='{range .items[?(@.metadata.annotations.kubernetes-tenants\.org/orphaned-reason=="RemovedFromTemplate")]}{.kind}/{.metadata.name}{"\n"}{end}'
 
-# Find orphaned resources from a specific tenant
+# Find orphaned resources from a specific tenant (label still available)
 kubectl get all -A -l kubernetes-tenants.org/orphaned=true,kubernetes-tenants.org/tenant=my-tenant
+```
+
+### Resource Annotations
+
+**DeletionPolicy Annotation:**
+
+The operator automatically adds a `deletion-policy` annotation to all created resources:
+
+```yaml
+metadata:
+  annotations:
+    kubernetes-tenants.org/deletion-policy: "Retain"  # or "Delete"
+```
+
+**Purpose:**
+- **Critical for orphan cleanup**: When resources are removed from templates, they no longer exist in the template spec
+- The annotation is the **only source of truth** for determining the correct cleanup behavior
+- Without this annotation, all orphaned resources would default to `Delete` policy
+
+**Behavior:**
+- Set automatically during resource creation by `renderResource` function
+- Read during orphan cleanup in `deleteOrphanedResource` function
+- Falls back to `Delete` if annotation is missing (defensive default)
+
+**Example query:**
+
+```bash
+# Find all Retain resources
+kubectl get all -A -o jsonpath='{range .items[?(@.metadata.annotations.kubernetes-tenants\.org/deletion-policy=="Retain")]}{.kind}/{.metadata.name}{"\n"}{end}'
 ```
 
 ## Examples

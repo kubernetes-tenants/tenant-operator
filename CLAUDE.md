@@ -240,15 +240,23 @@ spec:
    - Detect resources that were previously applied but removed from template
    - Compare `status.AppliedResources` (previous) with current desired resources
    - Resource key format: `kind/namespace/name@id` (e.g., `Deployment/default/myapp@app-deployment`)
+   - **DeletionPolicy Preservation**: Each resource stores its DeletionPolicy in annotation `kubernetes-tenants.org/deletion-policy` at creation time
+     - Critical: Orphaned resources no longer exist in template, so annotation is the only source of truth
+     - Enables correct cleanup behavior even after template changes
    - For each orphaned resource:
+     - Read `DeletionPolicy` from resource annotation (falls back to `Delete` if missing)
      - Respect `DeletionPolicy`:
-       - `Delete`: Remove resource from cluster
-       - `Retain`: Remove ownerReference/tracking labels, keep resource, add orphan labels
+       - `Delete`: Remove resource from cluster (automatic via ownerReference)
+       - `Retain`: Remove tracking labels, add orphan labels, keep resource (no ownerReference)
      - Log deletion/retention event with reason "RemovedFromTemplate"
-   - **Orphan Labels** (for retained resources):
-     - `kubernetes-tenants.org/orphaned: "true"`
-     - `kubernetes-tenants.org/orphaned-at: "<RFC3339 timestamp>"`
-     - `kubernetes-tenants.org/orphaned-reason: "RemovedFromTemplate" | "TenantDeleted"`
+   - **Orphan Markers** (for retained resources):
+     - Label: `kubernetes-tenants.org/orphaned: "true"` (for selector queries)
+     - Annotation: `kubernetes-tenants.org/orphaned-at: "<RFC3339 timestamp>"`
+     - Annotation: `kubernetes-tenants.org/orphaned-reason: "RemovedFromTemplate" | "TenantDeleted"`
+   - **Re-adoption**: When a previously orphaned resource is re-added to template:
+     - Operator automatically removes all orphan markers during apply
+     - Resource transitions cleanly back to managed state
+     - No manual cleanup required
    - Runs before applying new resources to prevent conflicts
    - Enables dynamic template evolution without manual cleanup
    - Easy identification of retained orphan resources via label selectors
@@ -378,11 +386,35 @@ value: "{{ .uid }}"
 - Example: `spec.source.mysql.passwordRef.{name, key}`
 - Never hardcode credentials in CRDs
 
-### OwnerReferences
+### OwnerReferences and Resource Tracking
 
-- All created resources have `ownerReference=Tenant`
-- Exception: `deletionPolicy=Retain` removes ownerReference on deletion
-- Enables automatic garbage collection
+**Two tracking mechanisms based on DeletionPolicy and namespace:**
+
+1. **OwnerReference-based tracking** (automatic garbage collection):
+   - Used for: Same-namespace resources with `DeletionPolicy=Delete` (default)
+   - Behavior: Kubernetes garbage collector automatically deletes resources when Tenant is deleted
+   - Location: `ownerReferences` field in resource metadata
+
+2. **Label-based tracking** (manual lifecycle management):
+   - Used for:
+     - Cross-namespace resources (ownerReferences don't work across namespaces)
+     - Namespace resources (cannot have ownerReferences)
+     - **Resources with `DeletionPolicy=Retain`** (prevents automatic deletion)
+   - Tracking labels:
+     - `kubernetes-tenants.org/tenant`: Tenant CR name
+     - `kubernetes-tenants.org/tenant-namespace`: Tenant CR namespace
+   - Behavior: Resources persist after Tenant deletion, operator manages lifecycle via finalizer
+
+**DeletionPolicy=Retain Implementation** ✅:
+- **Creation**: Resources created with label-based tracking only (NO ownerReference)
+- **Reason**: Prevents Kubernetes garbage collector from auto-deleting when Tenant is removed
+- **Deletion**: Finalizer removes tracking labels and adds orphan labels, resource persists in cluster
+- **Orphan Markers**:
+  - Label: `kubernetes-tenants.org/orphaned: "true"` (for selector queries)
+  - Annotation: `kubernetes-tenants.org/orphaned-at: "<RFC3339 timestamp>"`
+  - Annotation: `kubernetes-tenants.org/orphaned-reason: "TenantDeleted" | "RemovedFromTemplate"`
+
+**Critical Design Decision**: DeletionPolicy must be evaluated at resource creation time, not deletion time. Setting ownerReference initially and trying to remove it during deletion is too late - Kubernetes garbage collector has already marked the resource for deletion.
 
 ### RBAC Requirements
 

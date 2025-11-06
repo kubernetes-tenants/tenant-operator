@@ -755,8 +755,8 @@ secrets:
 <summary><b>What happens if I delete a database row?</b></summary>
 
 The Tenant CR is automatically deleted, triggering cleanup:
-- `deletionPolicy: Delete` (default): Resources are deleted
-- `deletionPolicy: Retain`: Resources kept, owner references removed
+- `deletionPolicy: Delete` (default): Resources are deleted (automatic via ownerReference)
+- `deletionPolicy: Retain`: Resources kept (no ownerReference set, label-based tracking only)
 </details>
 
 <details>

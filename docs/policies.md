@@ -147,7 +147,7 @@ deployments:
 
 ### `Retain`
 
-Resources are kept in the cluster, but ownerReference is removed.
+Resources are kept in the cluster and **never have ownerReference set** (use label-based tracking instead).
 
 ```yaml
 persistentVolumeClaims:
@@ -165,10 +165,15 @@ persistentVolumeClaims:
 ```
 
 **Behavior:**
-- ✅ Removes ownerReference
-- ✅ Resource stays in cluster
-- ❌ No automatic cleanup
+- ✅ **No ownerReference** (label-based tracking only)
+- ✅ Resource stays in cluster even when Tenant is deleted
+- ✅ Orphan labels added on deletion for identification
+- ❌ No automatic cleanup by Kubernetes garbage collector
 - ⚠️  Manual deletion required
+
+**Why no ownerReference?**
+
+Setting ownerReference would cause Kubernetes garbage collector to automatically delete the resource when the Tenant CR is deleted, regardless of DeletionPolicy. The operator evaluates DeletionPolicy **at resource creation time** and uses label-based tracking (`kubernetes-tenants.org/tenant`, `kubernetes-tenants.org/tenant-namespace`) instead of ownerReference for Retain resources.
 
 **Use when:**
 - Data must survive tenant deletion
@@ -190,8 +195,8 @@ The operator tracks all applied resources in `status.appliedResources` with keys
 
 1. **Detect Orphans**: Compares current template resources with previously applied resources
 2. **Respect Policy**: Applies the resource's `deletionPolicy` setting:
-   - `Delete`: Removes the orphaned resource from cluster
-   - `Retain`: Removes ownerReference/labels but keeps the resource
+   - `Delete`: Removes the orphaned resource from cluster (ownerReference enables automatic deletion)
+   - `Retain`: Removes tracking labels and adds orphan labels, but keeps the resource
 3. **Update Status**: Tracks the new set of applied resources
 
 **Example scenario:**
@@ -214,29 +219,46 @@ After removing the `worker` deployment from template:
 After removing the `web` deployment from template:
 - `web` deployment: **Deleted from cluster** automatically
 
-**Orphan Labels:**
+**Orphan Markers:**
 
-When resources are retained (DeletionPolicy=Retain), they are automatically marked with special labels for easy identification:
+When resources are retained (DeletionPolicy=Retain), they are automatically marked for easy identification:
 
 ```yaml
 metadata:
   labels:
-    kubernetes-tenants.org/orphaned: "true"
-    kubernetes-tenants.org/orphaned-at: "2025-01-15T10:30:00Z"
+    kubernetes-tenants.org/orphaned: "true"  # Label for selector queries
+  annotations:
+    kubernetes-tenants.org/orphaned-at: "2025-01-15T10:30:00Z"  # RFC3339 timestamp
     kubernetes-tenants.org/orphaned-reason: "RemovedFromTemplate"
 ```
+
+**Why split label/annotation?**
+- **Label** `orphaned: "true"`: Simple boolean for selector queries (Kubernetes labels have strict RFC 1123 format requirements - no colons allowed in values)
+- **Annotations**: Detailed metadata like timestamps (no format restrictions)
+
+**Orphan Lifecycle - Re-adoption:**
+
+If you re-add a previously removed resource to the template, the operator automatically:
+1. Removes all orphan markers (label + annotations)
+2. Re-applies tracking labels or ownerReferences based on current DeletionPolicy
+3. Resumes full management of the resource
+
+This means you can safely experiment with template changes:
+- Remove a resource → It becomes orphaned (if Retain policy)
+- Re-add the same resource → It's cleanly re-adopted into management
+- No manual cleanup or label management needed!
 
 **Finding orphaned resources:**
 
 ```bash
-# Find all orphaned resources
+# Find all orphaned resources (using label selector)
 kubectl get all -A -l kubernetes-tenants.org/orphaned=true
 
-# Find resources orphaned due to template changes
-kubectl get all -A -l kubernetes-tenants.org/orphaned-reason=RemovedFromTemplate
+# Find resources orphaned due to template changes (filter by annotation)
+kubectl get all -A -l kubernetes-tenants.org/orphaned=true -o jsonpath='{range .items[?(@.metadata.annotations.kubernetes-tenants\.org/orphaned-reason=="RemovedFromTemplate")]}{.kind}/{.metadata.name}{"\n"}{end}'
 
-# Find resources orphaned due to tenant deletion
-kubectl get all -A -l kubernetes-tenants.org/orphaned-reason=TenantDeleted
+# Find resources orphaned due to tenant deletion (filter by annotation)
+kubectl get all -A -l kubernetes-tenants.org/orphaned=true -o jsonpath='{range .items[?(@.metadata.annotations.kubernetes-tenants\.org/orphaned-reason=="TenantDeleted")]}{.kind}/{.metadata.name}{"\n"}{end}'
 ```
 
 **Benefits:**
@@ -324,9 +346,13 @@ spec:
 ### Why This Works
 
 With `deletionPolicy: Retain`:
-1. Even if TenantRegistry/TenantTemplate is deleted → Tenant CRs are deleted
-2. When Tenant CRs are deleted → ownerReferences are removed from resources
-3. **Resources stay in the cluster** instead of being deleted
+1. **At creation time**: Resources are created with label-based tracking only (NO ownerReference)
+2. Even if TenantRegistry/TenantTemplate is deleted → Tenant CRs are deleted
+3. When Tenant CRs are deleted → Resources stay in cluster (no ownerReference = no automatic deletion)
+4. Finalizer adds orphan labels for easy identification
+5. **Resources stay in the cluster** because Kubernetes garbage collector never marks them for deletion
+
+**Key insight**: DeletionPolicy is evaluated when creating resources, not when deleting them. This prevents the Kubernetes garbage collector from auto-deleting Retain resources.
 
 ### When to Use This Strategy
 
