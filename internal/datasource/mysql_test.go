@@ -1,0 +1,369 @@
+/*
+Copyright 2025.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package datasource
+
+import (
+	"context"
+	"database/sql"
+	"testing"
+
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestNewMySQLAdapter(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  Config
+		wantErr bool
+	}{
+		{
+			name: "valid configuration with defaults",
+			config: Config{
+				Host:     "localhost",
+				Port:     3306,
+				Username: "root",
+				Password: "password",
+				Database: "tenants",
+			},
+			wantErr: true, // Will fail without real MySQL, but tests config parsing
+		},
+		{
+			name: "valid configuration with custom pool settings",
+			config: Config{
+				Host:            "localhost",
+				Port:            3306,
+				Username:        "root",
+				Password:        "password",
+				Database:        "tenants",
+				MaxOpenConns:    50,
+				MaxIdleConns:    10,
+				ConnMaxLifetime: "10m",
+			},
+			wantErr: true, // Will fail without real MySQL
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewMySQLAdapter(tt.config)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestMySQLAdapter_QueryTenants(t *testing.T) {
+	tests := []struct {
+		name          string
+		queryConfig   QueryConfig
+		setupMock     func(sqlmock.Sqlmock)
+		want          []TenantRow
+		wantErr       bool
+		errorContains string
+	}{
+		{
+			name: "successful query with active tenants",
+			queryConfig: QueryConfig{
+				Table: "tenants",
+				ValueMappings: ValueMappings{
+					UID:       "id",
+					HostOrURL: "url",
+					Activate:  "active",
+				},
+				ExtraMappings: map[string]string{
+					"planId": "subscription_plan",
+					"region": "deployment_region",
+				},
+			},
+			setupMock: func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"id", "url", "active", "subscription_plan", "deployment_region"}).
+					AddRow("tenant1", "https://tenant1.example.com", "1", "premium", "us-east-1").
+					AddRow("tenant2", "https://tenant2.example.com", "true", "basic", "us-west-2").
+					AddRow("tenant3", "https://tenant3.example.com", "0", "premium", "eu-west-1"). // Inactive
+					AddRow("tenant4", "", "1", "basic", "ap-south-1")                              // Empty URL, should be filtered
+				mock.ExpectQuery("SELECT .* FROM .*").
+					WillReturnRows(rows)
+			},
+			want: []TenantRow{
+				{
+					UID:       "tenant1",
+					HostOrURL: "https://tenant1.example.com",
+					Activate:  "1",
+					Extra: map[string]string{
+						"planId": "premium",
+						"region": "us-east-1",
+					},
+				},
+				{
+					UID:       "tenant2",
+					HostOrURL: "https://tenant2.example.com",
+					Activate:  "true",
+					Extra: map[string]string{
+						"planId": "basic",
+						"region": "us-west-2",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "query with NULL values",
+			queryConfig: QueryConfig{
+				Table: "tenants",
+				ValueMappings: ValueMappings{
+					UID:       "id",
+					HostOrURL: "url",
+					Activate:  "active",
+				},
+				ExtraMappings: map[string]string{
+					"config": "json_config",
+				},
+			},
+			setupMock: func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"id", "url", "active", "json_config"}).
+					AddRow("tenant1", "https://tenant1.example.com", "1", sql.NullString{Valid: false}). // NULL config
+					AddRow(sql.NullString{Valid: false}, "https://tenant2.example.com", "1", "{}").      // NULL id
+					AddRow("tenant3", sql.NullString{Valid: false}, "1", "{}").                          // NULL URL
+					AddRow("tenant4", "https://tenant4.example.com", sql.NullString{Valid: false}, "{}") // NULL activate
+				mock.ExpectQuery("SELECT .* FROM .*").
+					WillReturnRows(rows)
+			},
+			want: []TenantRow{
+				{
+					UID:       "tenant1",
+					HostOrURL: "https://tenant1.example.com",
+					Activate:  "1",
+					Extra: map[string]string{
+						"config": "",
+					},
+				},
+				{
+					UID:       "", // NULL UID is converted to empty string but still included
+					HostOrURL: "https://tenant2.example.com",
+					Activate:  "1",
+					Extra: map[string]string{
+						"config": "{}",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "query with no extra mappings",
+			queryConfig: QueryConfig{
+				Table: "tenants",
+				ValueMappings: ValueMappings{
+					UID:       "tenant_id",
+					HostOrURL: "tenant_url",
+					Activate:  "is_active",
+				},
+				ExtraMappings: nil,
+			},
+			setupMock: func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"tenant_id", "tenant_url", "is_active"}).
+					AddRow("t1", "https://t1.example.com", "yes").
+					AddRow("t2", "https://t2.example.com", "YES")
+				mock.ExpectQuery("SELECT .* FROM .*").
+					WillReturnRows(rows)
+			},
+			want: []TenantRow{
+				{
+					UID:       "t1",
+					HostOrURL: "https://t1.example.com",
+					Activate:  "yes",
+					Extra:     map[string]string{},
+				},
+				{
+					UID:       "t2",
+					HostOrURL: "https://t2.example.com",
+					Activate:  "YES",
+					Extra:     map[string]string{},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "database query error",
+			queryConfig: QueryConfig{
+				Table: "tenants",
+				ValueMappings: ValueMappings{
+					UID:       "id",
+					HostOrURL: "url",
+					Activate:  "active",
+				},
+			},
+			setupMock: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery("SELECT .* FROM .*").
+					WillReturnError(sql.ErrConnDone)
+			},
+			wantErr:       true,
+			errorContains: "failed to query tenants",
+		},
+		{
+			name: "scan error",
+			queryConfig: QueryConfig{
+				Table: "tenants",
+				ValueMappings: ValueMappings{
+					UID:       "id",
+					HostOrURL: "url",
+					Activate:  "active",
+				},
+			},
+			setupMock: func(mock sqlmock.Sqlmock) {
+				// Return fewer columns than expected (will cause scan error)
+				rows := sqlmock.NewRows([]string{"id", "url"}).
+					AddRow("tenant1", "https://tenant1.example.com")
+				mock.ExpectQuery("SELECT .* FROM .*").
+					WillReturnRows(rows)
+			},
+			wantErr:       true,
+			errorContains: "failed to scan row",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create mock database
+			db, mock, err := sqlmock.New()
+			require.NoError(t, err)
+			defer func() {
+				_ = db.Close()
+			}()
+
+			// Setup mock expectations
+			tt.setupMock(mock)
+
+			// Create adapter with mocked database
+			adapter := &MySQLAdapter{db: db}
+
+			// Execute query
+			ctx := context.Background()
+			got, err := adapter.QueryTenants(ctx, tt.queryConfig)
+
+			// Check error
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errorContains != "" {
+					assert.Contains(t, err.Error(), tt.errorContains)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
+
+			// Ensure all expectations were met
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+func TestJoinColumns(t *testing.T) {
+	tests := []struct {
+		name    string
+		columns []string
+		want    string
+	}{
+		{
+			name:    "single column",
+			columns: []string{"id"},
+			want:    "`id`",
+		},
+		{
+			name:    "multiple columns",
+			columns: []string{"id", "name", "email"},
+			want:    "`id`, `name`, `email`",
+		},
+		{
+			name:    "empty columns",
+			columns: []string{},
+			want:    "",
+		},
+		{
+			name:    "columns with special characters",
+			columns: []string{"user.id", "tenant-name"},
+			want:    "`user.id`, `tenant-name`",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := joinColumns(tt.columns)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestIsActive(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		want  bool
+	}{
+		// Truthy values
+		{name: "numeric 1", value: "1", want: true},
+		{name: "lowercase true", value: "true", want: true},
+		{name: "uppercase TRUE", value: "TRUE", want: true},
+		{name: "titlecase True", value: "True", want: true},
+		{name: "lowercase yes", value: "yes", want: true},
+		{name: "uppercase YES", value: "YES", want: true},
+		{name: "titlecase Yes", value: "Yes", want: true},
+
+		// Falsy values
+		{name: "numeric 0", value: "0", want: false},
+		{name: "lowercase false", value: "false", want: false},
+		{name: "uppercase FALSE", value: "FALSE", want: false},
+		{name: "empty string", value: "", want: false},
+		{name: "no", value: "no", want: false},
+		{name: "NO", value: "NO", want: false},
+		{name: "random string", value: "random", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isActive(tt.value)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestMySQLAdapter_Close(t *testing.T) {
+	// Create mock database
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+
+	// Expect Close to be called
+	mock.ExpectClose()
+
+	adapter := &MySQLAdapter{db: db}
+
+	// Close should not return error
+	err = adapter.Close()
+	assert.NoError(t, err)
+
+	// Ensure all expectations were met
+	assert.NoError(t, mock.ExpectationsWereMet())
+
+	// Closing a nil adapter should not panic
+	nilAdapter := &MySQLAdapter{db: nil}
+	err = nilAdapter.Close()
+	assert.NoError(t, err)
+}

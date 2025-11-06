@@ -570,9 +570,10 @@ Label-based mechanism for tracking namespace ownership without ownerReferences (
 
 The number of parallel reconciliation workers.
 
-**Configuration:** (Not exposed as flags in current implementation)
-- Controlled by controller-runtime defaults
-- Future: `--tenant-concurrency`, `--registry-concurrency` flags
+**Configuration:**
+- `--tenant-concurrency=N` (default: 10) - Concurrent Tenant reconciliations
+- `--template-concurrency=N` (default: 5) - Concurrent Template reconciliations
+- `--registry-concurrency=N` (default: 3) - Concurrent Registry syncs
 
 **Tradeoff:** Higher concurrency = faster processing, more resource usage.
 

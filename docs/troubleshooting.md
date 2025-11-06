@@ -267,7 +267,9 @@ waitForReady: false
 B. Increase concurrency:
 ```yaml
 args:
-- --tenant-concurrency=20
+- --tenant-concurrency=20      # Increase Tenant reconciliation concurrency
+- --template-concurrency=10    # Increase Template reconciliation concurrency
+- --registry-concurrency=5     # Increase Registry reconciliation concurrency
 ```
 
 C. Optimize templates (see [Performance Guide](performance.md))
@@ -300,7 +302,9 @@ resources:
 B. Reduce concurrency:
 ```yaml
 args:
-- --tenant-concurrency=5
+- --tenant-concurrency=5       # Reduce Tenant reconciliation concurrency
+- --template-concurrency=3     # Reduce Template reconciliation concurrency
+- --registry-concurrency=1     # Reduce Registry reconciliation concurrency
 ```
 
 C. Increase requeue interval:

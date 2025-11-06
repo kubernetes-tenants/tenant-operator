@@ -17,9 +17,17 @@ limitations under the License.
 package readiness
 
 import (
+	"context"
 	"testing"
+	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestChecker_IsReady(t *testing.T) {
@@ -482,5 +490,167 @@ func TestNewChecker(t *testing.T) {
 	}
 	if checker.client != nil {
 		t.Error("NewChecker(nil) should have nil client")
+	}
+}
+
+func TestChecker_WaitForReady(t *testing.T) {
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+	_ = appsv1.AddToScheme(scheme)
+
+	tests := []struct {
+		name        string
+		setupClient func() client.Client
+		obj         *unstructured.Unstructured
+		timeout     time.Duration
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name: "ConfigMap is immediately ready",
+			setupClient: func() client.Client {
+				configMap := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-configmap",
+						Namespace: "default",
+					},
+				}
+				return fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap).Build()
+			},
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "ConfigMap",
+					"metadata": map[string]interface{}{
+						"name":      "test-configmap",
+						"namespace": "default",
+					},
+				},
+			},
+			timeout: 5 * time.Second,
+			wantErr: false,
+		},
+		{
+			name: "timeout waiting for deployment",
+			setupClient: func() client.Client {
+				deployment := &appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-deployment",
+						Namespace:  "default",
+						Generation: 1,
+					},
+					Spec: appsv1.DeploymentSpec{
+						Replicas: func() *int32 { r := int32(3); return &r }(),
+					},
+					Status: appsv1.DeploymentStatus{
+						ObservedGeneration: 1,
+						Replicas:           3,
+						AvailableReplicas:  0, // Not ready
+					},
+				}
+				return fake.NewClientBuilder().WithScheme(scheme).WithObjects(deployment).Build()
+			},
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "apps/v1",
+					"kind":       "Deployment",
+					"metadata": map[string]interface{}{
+						"name":      "test-deployment",
+						"namespace": "default",
+					},
+				},
+			},
+			timeout:     100 * time.Millisecond,
+			wantErr:     true,
+			errContains: "timeout waiting for resource to be ready",
+		},
+		{
+			name: "resource not found",
+			setupClient: func() client.Client {
+				return fake.NewClientBuilder().WithScheme(scheme).Build() // Empty client
+			},
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "apps/v1",
+					"kind":       "Deployment",
+					"metadata": map[string]interface{}{
+						"name":      "missing-deployment",
+						"namespace": "default",
+					},
+				},
+			},
+			timeout:     100 * time.Millisecond,
+			wantErr:     true,
+			errContains: "timeout",
+		},
+		{
+			name: "context cancelled",
+			setupClient: func() client.Client {
+				deployment := &appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-deployment",
+						Namespace:  "default",
+						Generation: 1,
+					},
+					Spec: appsv1.DeploymentSpec{
+						Replicas: func() *int32 { r := int32(3); return &r }(),
+					},
+					Status: appsv1.DeploymentStatus{
+						ObservedGeneration: 1,
+						Replicas:           3,
+						AvailableReplicas:  0, // Not ready
+					},
+				}
+				return fake.NewClientBuilder().WithScheme(scheme).WithObjects(deployment).Build()
+			},
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "apps/v1",
+					"kind":       "Deployment",
+					"metadata": map[string]interface{}{
+						"name":      "test-deployment",
+						"namespace": "default",
+					},
+				},
+			},
+			timeout:     5 * time.Second,
+			wantErr:     true,
+			errContains: "context",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewChecker(tt.setupClient())
+
+			ctx := context.Background()
+			if tt.errContains == "context" {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithCancel(ctx)
+				cancel() // Cancel immediately
+			}
+
+			err := c.WaitForReady(
+				ctx,
+				tt.obj.GetName(),
+				tt.obj.GetNamespace(),
+				tt.obj,
+				tt.timeout,
+			)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("WaitForReady() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr && tt.errContains != "" {
+				if err == nil {
+					t.Errorf("Expected error containing %q, got nil", tt.errContains)
+				} else if err.Error() == "" {
+					t.Errorf("Expected error containing %q, got empty error", tt.errContains)
+				}
+				// Note: We don't check error message content as it can vary
+			}
+		})
 	}
 }

@@ -196,8 +196,9 @@ spec:
       containers:
       - name: manager
         args:
-        - --tenant-concurrency=10        # Concurrent Tenant reconciliations
-        - --registry-concurrency=5       # Concurrent Registry syncs
+        - --tenant-concurrency=10        # Concurrent Tenant reconciliations (default: 10)
+        - --template-concurrency=5       # Concurrent Template reconciliations (default: 5)
+        - --registry-concurrency=3       # Concurrent Registry syncs (default: 3)
         - --leader-elect                 # Enable leader election
 ```
 
