@@ -403,25 +403,27 @@ func TestFindRegistryForTemplate(t *testing.T) {
 			wantNumResults: 1,
 		},
 		{
-			name: "template with empty registry reference",
+			name: "template with empty registry reference still triggers reconcile",
 			template: &tenantsv1.TenantTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "standalone-template",
 					Namespace: "default",
 				},
 				Spec: tenantsv1.TenantTemplateSpec{
-					RegistryID: "",
+					RegistryID: "", // Empty registry ID
 				},
 			},
 			wantRequests: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
-						Name:      "",
+						Name:      "", // Empty name will be passed to registry reconciler
 						Namespace: "default",
 					},
 				},
 			},
-			wantNumResults: 1, // Still returns a request even if empty (controller will handle)
+			// Note: Mapping function always returns a request even for empty registryID
+			// The registry reconciler will handle the NotFound case appropriately
+			wantNumResults: 1,
 		},
 	}
 
