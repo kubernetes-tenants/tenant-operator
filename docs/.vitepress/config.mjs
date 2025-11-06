@@ -58,6 +58,76 @@ export default withMermaid(
             { text: "Performance Tuning", link: "/performance" },
             { text: "Security", link: "/security" },
             { text: "Troubleshooting", link: "/troubleshooting" },
+            {
+              text: "Alert Runbooks",
+              collapsed: true,
+              items: [
+                {
+                  text: "Critical Alerts",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "Tenant Degraded",
+                      link: "/runbooks/tenant-degraded",
+                    },
+                    {
+                      text: "Tenant Resources Failed",
+                      link: "/runbooks/tenant-resources-failed",
+                    },
+                    {
+                      text: "Tenant Not Ready",
+                      link: "/runbooks/tenant-not-ready",
+                    },
+                    {
+                      text: "Tenant Status Unknown",
+                      link: "/runbooks/tenant-status-unknown",
+                    },
+                    {
+                      text: "Registry Many Tenants Failed",
+                      link: "/runbooks/registry-many-tenants-failed",
+                    },
+                  ],
+                },
+                {
+                  text: "Warning Alerts",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "Tenant Resources Mismatch",
+                      link: "/runbooks/tenant-resources-mismatch",
+                    },
+                    {
+                      text: "Tenant Resource Conflicts",
+                      link: "/runbooks/tenant-conflicts",
+                    },
+                    {
+                      text: "High Conflict Rate",
+                      link: "/runbooks/high-conflict-rate",
+                    },
+                    {
+                      text: "Registry Tenants Failed",
+                      link: "/runbooks/registry-tenants-failed",
+                    },
+                    {
+                      text: "Registry Sync Issues",
+                      link: "/runbooks/registry-sync-issues",
+                    },
+                    {
+                      text: "Reconciliation Errors",
+                      link: "/runbooks/reconciliation-errors",
+                    },
+                    {
+                      text: "Slow Reconciliation",
+                      link: "/runbooks/slow-reconciliation",
+                    },
+                    {
+                      text: "High Apply Failure Rate",
+                      link: "/runbooks/apply-failures",
+                    },
+                  ],
+                },
+              ],
+            },
           ],
         },
         {

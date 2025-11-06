@@ -31,6 +31,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -990,13 +991,16 @@ func removeString(slice []string, str string) []string {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *TenantRegistryReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *TenantRegistryReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&tenantsv1.TenantRegistry{}).
 		Owns(&tenantsv1.Tenant{}).
 		// Watch TenantTemplates to re-sync Tenants when template changes
 		Watches(&tenantsv1.TenantTemplate{}, handler.EnqueueRequestsFromMapFunc(r.findRegistryForTemplate)).
 		Named("tenantregistry").
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: concurrency,
+		}).
 		Complete(r)
 }
 

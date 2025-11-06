@@ -939,6 +939,16 @@ Built with:
 
 ---
 
+## Star History
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=kubernetes-tenants/tenant-operator&type=date&theme=dark&legend=top-left" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=kubernetes-tenants/tenant-operator&type=date&legend=top-left" />
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=kubernetes-tenants/tenant-operator&type=date&legend=top-left" />
+</picture>
+
+---
+
 <div align="center">
 
 **[⬆ Back to Top](#tenant-operator)**

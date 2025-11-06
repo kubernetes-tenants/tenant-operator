@@ -63,6 +63,9 @@ func main() {
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
+	var registryConcurrency int
+	var templateConcurrency int
+	var tenantConcurrency int
 	var tlsOpts []func(*tls.Config)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
@@ -81,6 +84,12 @@ func main() {
 	flag.StringVar(&metricsCertKey, "metrics-cert-key", "tls.key", "The name of the metrics server key file.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.IntVar(&registryConcurrency, "registry-concurrency", 3,
+		"Number of concurrent reconciliations for TenantRegistry controller")
+	flag.IntVar(&templateConcurrency, "template-concurrency", 5,
+		"Number of concurrent reconciliations for TenantTemplate controller")
+	flag.IntVar(&tenantConcurrency, "tenant-concurrency", 10,
+		"Number of concurrent reconciliations for Tenant controller")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -208,7 +217,7 @@ func main() {
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
 		Recorder: mgr.GetEventRecorderFor("tenantregistry-controller"),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(mgr, registryConcurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "TenantRegistry")
 		os.Exit(1)
 	}
@@ -216,7 +225,7 @@ func main() {
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
 		Recorder: mgr.GetEventRecorderFor("tenanttemplate-controller"),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(mgr, templateConcurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "TenantTemplate")
 		os.Exit(1)
 	}
@@ -224,7 +233,7 @@ func main() {
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
 		Recorder: mgr.GetEventRecorderFor("tenant-controller"),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(mgr, tenantConcurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Tenant")
 		os.Exit(1)
 	}

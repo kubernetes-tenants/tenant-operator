@@ -20,6 +20,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sort"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql" // MySQL driver
@@ -87,9 +88,17 @@ func (a *MySQLAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]
 		config.ValueMappings.Activate,
 	}
 
-	// Add extra columns
+	// Add extra columns in sorted order for stable queries
+	// Sort the keys to ensure consistent column order
+	extraKeys := make([]string, 0, len(config.ExtraMappings))
+	for key := range config.ExtraMappings {
+		extraKeys = append(extraKeys, key)
+	}
+	sort.Strings(extraKeys)
+
 	extraColumns := make([]string, 0, len(config.ExtraMappings))
-	for _, col := range config.ExtraMappings {
+	for _, key := range extraKeys {
+		col := config.ExtraMappings[key]
 		columns = append(columns, col)
 		extraColumns = append(extraColumns, col)
 	}

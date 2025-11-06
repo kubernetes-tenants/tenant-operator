@@ -200,8 +200,8 @@ flowchart TB
 ```
 
 ::: info Database Support
-\* **MySQL**: Fully supported (v1.0+)
-\* **PostgreSQL**: Planned for v1.2
+* **MySQL**: Fully supported (v1.0+)
+* **PostgreSQL**: Planned for v1.2
 :::
 
 ### Reconciliation Flow
@@ -333,3 +333,11 @@ sequenceDiagram
 
 - **GitHub**: [kubernetes-tenants/tenant-operator](https://github.com/kubernetes-tenants/tenant-operator)
 - **Issues**: [Report bugs or request features](https://github.com/kubernetes-tenants/tenant-operator/issues)
+
+## Star History
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=kubernetes-tenants/tenant-operator&type=date&theme=dark&legend=top-left" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=kubernetes-tenants/tenant-operator&type=date&legend=top-left" />
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=kubernetes-tenants/tenant-operator&type=date&legend=top-left" />
+</picture>

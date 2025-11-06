@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -308,12 +309,15 @@ func (r *TenantTemplateReconciler) updateStatus(ctx context.Context, tmpl *tenan
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *TenantTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *TenantTemplateReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&tenantsv1.TenantTemplate{}).
 		Named("tenanttemplate").
 		// Watch Tenants to update template Applied status when tenant status changes
 		Watches(&tenantsv1.Tenant{}, handler.EnqueueRequestsFromMapFunc(r.findTemplateForTenant)).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: concurrency,
+		}).
 		Complete(r)
 }
 

@@ -16,22 +16,12 @@ metadata:
     prometheus: kube-prometheus
 spec:
   groups:
-    - name: tenant-operator.alerts
+    # ========================================
+    # Critical Alerts - Immediate Action Required
+    # ========================================
+    - name: tenant-operator.critical
       interval: 30s
       rules:
-        # Critical: Tenant has failed resources
-        - alert: TenantResourcesFailed
-          expr: tenant_resources_failed > 0
-          for: 5m
-          labels:
-            severity: critical
-            component: tenant-operator
-          annotations:
-            summary: "Tenant {{ $labels.tenant }} has failed resources"
-            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $value }} failed resources for more than 5 minutes. This indicates a critical issue with resource provisioning."
-            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.example.com/runbooks/tenant-resources-failed"
-
         # Critical: Tenant is in degraded state
         - alert: TenantDegraded
           expr: tenant_degraded_status > 0
@@ -40,10 +30,84 @@ spec:
             severity: critical
             component: tenant-operator
           annotations:
-            summary: "Tenant {{ $labels.tenant }} is in degraded state"
-            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} is in degraded state. Reason: {{ $labels.reason }}. This may indicate template rendering errors, conflicts, or dependency issues."
+            summary: "Tenant {{ $labels.tenant }} is degraded"
+            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has been in degraded state for 5+ minutes. Reason: {{ $labels.reason }}. This may indicate template errors, conflicts, or dependency issues."
             dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.example.com/runbooks/tenant-degraded"
+            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-degraded"
+
+        # Critical: Tenant has failed resources
+        - alert: TenantResourcesFailed
+          expr: tenant_resources_failed > 0
+          for: 5m
+          labels:
+            severity: critical
+            component: tenant-operator
+          annotations:
+            summary: "Tenant {{ $labels.tenant }} has {{ $value }} failed resource(s)"
+            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $value }} failed resources for 5+ minutes. This indicates critical provisioning failure."
+            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-resources-failed"
+
+        # Critical: Tenant not ready for extended period
+        - alert: TenantNotReady
+          expr: tenant_condition_status{type="Ready"} == 0
+          for: 15m
+          labels:
+            severity: critical
+            component: tenant-operator
+          annotations:
+            summary: "Tenant {{ $labels.tenant }} not ready for 15+ minutes"
+            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has been not ready for more than 15 minutes. Immediate investigation required."
+            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-not-ready"
+
+        # Critical: Tenant in unknown state
+        - alert: TenantStatusUnknown
+          expr: tenant_condition_status{type="Ready"} == 2
+          for: 10m
+          labels:
+            severity: critical
+            component: tenant-operator
+          annotations:
+            summary: "Tenant {{ $labels.tenant }} status unknown"
+            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has been in unknown state for 10+ minutes. This indicates potential controller or API server issues."
+            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-status-unknown"
+
+        # Critical: Registry has widespread tenant failures
+        - alert: RegistryManyTenantsFailure
+          expr: registry_failed > 5 or (registry_failed / registry_desired > 0.5 and registry_desired > 0)
+          for: 5m
+          labels:
+            severity: critical
+            component: tenant-operator
+          annotations:
+            summary: "Registry {{ $labels.registry }} has widespread failures"
+            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $value }} failed tenants (>5 or >50% of desired). This indicates a systemic issue requiring immediate attention."
+            dashboard: "https://grafana.example.com/d/tenant-operator/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/registry-many-tenants-failed"
+
+    # ========================================
+    # Warning Alerts - Attention Required
+    # ========================================
+    - name: tenant-operator.warning
+      interval: 30s
+      rules:
+        # Warning: Tenant resources not matching desired state
+        - alert: TenantResourcesMismatch
+          expr: |
+            (tenant_resources_ready != tenant_resources_desired)
+            and (tenant_resources_desired > 0)
+            and (tenant_resources_failed == 0)
+          for: 15m
+          labels:
+            severity: warning
+            component: tenant-operator
+          annotations:
+            summary: "Tenant {{ $labels.tenant }} has resource count mismatch"
+            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $labels.tenant_resources_ready }} ready resources but desires {{ $labels.tenant_resources_desired }}. No failures detected but reconciliation may be stuck."
+            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-resources-mismatch"
 
         # Warning: Tenant has conflicted resources
         - alert: TenantResourcesConflicted
@@ -53,10 +117,10 @@ spec:
             severity: warning
             component: tenant-operator
           annotations:
-            summary: "Tenant {{ $labels.tenant }} has resources in conflict"
+            summary: "Tenant {{ $labels.tenant }} has {{ $value }} conflicted resource(s)"
             description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $value }} resources in conflict state. This usually indicates ownership conflicts with existing resources."
             dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.example.com/runbooks/tenant-conflicts"
+            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-conflicts"
 
         # Warning: High rate of conflicts
         - alert: TenantHighConflictRate
@@ -67,110 +131,104 @@ spec:
             component: tenant-operator
           annotations:
             summary: "High conflict rate for tenant {{ $labels.tenant }}"
-            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} is experiencing a high rate of conflicts ({{ $value }} conflicts/sec) for resource kind {{ $labels.resource_kind }}. Policy: {{ $labels.conflict_policy }}"
+            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} is experiencing {{ printf \"%.2f\" $value }} conflicts/sec for {{ $labels.resource_kind }}. Policy: {{ $labels.conflict_policy }}. Review naming templates or conflict policies."
             dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.example.com/runbooks/high-conflict-rate"
-
-        # Critical: Tenant not ready
-        - alert: TenantNotReady
-          expr: tenant_condition_status{type="Ready"} != 1
-          for: 10m
-          labels:
-            severity: critical
-            component: tenant-operator
-          annotations:
-            summary: "Tenant {{ $labels.tenant }} is not ready"
-            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has not been ready for more than 10 minutes. Current status: {{ $value }} (0=False, 1=True, 2=Unknown)"
-            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.example.com/runbooks/tenant-not-ready"
-
-        # Warning: Tenant resources not matching desired state
-        - alert: TenantResourcesMismatch
-          expr: tenant_resources_ready != tenant_resources_desired and tenant_resources_desired > 0
-          for: 15m
-          labels:
-            severity: warning
-            component: tenant-operator
-          annotations:
-            summary: "Tenant {{ $labels.tenant }} resources mismatch"
-            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $value }} ready resources but expects a different count. This may indicate reconciliation issues."
-            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.example.com/runbooks/tenant-resources-mismatch"
+            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/high-conflict-rate"
 
         # Warning: Registry has failed tenants
         - alert: RegistryTenantsFailure
-          expr: registry_failed > 0
-          for: 5m
+          expr: registry_failed > 0 and registry_failed <= 5
+          for: 10m
           labels:
             severity: warning
             component: tenant-operator
           annotations:
-            summary: "Registry {{ $labels.registry }} has failed tenants"
-            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $value }} failed tenants. This may indicate a systemic issue with tenant provisioning."
+            summary: "Registry {{ $labels.registry }} has {{ $value }} failed tenant(s)"
+            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $value }} failed tenants for 10+ minutes. This may indicate provisioning issues affecting some tenants."
             dashboard: "https://grafana.example.com/d/tenant-operator/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.example.com/runbooks/registry-tenants-failed"
-
-        # Critical: Registry has many failed tenants
-        - alert: RegistryManyTenantsFailure
-          expr: registry_failed > 5 or (registry_failed / registry_desired > 0.5 and registry_desired > 0)
-          for: 5m
-          labels:
-            severity: critical
-            component: tenant-operator
-          annotations:
-            summary: "Registry {{ $labels.registry }} has many failed tenants"
-            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $value }} failed tenants (more than 5 or >50% of desired count). This indicates a critical systemic issue."
-            dashboard: "https://grafana.example.com/d/tenant-operator/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.example.com/runbooks/registry-many-tenants-failed"
+            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/registry-tenants-failed"
 
         # Warning: Registry sync issues
         - alert: RegistryDesiredCountMismatch
-          expr: registry_ready != registry_desired and registry_desired > 0
-          for: 15m
+          expr: |
+            (registry_ready != registry_desired)
+            and (registry_desired > 0)
+            and (registry_failed == 0)
+          for: 20m
           labels:
             severity: warning
             component: tenant-operator
           annotations:
             summary: "Registry {{ $labels.registry }} has tenant count mismatch"
-            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $value }} desired tenants but a different count is ready. Expected all tenants to be ready within 15 minutes."
+            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $labels.registry_ready }} ready tenants but desires {{ $labels.registry_desired }}. No failures detected but sync may be delayed."
             dashboard: "https://grafana.example.com/d/tenant-operator/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.example.com/runbooks/registry-sync-issues"
+            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/registry-sync-issues"
 
         # Warning: High reconciliation error rate
         - alert: TenantReconciliationErrors
-          expr: rate(tenant_reconcile_duration_seconds_count{result="error"}[5m]) > 0.1
+          expr: |
+            sum(rate(tenant_reconcile_duration_seconds_count{result="error"}[5m]))
+            /
+            sum(rate(tenant_reconcile_duration_seconds_count[5m]))
+            > 0.1
           for: 10m
           labels:
             severity: warning
             component: tenant-operator
           annotations:
             summary: "High tenant reconciliation error rate"
-            description: "Tenant operator is experiencing a high reconciliation error rate ({{ $value }} errors/sec). This may indicate controller issues or API server problems."
+            description: "Tenant operator is experiencing {{ printf \"%.1f\" (mul $value 100) }}% error rate in reconciliations. This may indicate controller issues, API server problems, or resource contention."
             dashboard: "https://grafana.example.com/d/tenant-operator/controller-health"
-            runbook_url: "https://docs.example.com/runbooks/reconciliation-errors"
+            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/reconciliation-errors"
 
-        # Warning: Slow reconciliation
+        # Warning: Slow reconciliation (P95)
         - alert: TenantReconciliationSlow
-          expr: histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m])) > 30
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(tenant_reconcile_duration_seconds_bucket{result="success"}[5m])) by (le)
+            ) > 30
+          for: 15m
+          labels:
+            severity: warning
+            component: tenant-operator
+          annotations:
+            summary: "Slow tenant reconciliation detected"
+            description: "95th percentile of successful tenant reconciliation duration is {{ printf \"%.1f\" $value }}s (threshold: 30s). This may indicate performance issues, resource contention, or complex tenant configurations."
+            dashboard: "https://grafana.example.com/d/tenant-operator/controller-health"
+            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/slow-reconciliation"
+
+        # Warning: High apply failure rate
+        - alert: HighApplyFailureRate
+          expr: |
+            sum(rate(apply_attempts_total{result="failure"}[5m])) by (kind)
+            /
+            sum(rate(apply_attempts_total[5m])) by (kind)
+            > 0.2
           for: 10m
           labels:
             severity: warning
             component: tenant-operator
           annotations:
-            summary: "Slow tenant reconciliation"
-            description: "95th percentile of tenant reconciliation duration is {{ $value }}s (>30s). This may indicate performance issues or resource contention."
+            summary: "High apply failure rate for {{ $labels.kind }}"
+            description: "Resource kind {{ $labels.kind }} is experiencing {{ printf \"%.1f\" (mul $value 100) }}% apply failure rate. Review resource templates and RBAC permissions."
             dashboard: "https://grafana.example.com/d/tenant-operator/controller-health"
-            runbook_url: "https://docs.example.com/runbooks/slow-reconciliation"
+            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/apply-failures"
 
+    # ========================================
+    # Info Alerts - Informational
+    # ========================================
+    - name: tenant-operator.info
+      interval: 1m
+      rules:
         # Info: New conflicts detected
         - alert: TenantNewConflictsDetected
           expr: increase(tenant_conflicts_total[5m]) > 0
-          for: 1m
+          for: 2m
           labels:
             severity: info
             component: tenant-operator
           annotations:
             summary: "New conflicts detected for tenant {{ $labels.tenant }}"
-            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $value }} new conflicts in the last 5 minutes for {{ $labels.resource_kind }}. Conflict policy: {{ $labels.conflict_policy }}"
+            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} encountered {{ printf \"%.0f\" $value }} new conflict(s) in the last 5 minutes for {{ $labels.resource_kind }}. Conflict policy: {{ $labels.conflict_policy }}."
             dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.example.com/runbooks/tenant-conflicts"
+            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-conflicts"
