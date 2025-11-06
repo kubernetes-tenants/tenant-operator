@@ -543,7 +543,10 @@ All CRDs have comprehensive OpenAPI v3 schemas with:
 
 - Separate workqueues for Registry/Template/Tenant controllers
 - Rate-limited retries with exponential backoff
-- Concurrent reconciliation: `--concurrency.tenant=N` flag
+- Concurrent reconciliation flags:
+  - `--registry-concurrency=N` (default: 3)
+  - `--template-concurrency=N` (default: 5)
+  - `--tenant-concurrency=N` (default: 10)
 
 ### Reconciliation Optimization ✅
 
