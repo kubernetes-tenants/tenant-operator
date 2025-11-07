@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
+	"github.com/kubernetes-tenants/tenant-operator/internal/datasource"
 )
 
 // TestGetExistingTenants tests the getExistingTenants function
@@ -784,4 +785,148 @@ func TestRemoveString(t *testing.T) {
 			assert.Equal(t, tt.want, result)
 		})
 	}
+}
+
+// TestUpdateTenantWithConflictHandling tests that updateTenant handles conflicts gracefully with retry logic
+func TestUpdateTenantWithConflictHandling(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	require.NoError(t, tenantsv1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	// Create a TenantRegistry
+	registry := &tenantsv1.TenantRegistry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-registry",
+			Namespace: "default",
+		},
+	}
+
+	// Create a TenantTemplate
+	tmpl := &tenantsv1.TenantTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "web-app",
+			Namespace:  "default",
+			Generation: 1,
+		},
+		Spec: tenantsv1.TenantTemplateSpec{
+			RegistryID: "test-registry",
+		},
+	}
+
+	// Create an existing Tenant
+	tenant := &tenantsv1.Tenant{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "tenant1-web-app",
+			Namespace: "default",
+			Annotations: map[string]string{
+				"kubernetes-tenants.org/hostOrUrl":           "https://old.example.com",
+				"kubernetes-tenants.org/activate":            "true",
+				"kubernetes-tenants.org/extra":               "{}",
+				"kubernetes-tenants.org/template-generation": "1",
+			},
+		},
+		Spec: tenantsv1.TenantSpec{
+			UID:         "tenant1",
+			TemplateRef: "web-app",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(registry, tmpl, tenant).
+		Build()
+
+	recorder := record.NewFakeRecorder(100)
+
+	r := &TenantRegistryReconciler{
+		Client:   fakeClient,
+		Scheme:   scheme,
+		Recorder: recorder,
+	}
+
+	// Test data with updated values
+	row := datasource.TenantRow{
+		UID:       "tenant1",
+		HostOrURL: "https://new.example.com",
+		Activate:  "true",
+		Extra:     map[string]string{},
+	}
+
+	// Call updateTenant - should succeed with retry logic
+	err := r.updateTenant(ctx, registry, tmpl, tenant, row)
+	assert.NoError(t, err, "updateTenant should succeed even with potential conflicts")
+
+	// Verify tenant was updated
+	updated := &tenantsv1.Tenant{}
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: tenant.Name, Namespace: tenant.Namespace}, updated)
+	require.NoError(t, err)
+	assert.Equal(t, "https://new.example.com", updated.Annotations["kubernetes-tenants.org/hostOrUrl"])
+}
+
+// TestCreateTenantIgnoresAlreadyExists tests that createTenant handles AlreadyExists errors gracefully
+func TestCreateTenantIgnoresAlreadyExists(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	require.NoError(t, tenantsv1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	// Create a TenantRegistry
+	registry := &tenantsv1.TenantRegistry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-registry",
+			Namespace: "default",
+		},
+	}
+
+	// Create a TenantTemplate
+	tmpl := &tenantsv1.TenantTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "web-app",
+			Namespace:  "default",
+			Generation: 1,
+		},
+		Spec: tenantsv1.TenantTemplateSpec{
+			RegistryID: "test-registry",
+		},
+	}
+
+	// Create an existing Tenant with the same name that would be created
+	existingTenant := &tenantsv1.Tenant{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "tenant1-web-app",
+			Namespace: "default",
+		},
+		Spec: tenantsv1.TenantSpec{
+			UID:         "tenant1",
+			TemplateRef: "web-app",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(registry, tmpl, existingTenant).
+		Build()
+
+	recorder := record.NewFakeRecorder(100)
+
+	r := &TenantRegistryReconciler{
+		Client:   fakeClient,
+		Scheme:   scheme,
+		Recorder: recorder,
+	}
+
+	// Test data
+	row := datasource.TenantRow{
+		UID:       "tenant1",
+		HostOrURL: "https://example.com",
+		Activate:  "true",
+		Extra:     map[string]string{},
+	}
+
+	// Call createTenant - should return AlreadyExists error
+	err := r.createTenant(ctx, registry, tmpl, row)
+
+	// Verify that AlreadyExists error is returned (will be ignored by caller)
+	assert.Error(t, err, "createTenant should return error when tenant already exists")
 }

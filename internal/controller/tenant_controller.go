@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	errorsStd "errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -33,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -42,21 +44,22 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
 
 	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
 	"github.com/kubernetes-tenants/tenant-operator/internal/apply"
 	"github.com/kubernetes-tenants/tenant-operator/internal/graph"
 	"github.com/kubernetes-tenants/tenant-operator/internal/metrics"
 	"github.com/kubernetes-tenants/tenant-operator/internal/readiness"
+	"github.com/kubernetes-tenants/tenant-operator/internal/status"
 	"github.com/kubernetes-tenants/tenant-operator/internal/template"
 )
 
 // TenantReconciler reconciles a Tenant object
 type TenantReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
+	Scheme        *runtime.Scheme
+	Recorder      record.EventRecorder
+	StatusManager *status.Manager
 }
 
 const (
@@ -73,6 +76,26 @@ const (
 
 	// Resource formatting
 	NoResourcesMessage = "no resources"
+
+	// Degraded reasons
+	ReasonResourceFailuresAndConflicts = "ResourceFailuresAndConflicts"
+	ReasonResourceFailures             = "ResourceFailures"
+	ReasonResourceConflicts            = "ResourceConflicts"
+
+	// Reconcile results
+	ResultSuccess        = "success"
+	ResultPartialFailure = "partial_failure"
+)
+
+// ReconcileType defines the type of reconciliation to perform
+type ReconcileType int
+
+const (
+	ReconcileTypeUnknown ReconcileType = iota
+	ReconcileTypeInit                  // Finalizer needs to be added
+	ReconcileTypeCleanup               // Handle deletion
+	ReconcileTypeSpec                  // Spec changed (full reconcile with apply)
+	ReconcileTypeStatus                // Status-only (fast path, no apply)
 )
 
 // +kubebuilder:rbac:groups=operator.kubernetes-tenants.org,resources=tenants,verbs=get;list;watch;create;update;patch;delete
@@ -105,194 +128,33 @@ func (r *TenantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
-	// Handle deletion with finalizer
-	if !tenant.DeletionTimestamp.IsZero() {
-		if controllerutil.ContainsFinalizer(tenant, TenantFinalizer) {
-			// Perform cleanup with deletion policies
-			if err := r.cleanupTenantResources(ctx, tenant); err != nil {
-				logger.Error(err, "Failed to cleanup tenant resources")
-				metrics.TenantReconcileDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-				return ctrl.Result{}, err
-			}
+	// Determine reconcile type and use appropriate reconciliation path
+	reconcileType := r.determineReconcileType(tenant)
 
-			// Remove finalizer
-			controllerutil.RemoveFinalizer(tenant, TenantFinalizer)
-			if err := r.Update(ctx, tenant); err != nil {
-				logger.Error(err, "Failed to remove finalizer")
-				return ctrl.Result{}, err
-			}
+	switch reconcileType {
+	case ReconcileTypeCleanup:
+		// Tenant being deleted - handle cleanup
+		return r.reconcileCleanup(ctx, tenant, startTime)
 
-			logger.Info("Tenant cleanup completed", "tenant", tenant.Name)
-			metrics.TenantReconcileDuration.WithLabelValues("success").Observe(time.Since(startTime).Seconds())
-		}
-		return ctrl.Result{}, nil
+	case ReconcileTypeInit:
+		// First time setup - add finalizer
+		return r.reconcileInit(ctx, tenant)
+
+	case ReconcileTypeStatus:
+		// Only status changed - fast path, no apply
+		logger.V(1).Info("Using fast status reconcile path", "tenant", tenant.Name, "generation", tenant.Generation, "observedGeneration", tenant.Status.ObservedGeneration)
+		return r.reconcileStatus(ctx, tenant, startTime)
+
+	case ReconcileTypeSpec:
+		// Spec changed or template updated - full reconcile with apply
+		logger.Info("Using full reconcile path", "tenant", tenant.Name, "generation", tenant.Generation, "observedGeneration", tenant.Status.ObservedGeneration)
+		return r.reconcileSpec(ctx, tenant, startTime)
+
+	default:
+		logger.Error(nil, "Unknown reconcile type", "type", reconcileType)
+		metrics.TenantReconcileDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
+		return ctrl.Result{}, fmt.Errorf("unknown reconcile type: %v", reconcileType)
 	}
-
-	// Add finalizer if not present
-	if !controllerutil.ContainsFinalizer(tenant, TenantFinalizer) {
-		controllerutil.AddFinalizer(tenant, TenantFinalizer)
-		if err := r.Update(ctx, tenant); err != nil {
-			logger.Error(err, "Failed to add finalizer")
-			return ctrl.Result{}, err
-		}
-		logger.Info("Finalizer added to Tenant", "tenant", tenant.Name)
-		// Requeue to continue with reconciliation
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	// Build template variables from annotations
-	vars, err := r.buildTemplateVariablesFromAnnotations(tenant)
-	if err != nil {
-		logger.Error(err, "Failed to build template variables")
-		r.updateStatus(ctx, tenant, 0, 0, 0, false, "VariablesBuildError", err.Error())
-		r.updateDegradedCondition(ctx, tenant, true, "VariablesBuildError", err.Error())
-		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, "VariablesBuildError").Set(1)
-		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
-	}
-
-	// Collect all resources from Tenant.Spec (already rendered by Registry controller)
-	allResources := r.collectResourcesFromTenant(tenant)
-
-	// Build dependency graph
-	depGraph, err := graph.BuildGraph(allResources)
-	if err != nil {
-		logger.Error(err, "Failed to build dependency graph")
-		r.updateStatus(ctx, tenant, 0, 0, 0, false, "DependencyError", err.Error())
-		r.updateDegradedCondition(ctx, tenant, true, "DependencyCycle", "Dependency cycle detected in resource graph")
-		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, "DependencyCycle").Set(1)
-		return ctrl.Result{}, err
-	}
-
-	// Get sorted resources
-	sortedNodes, err := depGraph.TopologicalSort()
-	if err != nil {
-		logger.Error(err, "Failed to sort resources")
-		r.updateStatus(ctx, tenant, 0, 0, 0, false, "SortError", err.Error())
-		r.updateDegradedCondition(ctx, tenant, true, "DependencyCycle", err.Error())
-		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, "DependencyCycle").Set(1)
-		return ctrl.Result{}, err
-	}
-
-	// Detect and cleanup orphaned resources (resources removed from template)
-	// Build current desired resource keys
-	currentKeys, err := r.buildAppliedResourceKeys(ctx, tenant)
-	if err != nil {
-		logger.Error(err, "Failed to build applied resource keys")
-		// Continue with reconciliation even if orphan detection fails
-		currentKeys = make(map[string]bool)
-	}
-
-	// Get previously applied resource keys from status
-	previousKeys := tenant.Status.AppliedResources
-
-	// Find orphaned resources
-	orphanedKeys := r.findOrphanedResources(previousKeys, currentKeys)
-
-	// Delete orphaned resources
-	if len(orphanedKeys) > 0 {
-		logger.Info("Found orphaned resources", "count", len(orphanedKeys))
-		for _, orphanKey := range orphanedKeys {
-			if err := r.deleteOrphanedResource(ctx, tenant, orphanKey); err != nil {
-				logger.Error(err, "Failed to delete orphaned resource", "key", orphanKey)
-				// Continue with other orphans even if one fails
-			}
-		}
-	}
-
-	// Apply resources and track changes
-	readyCount, failedCount, changedCount, conflictedCount := r.applyResources(ctx, tenant, sortedNodes, vars)
-	totalResources := int32(len(sortedNodes))
-
-	// Update Conflicted condition based on conflict detection
-	hasConflict := conflictedCount > 0
-	r.updateConflictedCondition(ctx, tenant, hasConflict)
-
-	// Determine if tenant is degraded (template errors, dependency errors, or conflicts)
-	isDegraded := failedCount > 0 || hasConflict
-	var degradedReason string
-	if failedCount > 0 && hasConflict {
-		degradedReason = "ResourceFailuresAndConflicts"
-	} else if failedCount > 0 {
-		degradedReason = "ResourceFailures"
-	} else if hasConflict {
-		degradedReason = "ResourceConflicts"
-	}
-
-	// Update Degraded condition
-	if isDegraded {
-		r.updateDegradedCondition(ctx, tenant, true, degradedReason, fmt.Sprintf("Tenant has %d failed and %d conflicted resources", failedCount, conflictedCount))
-	} else {
-		r.updateDegradedCondition(ctx, tenant, false, "Healthy", "All resources are healthy")
-	}
-
-	// Always update status after reconciliation with actual counts
-	// This ensures status reflects reality without unnecessary resets
-	r.updateStatus(ctx, tenant, totalResources, readyCount, failedCount, failedCount == 0, "Reconciled", "Successfully reconciled all resources")
-
-	// Update AppliedResources in status to enable orphan detection
-	// Convert map keys to slice
-	appliedResourceKeys := make([]string, 0, len(currentKeys))
-	for key := range currentKeys {
-		appliedResourceKeys = append(appliedResourceKeys, key)
-	}
-
-	// Update status with applied resource keys using retry
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		// Get fresh copy
-		fresh := &tenantsv1.Tenant{}
-		if err := r.Get(ctx, client.ObjectKeyFromObject(tenant), fresh); err != nil {
-			return err
-		}
-
-		// Update AppliedResources field
-		fresh.Status.AppliedResources = appliedResourceKeys
-
-		// Update status
-		return r.Status().Update(ctx, fresh)
-	})
-
-	if err != nil {
-		logger.Error(err, "Failed to update AppliedResources in status")
-		// Non-fatal error, continue with reconciliation
-	}
-
-	// Emit completion event if resources were changed
-	if changedCount > 0 {
-		r.emitTemplateAppliedCompleteEvent(ctx, tenant, totalResources, readyCount, failedCount, changedCount)
-		logger.Info("Reconciliation completed with changes", "changed", changedCount, "ready", readyCount, "failed", failedCount, "conflicted", conflictedCount)
-	} else {
-		logger.V(1).Info("Reconciliation completed without changes", "ready", readyCount, "failed", failedCount, "conflicted", conflictedCount)
-	}
-
-	// Record metrics
-	result := "success"
-	if failedCount > 0 {
-		result = "partial_failure"
-	}
-	metrics.TenantReconcileDuration.WithLabelValues(result).Observe(time.Since(startTime).Seconds())
-	metrics.TenantResourcesReady.WithLabelValues(tenant.Name, tenant.Namespace).Set(float64(readyCount))
-	metrics.TenantResourcesDesired.WithLabelValues(tenant.Name, tenant.Namespace).Set(float64(totalResources))
-	metrics.TenantResourcesFailed.WithLabelValues(tenant.Name, tenant.Namespace).Set(float64(failedCount))
-	metrics.TenantResourcesConflicted.WithLabelValues(tenant.Name, tenant.Namespace).Set(float64(conflictedCount))
-
-	// Record condition status metrics
-	r.recordConditionMetrics(ctx, tenant)
-
-	// Record degraded status metric
-	if isDegraded {
-		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, degradedReason).Set(1)
-	} else {
-		// Reset all degraded metrics for this tenant
-		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, "ResourceFailures").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, "ResourceConflicts").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, "ResourceFailuresAndConflicts").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, "TemplateRenderError").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, "DependencyCycle").Set(0)
-	}
-
-	// Requeue after 30 seconds for faster resource status reflection
-	// This ensures that status changes in child resources are detected more quickly
-	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 }
 
 // applyResources applies all resources and returns counts for ready, failed, changed, and conflicted resources
@@ -308,6 +170,24 @@ func (r *TenantReconciler) applyResources(ctx context.Context, tenant *tenantsv1
 
 	for _, node := range sortedNodes {
 		resource := node.Resource
+
+		// Check if tenant is being deleted before processing each resource
+		// This allows quick exit when tenant is deleted during reconciliation
+		currentTenant := &tenantsv1.Tenant{}
+		if err := r.Get(ctx, client.ObjectKeyFromObject(tenant), currentTenant); err != nil {
+			if errors.IsNotFound(err) {
+				// Tenant was deleted, stop processing
+				logger.Info("Tenant deleted during reconciliation, stopping resource application")
+				return readyCount, failedCount, changedCount, conflictedCount
+			}
+			// Continue on other errors
+		} else if !currentTenant.DeletionTimestamp.IsZero() {
+			// Tenant is being deleted, stop processing immediately
+			logger.Info("Tenant deletion in progress, stopping resource application",
+				"tenant", tenant.Name,
+				"processedResources", readyCount+failedCount)
+			return readyCount, failedCount, changedCount, conflictedCount
+		}
 
 		// Render templates
 		obj, err := r.renderResource(ctx, templateEngine, resource, vars, tenant)
@@ -347,11 +227,21 @@ func (r *TenantReconciler) applyResources(ctx context.Context, tenant *tenantsv1
 
 		// Apply resource with specified patch strategy and track changes
 		// Pass deletionPolicy to prevent ownerReference for Retain policy resources
+		// ignoreFields are handled inside ApplyResource to avoid duplicate API calls
 		deletionPolicy := resource.DeletionPolicy
 		if deletionPolicy == "" {
 			deletionPolicy = tenantsv1.DeletionPolicyDelete // Default
 		}
-		changed, applyErr := applier.ApplyResource(ctx, obj, tenant, resource.ConflictPolicy, resource.PatchStrategy, deletionPolicy)
+
+		// Pass ignoreFields to ApplyResource
+		// Only effective for WhenNeeded policy; Once policy ignores this parameter
+		ignoreFields := resource.IgnoreFields
+		if resource.CreationPolicy == tenantsv1.CreationPolicyOnce {
+			// For Once policy, ignoreFields has no effect
+			ignoreFields = nil
+		}
+
+		changed, applyErr := applier.ApplyResource(ctx, obj, tenant, resource.ConflictPolicy, resource.PatchStrategy, deletionPolicy, ignoreFields)
 
 		// Track changes and emit events on first change
 		if changed {
@@ -406,26 +296,36 @@ func (r *TenantReconciler) applyResources(ctx context.Context, tenant *tenantsv1
 			continue
 		}
 
-		// Wait for readiness if required
+		// Check readiness immediately after apply (non-blocking)
+		// Fast status reconcile will continue checking every 30 seconds
 		if resource.WaitForReady != nil && *resource.WaitForReady {
-			timeout := time.Duration(resource.TimeoutSeconds) * time.Second
-			if timeout == 0 {
-				timeout = 300 * time.Second
-			}
-
-			name := obj.GetName()
-			namespace := obj.GetNamespace()
-
-			if err := checker.WaitForReady(ctx, name, namespace, obj, timeout); err != nil {
-				logger.Error(err, "Resource not ready within timeout", "id", resource.ID)
-				r.Recorder.Eventf(tenant, corev1.EventTypeWarning, "ReadinessTimeout",
-					"Resource %s not ready within %v: %v", resource.ID, timeout, err)
+			// Get current state from cluster to check readiness
+			current := &unstructured.Unstructured{}
+			current.SetGroupVersionKind(obj.GroupVersionKind())
+			err := r.Get(ctx, client.ObjectKey{
+				Name:      obj.GetName(),
+				Namespace: obj.GetNamespace(),
+			}, current)
+			if err != nil {
+				logger.Error(err, "Failed to get resource for readiness check", "id", resource.ID, "name", obj.GetName())
 				failedCount++
 				continue
 			}
-		}
 
-		readyCount++
+			// Check if ready NOW (non-blocking check)
+			if checker.IsReady(current) {
+				logger.V(1).Info("Resource is ready", "id", resource.ID, "name", obj.GetName())
+				readyCount++
+			} else {
+				// Not ready yet - fast status reconcile will check again in 30s
+				logger.V(1).Info("Resource not ready yet, will check again in next reconcile",
+					"id", resource.ID, "name", obj.GetName())
+				// Don't count as failed - just not ready yet
+			}
+		} else {
+			// No readiness check required, count as ready
+			readyCount++
+		}
 	}
 
 	return readyCount, failedCount, changedCount, conflictedCount
@@ -826,273 +726,77 @@ func (r *TenantReconciler) renderUnstructured(ctx context.Context, data map[stri
 	return result, nil
 }
 
-// updateStatus updates Tenant status with retry on conflict
-func (r *TenantReconciler) updateStatus(ctx context.Context, tenant *tenantsv1.Tenant, desired, ready, failed int32, success bool, reason, message string) {
-	logger := log.FromContext(ctx)
-
-	// Retry status update on conflict
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		// Get the latest version of the tenant
-		key := client.ObjectKeyFromObject(tenant)
-		latest := &tenantsv1.Tenant{}
-		if err := r.Get(ctx, key, latest); err != nil {
-			return err
-		}
-
-		// Update status fields
-		latest.Status.DesiredResources = desired
-		latest.Status.ReadyResources = ready
-		latest.Status.FailedResources = failed
-		latest.Status.ObservedGeneration = latest.Generation
-
-		// Prepare Ready condition
-		readyCondition := metav1.Condition{
-			Type:               ConditionTypeReady,
-			Status:             metav1.ConditionTrue,
-			Reason:             reason,
-			Message:            message,
-			LastTransitionTime: metav1.Now(),
-		}
-		if !success {
-			readyCondition.Status = metav1.ConditionFalse
-		}
-
-		// Update or append Ready condition
-		foundReady := false
-		for i := range latest.Status.Conditions {
-			if latest.Status.Conditions[i].Type == ConditionTypeReady {
-				latest.Status.Conditions[i] = readyCondition
-				foundReady = true
-				break
-			}
-		}
-		if !foundReady {
-			latest.Status.Conditions = append(latest.Status.Conditions, readyCondition)
-		}
-
-		// Update status subresource
-		return r.Status().Update(ctx, latest)
-	})
-
-	if err != nil {
-		logger.Error(err, "Failed to update Tenant status after retries")
-	}
+// resourceStatusCounts wraps desired/ready/failed counts to enable validation before publishing.
+type resourceStatusCounts struct {
+	desired int32
+	ready   int32
+	failed  int32
 }
 
-// updateProgressingCondition updates only the Progressing condition without touching other status fields
-func (r *TenantReconciler) updateProgressingCondition(ctx context.Context, tenant *tenantsv1.Tenant, progressing bool, reason, message string) {
-	logger := log.FromContext(ctx)
-
-	// Retry status update on conflict
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		// Get the latest version of the tenant
-		key := client.ObjectKeyFromObject(tenant)
-		latest := &tenantsv1.Tenant{}
-		if err := r.Get(ctx, key, latest); err != nil {
-			return err
-		}
-
-		// Prepare Progressing condition
-		progressingCondition := metav1.Condition{
-			Type:               "Progressing",
-			Status:             metav1.ConditionFalse,
-			Reason:             "ReconcileComplete",
-			Message:            "Reconciliation completed",
-			LastTransitionTime: metav1.Now(),
-		}
-
-		if progressing {
-			progressingCondition.Status = metav1.ConditionTrue
-			progressingCondition.Reason = reason
-			progressingCondition.Message = message
-		}
-
-		// Update or append Progressing condition
-		found := false
-		for i := range latest.Status.Conditions {
-			if latest.Status.Conditions[i].Type == "Progressing" {
-				// Only update if status actually changed to avoid unnecessary writes
-				if latest.Status.Conditions[i].Status != progressingCondition.Status {
-					latest.Status.Conditions[i] = progressingCondition
-					found = true
-					break
-				}
-				// No change needed
-				return nil
-			}
-		}
-		if !found {
-			latest.Status.Conditions = append(latest.Status.Conditions, progressingCondition)
-		}
-
-		// Update status subresource
-		return r.Status().Update(ctx, latest)
-	})
-
-	if err != nil {
-		logger.Error(err, "Failed to update Progressing condition after retries")
+// newResourceStatusCounts validates provided values and returns a sanitized struct or an error.
+func newResourceStatusCounts(desired, ready, failed int32) (*resourceStatusCounts, error) {
+	switch {
+	case desired < 0:
+		return nil, fmt.Errorf("desired resource count cannot be negative: %d", desired)
+	case ready < 0:
+		return nil, fmt.Errorf("ready resource count cannot be negative: %d", ready)
+	case failed < 0:
+		return nil, fmt.Errorf("failed resource count cannot be negative: %d", failed)
 	}
+
+	if ready > desired {
+		return nil, fmt.Errorf("ready resources (%d) exceed desired (%d)", ready, desired)
+	}
+	if failed > desired {
+		return nil, fmt.Errorf("failed resources (%d) exceed desired (%d)", failed, desired)
+	}
+	if ready+failed > desired {
+		return nil, fmt.Errorf("ready + failed resources (%d) exceed desired (%d)", ready+failed, desired)
+	}
+
+	return &resourceStatusCounts{
+		desired: desired,
+		ready:   ready,
+		failed:  failed,
+	}, nil
 }
 
-// updateConflictedCondition updates the Conflicted condition based on conflict detection
-func (r *TenantReconciler) updateConflictedCondition(ctx context.Context, tenant *tenantsv1.Tenant, hasConflict bool) {
+// updateStatus updates Tenant status using the StatusManager
+func (r *TenantReconciler) updateStatus(ctx context.Context, tenant *tenantsv1.Tenant, counts *resourceStatusCounts, success bool, reason, message string) {
 	logger := log.FromContext(ctx)
 
-	// Retry status update on conflict
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		// Get the latest version of the tenant
-		key := client.ObjectKeyFromObject(tenant)
-		latest := &tenantsv1.Tenant{}
-		if err := r.Get(ctx, key, latest); err != nil {
-			return err
-		}
-
-		// Prepare Conflicted condition
-		conflictedCondition := metav1.Condition{
-			Type:               "Conflicted",
-			Status:             metav1.ConditionFalse,
-			Reason:             "NoConflict",
-			Message:            "No resource conflicts detected",
-			LastTransitionTime: metav1.Now(),
-		}
-
-		if hasConflict {
-			conflictedCondition.Status = metav1.ConditionTrue
-			conflictedCondition.Reason = "ResourceConflict"
-			conflictedCondition.Message = "One or more resources are in conflict. Check events for details."
-		}
-
-		// Update or append Conflicted condition
-		foundConflicted := false
-		for i := range latest.Status.Conditions {
-			if latest.Status.Conditions[i].Type == "Conflicted" {
-				// Only update if the status changed to avoid unnecessary updates
-				if latest.Status.Conditions[i].Status != conflictedCondition.Status {
-					latest.Status.Conditions[i] = conflictedCondition
-					foundConflicted = true
-					break
-				}
-				// Status hasn't changed, no update needed
-				return nil
-			}
-		}
-		if !foundConflicted {
-			latest.Status.Conditions = append(latest.Status.Conditions, conflictedCondition)
-		}
-
-		// Update status subresource
-		return r.Status().Update(ctx, latest)
-	})
-
-	if err != nil {
-		logger.Error(err, "Failed to update Conflicted condition after retries")
+	// Only publish resource counts when we have validated data
+	if counts != nil {
+		r.StatusManager.PublishResourceCounts(tenant, counts.ready, counts.failed, counts.desired, 0)
+	} else {
+		logger.V(1).Info("Skipping resource count publication due to missing or invalid values",
+			"tenant", tenant.Name,
+			"namespace", tenant.Namespace,
+			"reason", reason)
 	}
+
+	// Ready condition should always reflect the latest reconcile attempt
+	r.StatusManager.PublishReadyCondition(tenant, success, reason, message)
 }
 
-// updateDegradedCondition updates the Degraded condition based on tenant health
-func (r *TenantReconciler) updateDegradedCondition(ctx context.Context, tenant *tenantsv1.Tenant, isDegraded bool, reason, message string) {
-	logger := log.FromContext(ctx)
-
-	// Retry status update on conflict
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		// Get the latest version of the tenant
-		key := client.ObjectKeyFromObject(tenant)
-		latest := &tenantsv1.Tenant{}
-		if err := r.Get(ctx, key, latest); err != nil {
-			return err
-		}
-
-		// Prepare Degraded condition
-		degradedCondition := metav1.Condition{
-			Type:               "Degraded",
-			Status:             metav1.ConditionFalse,
-			Reason:             reason,
-			Message:            message,
-			LastTransitionTime: metav1.Now(),
-		}
-
-		if isDegraded {
-			degradedCondition.Status = metav1.ConditionTrue
-		}
-
-		// Update or append Degraded condition
-		foundDegraded := false
-		for i := range latest.Status.Conditions {
-			if latest.Status.Conditions[i].Type == "Degraded" {
-				// Only update if the status changed to avoid unnecessary updates
-				if latest.Status.Conditions[i].Status != degradedCondition.Status {
-					latest.Status.Conditions[i] = degradedCondition
-					foundDegraded = true
-					break
-				}
-				// Status hasn't changed, no update needed
-				return nil
-			}
-		}
-		if !foundDegraded {
-			latest.Status.Conditions = append(latest.Status.Conditions, degradedCondition)
-		}
-
-		// Update status subresource
-		return r.Status().Update(ctx, latest)
-	})
-
-	if err != nil {
-		logger.Error(err, "Failed to update Degraded condition after retries")
-	}
+// updateProgressingCondition updates only the Progressing condition using the StatusManager
+func (r *TenantReconciler) updateProgressingCondition(_ context.Context, tenant *tenantsv1.Tenant, progressing bool, reason, message string) {
+	r.StatusManager.PublishProgressingCondition(tenant, progressing, reason, message)
 }
 
-// recordConditionMetrics records condition status metrics for all tenant conditions
-func (r *TenantReconciler) recordConditionMetrics(ctx context.Context, tenant *tenantsv1.Tenant) {
-	// Fetch the latest tenant to get current conditions
-	key := client.ObjectKeyFromObject(tenant)
-	latest := &tenantsv1.Tenant{}
-	if err := r.Get(ctx, key, latest); err != nil {
-		return
-	}
+// updateConflictedCondition updates the Conflicted condition using the StatusManager
+func (r *TenantReconciler) updateConflictedCondition(_ context.Context, tenant *tenantsv1.Tenant, hasConflict bool) {
+	r.StatusManager.PublishConflictedCondition(tenant, hasConflict)
+}
 
-	// Track which condition types we've seen
-	conditionsSeen := make(map[string]bool)
-
-	// Record metrics for each condition
-	for _, condition := range latest.Status.Conditions {
-		conditionsSeen[condition.Type] = true
-
-		var statusValue float64
-		switch condition.Status {
-		case metav1.ConditionTrue:
-			statusValue = 1
-		case metav1.ConditionFalse:
-			statusValue = 0
-		case metav1.ConditionUnknown:
-			statusValue = 2
-		default:
-			statusValue = 2 // Unknown
-		}
-
-		metrics.TenantConditionStatus.WithLabelValues(
-			tenant.Name,
-			tenant.Namespace,
-			condition.Type,
-		).Set(statusValue)
-	}
-
-	// Ensure all expected condition types are recorded (default to Unknown if missing)
-	expectedConditions := []string{"Ready", "Progressing", "Conflicted", "Degraded"}
-	for _, condType := range expectedConditions {
-		if !conditionsSeen[condType] {
-			metrics.TenantConditionStatus.WithLabelValues(
-				tenant.Name,
-				tenant.Namespace,
-				condType,
-			).Set(2) // Unknown
-		}
-	}
+// updateDegradedCondition updates the Degraded condition using the StatusManager
+func (r *TenantReconciler) updateDegradedCondition(_ context.Context, tenant *tenantsv1.Tenant, isDegraded bool, reason, message string) {
+	r.StatusManager.PublishDegradedCondition(tenant, isDegraded, reason, message)
 }
 
 // cleanupTenantResources handles resource cleanup according to DeletionPolicy
-//
-//nolint:unparam // error return kept for future cleanup error handling
+// This function uses best-effort approach: it tries to clean up all resources but won't block deletion
+// if some resources fail to clean up. Resources with ownerReferences will be garbage collected by Kubernetes.
 func (r *TenantReconciler) cleanupTenantResources(ctx context.Context, tenant *tenantsv1.Tenant) error {
 	logger := log.FromContext(ctx)
 	logger.Info("Starting tenant resource cleanup", "tenant", tenant.Name)
@@ -1103,32 +807,51 @@ func (r *TenantReconciler) cleanupTenantResources(ctx context.Context, tenant *t
 	// Build template variables from annotations
 	vars, err := r.buildTemplateVariablesFromAnnotations(tenant)
 	if err != nil {
-		logger.Error(err, "Failed to build template variables for cleanup")
+		logger.Error(err, "Failed to build template variables for cleanup, using empty variables")
 		// Continue with cleanup even if variables fail
 		vars = template.Variables{}
 	}
 
 	// Collect all resources
 	allResources := r.collectResourcesFromTenant(tenant)
+	logger.Info("Collected resources for cleanup", "count", len(allResources))
+
+	// Track cleanup statistics
+	var cleanupErrors []string
+	successCount := 0
+	failedCount := 0
+	retainedCount := 0
 
 	// Process each resource according to its DeletionPolicy
-	for _, res := range allResources {
+	for i, res := range allResources {
+		// Check context cancellation (timeout) before processing each resource
+		if ctx.Err() != nil {
+			logger.Info("Cleanup context cancelled, stopping cleanup",
+				"processed", i,
+				"total", len(allResources),
+				"reason", ctx.Err())
+			cleanupErrors = append(cleanupErrors, fmt.Sprintf("cleanup timed out after processing %d/%d resources", i, len(allResources)))
+			// Exit loop immediately on timeout
+			break
+		}
+
 		// Render resource to get actual name/namespace
 		rendered, err := r.renderResource(ctx, templateEngine, res, vars, tenant)
 		if err != nil {
-			logger.Error(err, "Failed to render resource for cleanup",
+			logger.Error(err, "Failed to render resource for cleanup, skipping",
 				"resource", res.ID,
 				"kind", res.Spec.GetKind())
+			failedCount++
+			cleanupErrors = append(cleanupErrors, fmt.Sprintf("render failed for %s: %v", res.ID, err))
 			// Continue with other resources
 			continue
 		}
 
 		resourceName := rendered.GetName()
 		resourceKind := rendered.GetKind()
-
-		// Apply deletion policy
 		orphanReason := "TenantDeleted"
 
+		// Apply deletion policy
 		switch res.DeletionPolicy {
 		case tenantsv1.DeletionPolicyRetain:
 			// Remove ownerReferences but keep resource
@@ -1138,44 +861,129 @@ func (r *TenantReconciler) cleanupTenantResources(ctx context.Context, tenant *t
 				"namespace", rendered.GetNamespace())
 
 			if err := applier.DeleteResource(ctx, rendered, tenantsv1.DeletionPolicyRetain, orphanReason); err != nil {
-				logger.Error(err, "Failed to retain resource",
+				logger.Error(err, "Failed to retain resource, continuing",
 					"resource", resourceName,
 					"kind", resourceKind)
+				failedCount++
+				cleanupErrors = append(cleanupErrors, fmt.Sprintf("retain failed for %s/%s: %v", resourceKind, resourceName, err))
 				// Continue with other resources
 			} else {
+				retainedCount++
 				r.Recorder.Eventf(tenant, corev1.EventTypeNormal, "ResourceRetained",
 					"Resource %s/%s retained with orphan labels (ownerReferences removed)", resourceKind, resourceName)
 			}
 
 		case tenantsv1.DeletionPolicyDelete, "":
 			// Delete resource (default behavior)
-			logger.V(1).Info("Deleting resource",
+			// Most resources with ownerReferences will be garbage collected automatically
+			logger.V(1).Info("Processing resource deletion",
 				"resource", resourceName,
 				"kind", resourceKind,
 				"namespace", rendered.GetNamespace())
 
 			if err := applier.DeleteResource(ctx, rendered, tenantsv1.DeletionPolicyDelete, orphanReason); err != nil {
-				// Log error but continue - ownerReferences will handle cleanup
+				// Not a fatal error - ownerReferences will handle cleanup
 				logger.V(1).Info("Resource deletion delegated to ownerReference garbage collection",
 					"resource", resourceName,
 					"kind", resourceKind,
 					"error", err.Error())
+				// Don't count as failure since GC will handle it
 			}
+			successCount++
 		}
 	}
 
-	logger.Info("Tenant resource cleanup completed", "tenant", tenant.Name, "resources", len(allResources))
+	// Log cleanup summary
+	logger.Info("Tenant resource cleanup completed",
+		"tenant", tenant.Name,
+		"total", len(allResources),
+		"successful", successCount,
+		"retained", retainedCount,
+		"failed", failedCount)
+
+	// Return error only if there were significant failures
+	// This allows cleanup to proceed even with partial failures
+	if len(cleanupErrors) > 0 {
+		logger.Info("Cleanup completed with some errors", "errorCount", len(cleanupErrors))
+		// Return first few errors for visibility
+		maxErrors := 3
+		if len(cleanupErrors) > maxErrors {
+			return fmt.Errorf("cleanup had %d errors, first %d: %v", len(cleanupErrors), maxErrors, cleanupErrors[:maxErrors])
+		}
+		return fmt.Errorf("cleanup had errors: %v", cleanupErrors)
+	}
+
 	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *TenantReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) error {
-	// Create predicates for owned resources to reduce unnecessary reconciliations
-	// Only trigger reconciliation on Generation changes (spec updates) or status updates
-	ownedResourcePredicate := predicate.Or(
-		predicate.GenerationChangedPredicate{},
-		predicate.AnnotationChangedPredicate{},
-	)
+	// Create smart predicates that react to both spec AND status changes
+	// This enables real-time status propagation from child resources
+	ownedResourcePredicate := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldObj := e.ObjectOld
+			newObj := e.ObjectNew
+
+			// Always reconcile on generation change (spec change)
+			if oldObj.GetGeneration() != newObj.GetGeneration() {
+				return true
+			}
+
+			// Always reconcile on annotation change
+			if !reflect.DeepEqual(oldObj.GetAnnotations(), newObj.GetAnnotations()) {
+				return true
+			}
+
+			// Reconcile on status change for specific resource types
+			// This enables real-time status propagation
+			switch obj := newObj.(type) {
+			case *appsv1.Deployment:
+				oldDep := e.ObjectOld.(*appsv1.Deployment)
+				// Check if ready replicas or conditions changed
+				if obj.Status.ReadyReplicas != oldDep.Status.ReadyReplicas ||
+					obj.Status.AvailableReplicas != oldDep.Status.AvailableReplicas ||
+					!reflect.DeepEqual(obj.Status.Conditions, oldDep.Status.Conditions) {
+					return true
+				}
+			case *appsv1.StatefulSet:
+				oldSts := e.ObjectOld.(*appsv1.StatefulSet)
+				if obj.Status.ReadyReplicas != oldSts.Status.ReadyReplicas ||
+					obj.Status.CurrentReplicas != oldSts.Status.CurrentReplicas ||
+					!reflect.DeepEqual(obj.Status.Conditions, oldSts.Status.Conditions) {
+					return true
+				}
+			case *appsv1.DaemonSet:
+				oldDs := e.ObjectOld.(*appsv1.DaemonSet)
+				if obj.Status.NumberReady != oldDs.Status.NumberReady ||
+					obj.Status.DesiredNumberScheduled != oldDs.Status.DesiredNumberScheduled ||
+					!reflect.DeepEqual(obj.Status.Conditions, oldDs.Status.Conditions) {
+					return true
+				}
+			case *batchv1.Job:
+				oldJob := e.ObjectOld.(*batchv1.Job)
+				if obj.Status.Succeeded != oldJob.Status.Succeeded ||
+					obj.Status.Failed != oldJob.Status.Failed ||
+					!reflect.DeepEqual(obj.Status.Conditions, oldJob.Status.Conditions) {
+					return true
+				}
+			case *networkingv1.Ingress:
+				oldIng := e.ObjectOld.(*networkingv1.Ingress)
+				if !reflect.DeepEqual(obj.Status.LoadBalancer, oldIng.Status.LoadBalancer) {
+					return true
+				}
+			}
+
+			// Don't reconcile for other status-only changes
+			return false
+		},
+		CreateFunc: func(e event.CreateEvent) bool {
+			return true
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return true
+		},
+	}
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&tenantsv1.Tenant{}).
@@ -1461,4 +1269,407 @@ func (r *TenantReconciler) getAPIVersionForKind(kind string) string {
 		// For unknown kinds, return v1 as default
 		return "v1"
 	}
+}
+
+// determineReconcileType determines what type of reconciliation is needed
+func (r *TenantReconciler) determineReconcileType(tenant *tenantsv1.Tenant) ReconcileType {
+	// 1. Check deletion
+	if !tenant.DeletionTimestamp.IsZero() {
+		return ReconcileTypeCleanup
+	}
+
+	// 2. Check finalizer
+	if !controllerutil.ContainsFinalizer(tenant, TenantFinalizer) {
+		return ReconcileTypeInit
+	}
+
+	// 3. Check if this was triggered by owned resource status change
+	// We can infer this by checking if the tenant's generation matches status.observedGeneration
+	if tenant.Generation == tenant.Status.ObservedGeneration {
+		// Generation hasn't changed, likely triggered by child resource status change
+		return ReconcileTypeStatus
+	}
+
+	// 4. Default to full reconcile for spec changes
+	return ReconcileTypeSpec
+}
+
+// hasOwnershipConflict checks if a resource has an ownership conflict with the tenant
+// Returns true if the resource is managed by a different controller or has conflicting ownerReferences
+func (r *TenantReconciler) hasOwnershipConflict(obj *unstructured.Unstructured, tenant *tenantsv1.Tenant) bool {
+	// Check ownerReferences
+	ownerRefs := obj.GetOwnerReferences()
+	if len(ownerRefs) == 0 {
+		// No owner - check tracking labels for cross-namespace resources
+		labels := obj.GetLabels()
+		if labels != nil {
+			labelTenant := labels["kubernetes-tenants.org/tenant"]
+			labelNamespace := labels["kubernetes-tenants.org/tenant-namespace"]
+
+			// If it has our tracking labels, verify they match
+			if labelTenant != "" || labelNamespace != "" {
+				return labelTenant != tenant.Name || labelNamespace != tenant.Namespace
+			}
+		}
+		// No owner and no tracking labels - not a conflict, just unmanaged
+		return false
+	}
+
+	// Check if any owner is this tenant
+	for _, ref := range ownerRefs {
+		if ref.UID == tenant.UID {
+			return false // We own it
+		}
+	}
+
+	// Owned by someone else
+	return true
+}
+
+// reconcileCleanup handles tenant deletion with finalizer
+func (r *TenantReconciler) reconcileCleanup(ctx context.Context, tenant *tenantsv1.Tenant, startTime time.Time) (ctrl.Result, error) {
+	logger := log.FromContext(ctx)
+
+	if controllerutil.ContainsFinalizer(tenant, TenantFinalizer) {
+		logger.Info("Tenant deletion requested, starting cleanup", "tenant", tenant.Name)
+
+		// Create a timeout context for cleanup (30 seconds max)
+		cleanupCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+
+		// Perform best-effort cleanup with deletion policies
+		if err := r.cleanupTenantResources(cleanupCtx, tenant); err != nil {
+			logger.Error(err, "Cleanup encountered errors (will proceed with deletion)",
+				"tenant", tenant.Name)
+			r.Recorder.Eventf(tenant, corev1.EventTypeWarning, "CleanupPartialFailure",
+				"Some resources could not be cleaned up: %v. Kubernetes garbage collector will handle remaining resources with ownerReferences.", err)
+		}
+
+		// ALWAYS remove finalizer after cleanup attempt
+		controllerutil.RemoveFinalizer(tenant, TenantFinalizer)
+		if err := r.Update(ctx, tenant); err != nil {
+			logger.Error(err, "Failed to remove finalizer", "tenant", tenant.Name)
+			return ctrl.Result{}, err
+		}
+
+		logger.Info("Tenant deletion completed, finalizer removed", "tenant", tenant.Name)
+		r.Recorder.Eventf(tenant, corev1.EventTypeNormal, "TenantDeleted",
+			"Tenant %s deleted successfully. Resources will be cleaned up by Kubernetes garbage collector.", tenant.Name)
+		metrics.TenantReconcileDuration.WithLabelValues("success").Observe(time.Since(startTime).Seconds())
+	}
+	return ctrl.Result{}, nil
+}
+
+// reconcileInit handles finalizer initialization
+func (r *TenantReconciler) reconcileInit(ctx context.Context, tenant *tenantsv1.Tenant) (ctrl.Result, error) {
+	logger := log.FromContext(ctx)
+
+	controllerutil.AddFinalizer(tenant, TenantFinalizer)
+	if err := r.Update(ctx, tenant); err != nil {
+		logger.Error(err, "Failed to add finalizer")
+		return ctrl.Result{}, err
+	}
+	logger.Info("Finalizer added to Tenant", "tenant", tenant.Name)
+	// Requeue to continue with reconciliation
+	return ctrl.Result{Requeue: true}, nil
+}
+
+// reconcileSpec handles full reconciliation with resource application
+// This is triggered when spec changes or template updates
+func (r *TenantReconciler) reconcileSpec(ctx context.Context, tenant *tenantsv1.Tenant, startTime time.Time) (ctrl.Result, error) {
+	logger := log.FromContext(ctx)
+	logger.Info("Running full reconcile with resource application", "tenant", tenant.Name)
+
+	// Build template variables from annotations
+	vars, err := r.buildTemplateVariablesFromAnnotations(tenant)
+	if err != nil {
+		logger.Error(err, "Failed to build template variables")
+		r.updateStatus(ctx, tenant, nil, false, "VariablesBuildError", err.Error())
+		r.updateDegradedCondition(ctx, tenant, true, "VariablesBuildError", err.Error())
+		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, "VariablesBuildError").Set(1)
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
+	}
+
+	// Collect all resources from Tenant.Spec
+	allResources := r.collectResourcesFromTenant(tenant)
+
+	// Build dependency graph
+	depGraph, err := graph.BuildGraph(allResources)
+	if err != nil {
+		logger.Error(err, "Failed to build dependency graph")
+		r.updateStatus(ctx, tenant, nil, false, "DependencyError", err.Error())
+		r.updateDegradedCondition(ctx, tenant, true, "DependencyCycle", "Dependency cycle detected in resource graph")
+		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, "DependencyCycle").Set(1)
+		return ctrl.Result{}, err
+	}
+
+	// Get sorted resources
+	sortedNodes, err := depGraph.TopologicalSort()
+	if err != nil {
+		logger.Error(err, "Failed to sort resources")
+		r.updateStatus(ctx, tenant, nil, false, "SortError", err.Error())
+		r.updateDegradedCondition(ctx, tenant, true, "DependencyCycle", err.Error())
+		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, "DependencyCycle").Set(1)
+		return ctrl.Result{}, err
+	}
+
+	// Detect and cleanup orphaned resources
+	currentKeys, err := r.buildAppliedResourceKeys(ctx, tenant)
+	if err != nil {
+		logger.Error(err, "Failed to build applied resource keys")
+		currentKeys = make(map[string]bool)
+	}
+
+	previousKeys := tenant.Status.AppliedResources
+	orphanedKeys := r.findOrphanedResources(previousKeys, currentKeys)
+
+	if len(orphanedKeys) > 0 {
+		logger.Info("Found orphaned resources", "count", len(orphanedKeys))
+		for _, orphanKey := range orphanedKeys {
+			if err := r.deleteOrphanedResource(ctx, tenant, orphanKey); err != nil {
+				logger.Error(err, "Failed to delete orphaned resource", "key", orphanKey)
+			}
+		}
+	}
+
+	// Apply resources and track changes
+	readyCount, failedCount, changedCount, conflictedCount := r.applyResources(ctx, tenant, sortedNodes, vars)
+	totalResources := int32(len(sortedNodes))
+
+	// Update conditions
+	hasConflict := conflictedCount > 0
+	r.updateConflictedCondition(ctx, tenant, hasConflict)
+
+	isDegraded := failedCount > 0 || hasConflict
+	var degradedReason string
+	if failedCount > 0 && hasConflict {
+		degradedReason = ReasonResourceFailuresAndConflicts
+	} else if failedCount > 0 {
+		degradedReason = ReasonResourceFailures
+	} else if hasConflict {
+		degradedReason = ReasonResourceConflicts
+	}
+
+	if isDegraded {
+		r.updateDegradedCondition(ctx, tenant, true, degradedReason, fmt.Sprintf("Tenant has %d failed and %d conflicted resources", failedCount, conflictedCount))
+	} else {
+		r.updateDegradedCondition(ctx, tenant, false, "Healthy", "All resources are healthy")
+	}
+
+	// Update status
+	statusCounts, countsErr := newResourceStatusCounts(totalResources, readyCount, failedCount)
+	if countsErr != nil {
+		logger.Error(countsErr, "Skipping resource counts update due to invalid values",
+			"desired", totalResources, "ready", readyCount, "failed", failedCount)
+	}
+	r.updateStatus(ctx, tenant, statusCounts, failedCount == 0, "Reconciled", "Successfully reconciled all resources")
+
+	// Update AppliedResources
+	appliedResourceKeys := make([]string, 0, len(currentKeys))
+	for key := range currentKeys {
+		appliedResourceKeys = append(appliedResourceKeys, key)
+	}
+	r.StatusManager.PublishAppliedResources(tenant, appliedResourceKeys)
+
+	// Emit completion event if resources were changed
+	if changedCount > 0 {
+		r.emitTemplateAppliedCompleteEvent(ctx, tenant, totalResources, readyCount, failedCount, changedCount)
+		logger.Info("Reconciliation completed with changes", "changed", changedCount, "ready", readyCount, "failed", failedCount, "conflicted", conflictedCount)
+	} else {
+		logger.V(1).Info("Reconciliation completed without changes", "ready", readyCount, "failed", failedCount, "conflicted", conflictedCount)
+	}
+
+	// Record metrics
+	result := ResultSuccess
+	if failedCount > 0 {
+		result = ResultPartialFailure
+	}
+	metrics.TenantReconcileDuration.WithLabelValues(result).Observe(time.Since(startTime).Seconds())
+
+	// Publish metrics
+	var conditions []metav1.Condition
+	readyCond := metav1.Condition{
+		Type:               "Ready",
+		Status:             metav1.ConditionTrue,
+		Reason:             "Reconciled",
+		Message:            "Successfully reconciled all resources",
+		LastTransitionTime: metav1.Now(),
+	}
+	if failedCount > 0 {
+		readyCond.Status = metav1.ConditionFalse
+	}
+	progressingCond := metav1.Condition{
+		Type:               "Progressing",
+		Status:             metav1.ConditionFalse,
+		Reason:             "ReconcileComplete",
+		Message:            "Reconciliation completed",
+		LastTransitionTime: metav1.Now(),
+	}
+	conflictedCond := metav1.Condition{
+		Type:               "Conflicted",
+		Status:             metav1.ConditionFalse,
+		Reason:             "NoConflict",
+		Message:            "No resource conflicts detected",
+		LastTransitionTime: metav1.Now(),
+	}
+	if hasConflict {
+		conflictedCond.Status = metav1.ConditionTrue
+		conflictedCond.Reason = "ResourceConflict"
+		conflictedCond.Message = "One or more resources are in conflict. Check events for details."
+	}
+	degradedCond := metav1.Condition{
+		Type:               "Degraded",
+		Status:             metav1.ConditionFalse,
+		Reason:             "Healthy",
+		Message:            "All resources are healthy",
+		LastTransitionTime: metav1.Now(),
+	}
+	if isDegraded {
+		degradedCond.Status = metav1.ConditionTrue
+		degradedCond.Reason = degradedReason
+		degradedCond.Message = fmt.Sprintf("Tenant has %d failed and %d conflicted resources", failedCount, conflictedCount)
+	}
+	conditions = []metav1.Condition{readyCond, progressingCond, conflictedCond, degradedCond}
+
+	r.StatusManager.PublishMetrics(tenant, readyCount, failedCount, totalResources, conflictedCount, conditions, isDegraded, degradedReason)
+
+	// Requeue after 30 seconds for faster resource status reflection
+	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+}
+
+// reconcileStatus handles status-only reconciliation (fast path)
+// This is triggered when child resources change their status (e.g., Deployment becomes ready)
+// It does NOT apply resources, only checks their current status
+func (r *TenantReconciler) reconcileStatus(ctx context.Context, tenant *tenantsv1.Tenant, startTime time.Time) (ctrl.Result, error) {
+	logger := log.FromContext(ctx)
+	logger.V(1).Info("Running status-only reconcile (fast path)", "tenant", tenant.Name)
+
+	// Build template variables
+	vars, err := r.buildTemplateVariablesFromAnnotations(tenant)
+	if err != nil {
+		logger.Error(err, "Failed to build template variables for status check")
+		// Fall back to full reconcile on variable errors
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
+	}
+
+	// Collect resources
+	allResources := r.collectResourcesFromTenant(tenant)
+	totalResources := int32(len(allResources))
+
+	// Check readiness WITHOUT applying (just check status)
+	readyCount, failedCount, conflictedCount := r.checkResourcesReadiness(ctx, tenant, allResources, vars)
+
+	// Update status immediately
+	statusCounts, countsErr := newResourceStatusCounts(totalResources, readyCount, failedCount)
+	if countsErr != nil {
+		logger.Error(countsErr, "Invalid resource counts", "desired", totalResources, "ready", readyCount, "failed", failedCount)
+	}
+
+	// Determine conditions
+	isReady := failedCount == 0 && conflictedCount == 0
+	hasConflict := conflictedCount > 0
+	isDegraded := failedCount > 0 || hasConflict
+
+	// Determine degraded reason
+	var degradedReason string
+	if failedCount > 0 && hasConflict {
+		degradedReason = ReasonResourceFailuresAndConflicts
+	} else if failedCount > 0 {
+		degradedReason = ReasonResourceFailures
+	} else if hasConflict {
+		degradedReason = ReasonResourceConflicts
+	} else {
+		degradedReason = "Healthy"
+	}
+
+	// Update ObservedGeneration to match current Generation
+	r.StatusManager.PublishObservedGeneration(tenant, tenant.Generation)
+
+	// Update status using existing methods (will be replaced by updateStatusAtomic later)
+	if statusCounts != nil {
+		r.StatusManager.PublishResourceCounts(tenant, statusCounts.ready, statusCounts.failed, statusCounts.desired, conflictedCount)
+	}
+	r.StatusManager.PublishReadyCondition(tenant, isReady, "StatusSync", "Status synchronized from child resources")
+	r.StatusManager.PublishConflictedCondition(tenant, hasConflict)
+	r.StatusManager.PublishDegradedCondition(tenant, isDegraded, degradedReason, fmt.Sprintf("Tenant has %d failed and %d conflicted resources", failedCount, conflictedCount))
+	r.StatusManager.PublishProgressingCondition(tenant, false, "ReconcileComplete", "Status check completed")
+
+	// Record metrics
+	metrics.TenantReconcileDuration.WithLabelValues("status_only").Observe(time.Since(startTime).Seconds())
+
+	logger.V(1).Info("Status-only reconcile completed",
+		"tenant", tenant.Name,
+		"ready", readyCount,
+		"failed", failedCount,
+		"conflicted", conflictedCount,
+		"duration", time.Since(startTime).String())
+
+	// Requeue after 5 minutes for periodic health check
+	// Next change will trigger immediate reconcile via watch
+	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+}
+
+// checkResourcesReadiness checks the readiness of resources WITHOUT applying them
+// This is much faster than applyResources as it only reads status
+// Returns: readyCount, failedCount, conflictedCount
+func (r *TenantReconciler) checkResourcesReadiness(
+	ctx context.Context,
+	tenant *tenantsv1.Tenant,
+	resources []tenantsv1.TResource,
+	vars template.Variables,
+) (readyCount, failedCount, conflictedCount int32) {
+	logger := log.FromContext(ctx)
+	checker := readiness.NewChecker(r.Client)
+	templateEngine := template.NewEngine()
+
+	for _, resource := range resources {
+		// Render resource (just to get name/namespace)
+		obj, err := r.renderResource(ctx, templateEngine, resource, vars, tenant)
+		if err != nil {
+			logger.V(1).Info("Failed to render resource for status check", "id", resource.ID, "error", err)
+			failedCount++
+			continue
+		}
+
+		// Get current resource from cluster
+		current := obj.DeepCopy()
+		err = r.Get(ctx, client.ObjectKey{
+			Name:      obj.GetName(),
+			Namespace: obj.GetNamespace(),
+		}, current)
+
+		if err != nil {
+			if errors.IsNotFound(err) {
+				// Resource doesn't exist - count as failed
+				logger.V(1).Info("Resource not found in cluster", "id", resource.ID, "name", obj.GetName())
+				failedCount++
+				continue
+			}
+			logger.Error(err, "Failed to get resource for status check", "id", resource.ID, "name", obj.GetName())
+			failedCount++
+			continue
+		}
+
+		// Check ownership conflict
+		if r.hasOwnershipConflict(current, tenant) {
+			logger.V(1).Info("Resource has ownership conflict", "id", resource.ID, "name", obj.GetName())
+			conflictedCount++
+			failedCount++
+			continue
+		}
+
+		// Check readiness
+		if resource.WaitForReady != nil && *resource.WaitForReady {
+			if !checker.IsReady(current) {
+				logger.V(1).Info("Resource not ready", "id", resource.ID, "name", obj.GetName())
+				failedCount++
+				continue
+			}
+		}
+
+		// Resource is ready
+		readyCount++
+	}
+
+	return readyCount, failedCount, conflictedCount
 }

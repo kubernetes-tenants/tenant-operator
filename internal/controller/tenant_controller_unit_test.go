@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
+	"github.com/kubernetes-tenants/tenant-operator/internal/status"
 	"github.com/kubernetes-tenants/tenant-operator/internal/template"
 )
 
@@ -120,7 +121,7 @@ func TestBuildTemplateVariablesFromAnnotations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &TenantReconciler{}
+			r := &TenantReconciler{StatusManager: status.NewManager(nil, status.WithSyncMode())}
 			vars, err := r.buildTemplateVariablesFromAnnotations(tt.tenant)
 
 			if tt.wantErr {
@@ -323,7 +324,7 @@ func TestCollectResourcesFromTenant(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &TenantReconciler{}
+			r := &TenantReconciler{StatusManager: status.NewManager(nil, status.WithSyncMode())}
 			resources := r.collectResourcesFromTenant(tt.tenant)
 			assert.Len(t, resources, tt.wantCount)
 		})
@@ -363,7 +364,7 @@ func TestCountTenantResourcesByType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &TenantReconciler{}
+			r := &TenantReconciler{StatusManager: status.NewManager(nil, status.WithSyncMode())}
 			counts := r.countTenantResourcesByType(tt.tenant)
 			assert.Equal(t, tt.wantCount, counts)
 		})
@@ -402,7 +403,7 @@ func TestFormatTenantResourceDetails(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &TenantReconciler{}
+			r := &TenantReconciler{StatusManager: status.NewManager(nil, status.WithSyncMode())}
 			got := r.formatTenantResourceDetails(tt.counts)
 			assert.Equal(t, tt.want, got)
 		})
@@ -430,7 +431,7 @@ func TestGetAPIVersionForKind(t *testing.T) {
 		{kind: "UnknownKind", want: "v1"}, // Default
 	}
 
-	r := &TenantReconciler{}
+	r := &TenantReconciler{StatusManager: status.NewManager(nil, status.WithSyncMode())}
 	for _, tt := range tests {
 		t.Run(tt.kind, func(t *testing.T) {
 			got := r.getAPIVersionForKind(tt.kind)
@@ -490,7 +491,7 @@ func TestFindOrphanedResources(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &TenantReconciler{}
+			r := &TenantReconciler{StatusManager: status.NewManager(nil, status.WithSyncMode())}
 			orphans := r.findOrphanedResources(tt.previousKeys, tt.currentKeys)
 			assert.ElementsMatch(t, tt.want, orphans)
 		})
@@ -872,8 +873,9 @@ func TestUpdateProgressingCondition(t *testing.T) {
 				Build()
 
 			r := &TenantReconciler{
-				Client: fakeClient,
-				Scheme: scheme,
+				Client:        fakeClient,
+				Scheme:        scheme,
+				StatusManager: status.NewManager(fakeClient, status.WithSyncMode()),
 			}
 
 			ctx := context.Background()
@@ -964,8 +966,9 @@ func TestBuildAppliedResourceKeys(t *testing.T) {
 				Build()
 
 			r := &TenantReconciler{
-				Client: fakeClient,
-				Scheme: scheme,
+				Client:        fakeClient,
+				Scheme:        scheme,
+				StatusManager: status.NewManager(fakeClient, status.WithSyncMode()),
 			}
 
 			ctx := context.Background()

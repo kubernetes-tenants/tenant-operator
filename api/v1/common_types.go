@@ -128,6 +128,14 @@ type TResource struct {
 	// +optional
 	// +kubebuilder:default=apply
 	PatchStrategy PatchStrategy `json:"patchStrategy,omitempty"`
+
+	// IgnoreFields specifies JSONPath expressions for fields to exclude from synchronization
+	// These fields will be applied during initial creation but ignored in subsequent reconciliations
+	// Only effective when CreationPolicy is WhenNeeded (default)
+	// Allows fine-grained control for fields that should be managed externally (e.g., HPA-controlled replicas)
+	// Example: ["$.spec.replicas", "$.spec.template.spec.containers[0].resources"]
+	// +optional
+	IgnoreFields []string `json:"ignoreFields,omitempty"`
 }
 
 // SecretRef references a Kubernetes Secret

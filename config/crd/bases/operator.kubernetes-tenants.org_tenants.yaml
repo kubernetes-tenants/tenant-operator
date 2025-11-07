@@ -118,6 +118,16 @@ spec:
                       description: ID is a unique identifier within the template (used
                         for dependencies and references)
                       type: string
+                    ignoreFields:
+                      description: |-
+                        IgnoreFields specifies JSONPath expressions for fields to exclude from synchronization
+                        These fields will be applied during initial creation but ignored in subsequent reconciliations
+                        Only effective when CreationPolicy is WhenNeeded (default)
+                        Allows fine-grained control for fields that should be managed externally (e.g., HPA-controlled replicas)
+                        Example: ["$.spec.replicas", "$.spec.template.spec.containers[0].resources"]
+                      items:
+                        type: string
+                      type: array
                     labelsTemplate:
                       additionalProperties:
                         type: string
@@ -221,6 +231,16 @@ spec:
                       description: ID is a unique identifier within the template (used
                         for dependencies and references)
                       type: string
+                    ignoreFields:
+                      description: |-
+                        IgnoreFields specifies JSONPath expressions for fields to exclude from synchronization
+                        These fields will be applied during initial creation but ignored in subsequent reconciliations
+                        Only effective when CreationPolicy is WhenNeeded (default)
+                        Allows fine-grained control for fields that should be managed externally (e.g., HPA-controlled replicas)
+                        Example: ["$.spec.replicas", "$.spec.template.spec.containers[0].resources"]
+                      items:
+                        type: string
+                      type: array
                     labelsTemplate:
                       additionalProperties:
                         type: string
@@ -324,6 +344,16 @@ spec:
                       description: ID is a unique identifier within the template (used
                         for dependencies and references)
                       type: string
+                    ignoreFields:
+                      description: |-
+                        IgnoreFields specifies JSONPath expressions for fields to exclude from synchronization
+                        These fields will be applied during initial creation but ignored in subsequent reconciliations
+                        Only effective when CreationPolicy is WhenNeeded (default)
+                        Allows fine-grained control for fields that should be managed externally (e.g., HPA-controlled replicas)
+                        Example: ["$.spec.replicas", "$.spec.template.spec.containers[0].resources"]
+                      items:
+                        type: string
+                      type: array
                     labelsTemplate:
                       additionalProperties:
                         type: string
@@ -427,6 +457,16 @@ spec:
                       description: ID is a unique identifier within the template (used
                         for dependencies and references)
                       type: string
+                    ignoreFields:
+                      description: |-
+                        IgnoreFields specifies JSONPath expressions for fields to exclude from synchronization
+                        These fields will be applied during initial creation but ignored in subsequent reconciliations
+                        Only effective when CreationPolicy is WhenNeeded (default)
+                        Allows fine-grained control for fields that should be managed externally (e.g., HPA-controlled replicas)
+                        Example: ["$.spec.replicas", "$.spec.template.spec.containers[0].resources"]
+                      items:
+                        type: string
+                      type: array
                     labelsTemplate:
                       additionalProperties:
                         type: string
@@ -530,6 +570,16 @@ spec:
                       description: ID is a unique identifier within the template (used
                         for dependencies and references)
                       type: string
+                    ignoreFields:
+                      description: |-
+                        IgnoreFields specifies JSONPath expressions for fields to exclude from synchronization
+                        These fields will be applied during initial creation but ignored in subsequent reconciliations
+                        Only effective when CreationPolicy is WhenNeeded (default)
+                        Allows fine-grained control for fields that should be managed externally (e.g., HPA-controlled replicas)
+                        Example: ["$.spec.replicas", "$.spec.template.spec.containers[0].resources"]
+                      items:
+                        type: string
+                      type: array
                     labelsTemplate:
                       additionalProperties:
                         type: string
@@ -633,6 +683,16 @@ spec:
                       description: ID is a unique identifier within the template (used
                         for dependencies and references)
                       type: string
+                    ignoreFields:
+                      description: |-
+                        IgnoreFields specifies JSONPath expressions for fields to exclude from synchronization
+                        These fields will be applied during initial creation but ignored in subsequent reconciliations
+                        Only effective when CreationPolicy is WhenNeeded (default)
+                        Allows fine-grained control for fields that should be managed externally (e.g., HPA-controlled replicas)
+                        Example: ["$.spec.replicas", "$.spec.template.spec.containers[0].resources"]
+                      items:
+                        type: string
+                      type: array
                     labelsTemplate:
                       additionalProperties:
                         type: string
@@ -736,6 +796,16 @@ spec:
                       description: ID is a unique identifier within the template (used
                         for dependencies and references)
                       type: string
+                    ignoreFields:
+                      description: |-
+                        IgnoreFields specifies JSONPath expressions for fields to exclude from synchronization
+                        These fields will be applied during initial creation but ignored in subsequent reconciliations
+                        Only effective when CreationPolicy is WhenNeeded (default)
+                        Allows fine-grained control for fields that should be managed externally (e.g., HPA-controlled replicas)
+                        Example: ["$.spec.replicas", "$.spec.template.spec.containers[0].resources"]
+                      items:
+                        type: string
+                      type: array
                     labelsTemplate:
                       additionalProperties:
                         type: string
@@ -839,6 +909,16 @@ spec:
                       description: ID is a unique identifier within the template (used
                         for dependencies and references)
                       type: string
+                    ignoreFields:
+                      description: |-
+                        IgnoreFields specifies JSONPath expressions for fields to exclude from synchronization
+                        These fields will be applied during initial creation but ignored in subsequent reconciliations
+                        Only effective when CreationPolicy is WhenNeeded (default)
+                        Allows fine-grained control for fields that should be managed externally (e.g., HPA-controlled replicas)
+                        Example: ["$.spec.replicas", "$.spec.template.spec.containers[0].resources"]
+                      items:
+                        type: string
+                      type: array
                     labelsTemplate:
                       additionalProperties:
                         type: string
@@ -942,6 +1022,16 @@ spec:
                       description: ID is a unique identifier within the template (used
                         for dependencies and references)
                       type: string
+                    ignoreFields:
+                      description: |-
+                        IgnoreFields specifies JSONPath expressions for fields to exclude from synchronization
+                        These fields will be applied during initial creation but ignored in subsequent reconciliations
+                        Only effective when CreationPolicy is WhenNeeded (default)
+                        Allows fine-grained control for fields that should be managed externally (e.g., HPA-controlled replicas)
+                        Example: ["$.spec.replicas", "$.spec.template.spec.containers[0].resources"]
+                      items:
+                        type: string
+                      type: array
                     labelsTemplate:
                       additionalProperties:
                         type: string
@@ -1045,6 +1135,16 @@ spec:
                       description: ID is a unique identifier within the template (used
                         for dependencies and references)
                       type: string
+                    ignoreFields:
+                      description: |-
+                        IgnoreFields specifies JSONPath expressions for fields to exclude from synchronization
+                        These fields will be applied during initial creation but ignored in subsequent reconciliations
+                        Only effective when CreationPolicy is WhenNeeded (default)
+                        Allows fine-grained control for fields that should be managed externally (e.g., HPA-controlled replicas)
+                        Example: ["$.spec.replicas", "$.spec.template.spec.containers[0].resources"]
+                      items:
+                        type: string
+                      type: array
                     labelsTemplate:
                       additionalProperties:
                         type: string
@@ -1148,6 +1248,16 @@ spec:
                       description: ID is a unique identifier within the template (used
                         for dependencies and references)
                       type: string
+                    ignoreFields:
+                      description: |-
+                        IgnoreFields specifies JSONPath expressions for fields to exclude from synchronization
+                        These fields will be applied during initial creation but ignored in subsequent reconciliations
+                        Only effective when CreationPolicy is WhenNeeded (default)
+                        Allows fine-grained control for fields that should be managed externally (e.g., HPA-controlled replicas)
+                        Example: ["$.spec.replicas", "$.spec.template.spec.containers[0].resources"]
+                      items:
+                        type: string
+                      type: array
                     labelsTemplate:
                       additionalProperties:
                         type: string

@@ -43,6 +43,7 @@ export default withMermaid(
             { text: "Templates", link: "/templates" },
             { text: "Dependencies", link: "/dependencies" },
             { text: "Policies", link: "/policies" },
+            { text: "Field-Level Ignore Control", link: "/field-ignore" },
           ],
         },
         {

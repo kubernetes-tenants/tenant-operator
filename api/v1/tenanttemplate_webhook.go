@@ -143,6 +143,11 @@ func (v *TenantTemplateValidator) validateTenantTemplate(ctx context.Context, tm
 		return warnings, fmt.Errorf("template validation failed: %w", err)
 	}
 
+	// 6. Validate ignoreFields for all resources
+	if err := v.validateIgnoreFields(tmpl); err != nil {
+		return warnings, fmt.Errorf("ignoreFields validation failed: %w", err)
+	}
+
 	return warnings, nil
 }
 
@@ -292,6 +297,19 @@ func (v *TenantTemplateValidator) validateTemplateSyntax(tmpl *TenantTemplate) e
 			if _, err := engine.Render(tmplStr, sampleVars); err != nil {
 				return fmt.Errorf("invalid AnnotationsTemplate[%s] in resource '%s': %w", key, res.ID, err)
 			}
+		}
+	}
+
+	return nil
+}
+
+// validateIgnoreFields validates ignoreFields for all resources
+func (v *TenantTemplateValidator) validateIgnoreFields(tmpl *TenantTemplate) error {
+	allResources := v.collectAllResources(tmpl)
+
+	for _, res := range allResources {
+		if err := ValidateTResource(&res); err != nil {
+			return err
 		}
 	}
 
