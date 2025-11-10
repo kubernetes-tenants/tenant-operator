@@ -491,6 +491,147 @@ kubectl get tenant <name> -o jsonpath='{.status.appliedResources}' | jq
 3. Test template changes in non-production first
 4. Review orphan cleanup behavior in [Policies Guide](policies.md#orphan-resource-cleanup)
 
+### 12. Tenant Showing Degraded with ResourcesNotReady
+
+::: tip New in v1.1.4
+The `ResourcesNotReady` degraded condition provides granular visibility into resources that haven't reached ready state yet.
+:::
+
+**Symptoms:**
+- Tenant condition `Degraded=True` with reason `ResourcesNotReady`
+- Not all resources showing as ready even though they exist
+- `readyResources < desiredResources` in tenant status
+- Ready condition shows `status=False` with reason `NotAllResourcesReady`
+
+**Diagnosis:**
+
+```bash
+# Check tenant status
+kubectl get tenant <name> -o jsonpath='{.status}' | jq
+
+# Should show:
+# "conditions": [
+#   {"type": "Ready", "status": "False", "reason": "NotAllResourcesReady"},
+#   {"type": "Degraded", "status": "True", "reason": "ResourcesNotReady"}
+# ]
+
+# Check resource readiness
+kubectl get tenant <name> -o jsonpath='{.status.readyResources} / {.status.desiredResources}'
+
+# Identify which resources are not ready
+kubectl describe tenant <name>
+
+# Check recent events
+kubectl get events --field-selector involvedObject.name=<tenant-name> --sort-by='.lastTimestamp'
+```
+
+**Common Causes:**
+
+1. **Resources still starting up**: Normal during initial provisioning
+2. **Resource readiness checks failing**: Container failing health checks
+3. **Dependency not satisfied**: Waiting for dependent resources
+4. **Timeout exceeded**: Resource taking longer than `timeoutSeconds`
+5. **Image pull errors**: Container images not available
+6. **Insufficient resources**: Not enough CPU/memory in cluster
+
+**Solutions:**
+
+**A. Check resource status:**
+```bash
+# For Deployments
+kubectl get deployment <name> -o jsonpath='{.status}' | jq
+
+# Check if replicas match
+kubectl get deployment <name> -o jsonpath='{.spec.replicas} desired, {.status.availableReplicas} available'
+
+# For StatefulSets
+kubectl get statefulset <name> -o jsonpath='{.status.readyReplicas}/{.spec.replicas} ready'
+
+# For Jobs
+kubectl get job <name> -o jsonpath='{.status.succeeded}'
+
+# For Services (should be immediate)
+kubectl get service <name>
+
+# Check pod status
+kubectl get pods -l app=<name>
+kubectl describe pod <pod-name>
+```
+
+**B. Check resource logs:**
+```bash
+# Deployment pods
+kubectl logs deployment/<name> --tail=50
+
+# Job logs
+kubectl logs job/<name>
+
+# Check for errors
+kubectl logs deployment/<name> --previous  # If pod crashed
+```
+
+**C. Check readiness probes:**
+```bash
+# See if readiness probes are configured correctly
+kubectl get deployment <name> -o jsonpath='{.spec.template.spec.containers[*].readinessProbe}' | jq
+```
+
+**D. Adjust timeouts if needed:**
+```yaml
+# In TenantTemplate
+deployments:
+  - id: app
+    timeoutSeconds: 600  # Increase from default 300s
+    waitForReady: true   # Ensure readiness checks are enabled
+    spec:
+      template:
+        spec:
+          containers:
+          - name: app
+            readinessProbe:
+              httpGet:
+                path: /health
+                port: 8080
+              initialDelaySeconds: 10  # Allow time to start
+              periodSeconds: 5
+```
+
+**E. Monitor reconciliation:**
+```bash
+# Watch tenant status updates (30-second interval in v1.1.4)
+watch -n 5 'kubectl get tenant <name> -o jsonpath="{.status.readyResources}/{.status.desiredResources} ready"'
+
+# Watch pod status
+watch kubectl get pods -l tenant=<name>
+```
+
+**Expected Behavior:**
+
+::: tip v1.1.4+ Fast Status Updates
+- **Status updates every 30 seconds** (down from 5 minutes in earlier versions)
+- **Event-driven**: Immediate reconciliation when child resources change
+- Resources typically become ready within 1-2 minutes (depending on resource type)
+- Degraded condition clears automatically when all resources reach ready state
+:::
+
+**When to Investigate Further:**
+
+- Resources stuck "not ready" for > 5 minutes
+- `readyResources` count not increasing over time
+- Events show repeated failures or errors
+- Logs indicate application-level issues
+
+**Prevention:**
+
+1. Set realistic `timeoutSeconds` values for resource types (Deployments: 300s, Jobs: 600s)
+2. Ensure resource specifications have correct readiness probes
+3. Test templates in non-production environments first
+4. Monitor `tenant_resources_ready` and `tenant_degraded_status` metrics
+5. Use `kubectl wait` for pre-flight checks:
+   ```bash
+   kubectl wait --for=condition=Ready tenant/<name> --timeout=300s
+   ```
+
 ## Debugging Workflows
 
 ### Debug Template Rendering

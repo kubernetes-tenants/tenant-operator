@@ -226,7 +226,7 @@ Gauge tracking the status of tenant conditions.
 **Labels:**
 - `tenant`: Tenant name
 - `namespace`: Tenant namespace
-- `type`: Condition type (e.g., Ready, Degraded)
+- `type`: Condition type (Ready, Progressing, Conflicted, Degraded)
 
 **Values:**
 - `0`: False
@@ -241,8 +241,11 @@ tenant_condition_status{type="Ready"} == 1
 # Count tenants not ready
 count(tenant_condition_status{type="Ready"} != 1)
 
-# List degraded tenants
+# Check degraded tenants (v1.1.4+)
 tenant_condition_status{type="Degraded"} == 1
+
+# Count degraded tenants
+count(tenant_condition_status{type="Degraded"} == 1)
 ```
 
 **Alerts:**
@@ -330,7 +333,7 @@ Gauge indicating if a tenant is in degraded state.
 **Labels:**
 - `tenant`: Tenant name
 - `namespace`: Tenant namespace
-- `reason`: Reason for degradation (TemplateRenderError, ConflictDetected, DependencyCycle, etc.)
+- `reason`: Reason for degradation (TemplateRenderError, ConflictDetected, DependencyCycle, ResourceFailuresAndConflicts, ResourceFailures, ResourceConflicts, ResourcesNotReady)
 
 **Values:**
 - `0`: Not degraded
@@ -346,6 +349,12 @@ tenant_degraded_status{reason!=""} == 1
 
 # Degraded tenants by reason
 sum(tenant_degraded_status) by (reason)
+
+# Tenants with resources not ready (v1.1.4+)
+tenant_degraded_status{reason="ResourcesNotReady"} == 1
+
+# Count by specific degraded reason
+sum(tenant_degraded_status{reason="ResourcesNotReady"})
 ```
 
 **Alerts:**
@@ -356,7 +365,72 @@ sum(tenant_degraded_status) by (reason)
   annotations:
     summary: Tenant {{ $labels.tenant }} is degraded
     description: "Reason: {{ $labels.reason }}"
+
+- alert: TenantNotAllResourcesReady
+  expr: tenant_degraded_status{reason="ResourcesNotReady"} == 1
+  for: 5m
+  annotations:
+    summary: Tenant {{ $labels.tenant }} has resources that are not ready
+    description: Check tenant status for readiness details
 ```
+
+### Smart Reconciliation Metrics
+
+::: tip New in v1.1.4
+v1.1.4 introduces enhanced status tracking with a 30-second requeue interval for fast status reflection.
+:::
+
+**Key Changes:**
+- **Fast Status Updates**: Child resource status changes reflected in Tenant status within 30 seconds (down from 5 minutes)
+- **Event-Driven**: Immediate reconciliation on watched resource changes
+- **Smart Predicates**: Only reconcile on Generation/Annotation changes, not status-only updates
+
+**Impact on Metrics:**
+
+The 30-second requeue interval means you'll see:
+- **Higher reconciliation frequency**: ~2 reconciles per minute per tenant
+- **Lower latency**: Status changes propagate faster
+- **Optimized overhead**: Smart predicates filter unnecessary reconciliations
+
+**Monitoring Reconciliation Patterns:**
+
+```promql
+# Reconciliation frequency (should show ~2 per minute per tenant in v1.1.4+)
+rate(tenant_reconcile_duration_seconds_count[5m])
+
+# P50 latency (should remain low despite faster requeue)
+histogram_quantile(0.50, rate(tenant_reconcile_duration_seconds_bucket[5m]))
+
+# P95 latency (watch for spikes > 30s)
+histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m]))
+
+# Status-only reconciliations (fast path)
+rate(tenant_reconcile_duration_seconds_count{result="status_only"}[5m])
+```
+
+**Alert for Reconciliation Bottlenecks:**
+
+```yaml
+- alert: SlowReconciliation
+  expr: histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m])) > 30
+  for: 5m
+  annotations:
+    summary: Tenant reconciliation P95 latency > 30s
+    description: May indicate controller performance issues or resource readiness delays
+
+- alert: HighReconciliationRate
+  expr: rate(tenant_reconcile_duration_seconds_count[5m]) > 5
+  for: 10m
+  annotations:
+    summary: Unusually high reconciliation rate
+    description: May indicate reconciliation loop or frequent resource changes
+```
+
+**Best Practices:**
+1. **Capacity Planning**: Monitor reconciliation rate for horizontal scaling decisions
+2. **Latency Tracking**: P95 latency should stay under 10s for healthy systems
+3. **Event-Driven Behavior**: Most reconciliations should be triggered by resource changes, not periodic requeues
+4. **Watch Predicates**: Verify that status-only updates don't trigger full reconciliations
 
 ### Controller-Runtime Metrics
 

@@ -46,6 +46,21 @@ sum(tenant_degraded_status) by (reason)
 
 # Top 10 degraded tenants
 topk(10, tenant_degraded_status)
+
+# Degraded tenants with resources not ready (v1.1.4+)
+tenant_degraded_status{reason="ResourcesNotReady"} == 1
+
+# Count by specific degraded reason
+sum(tenant_degraded_status{reason="ResourcesNotReady"})
+
+# Tenants with resource failures only
+tenant_degraded_status{reason="ResourceFailures"} == 1
+
+# Tenants with conflicts only
+tenant_degraded_status{reason="ResourceConflicts"} == 1
+
+# Tenants with both failures and conflicts
+tenant_degraded_status{reason="ResourceFailuresAndConflicts"} == 1
 ```
 
 ### Resource Health by Tenant
@@ -399,6 +414,90 @@ tenant_resources_ready != tenant_resources_desired and tenant_resources_desired 
 
 # Slow reconciliation
 histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m])) > 30
+
+# Resources not ready (v1.1.4+)
+tenant_degraded_status{reason="ResourcesNotReady"} > 0
+
+# Tenants with both failures and conflicts (v1.1.4+)
+tenant_degraded_status{reason="ResourceFailuresAndConflicts"} > 0
+```
+
+## v1.1.4 Enhanced Status Queries
+
+::: tip New in v1.1.4
+v1.1.4 introduces more granular degraded condition reasons and smart reconciliation with 30-second requeue interval.
+:::
+
+### New Degraded Reasons
+
+```promql
+# All tenants degraded due to resources not ready
+tenant_degraded_status{reason="ResourcesNotReady"} == 1
+
+# Tenants with resource failures only
+tenant_degraded_status{reason="ResourceFailures"} == 1
+
+# Tenants with conflicts only
+tenant_degraded_status{reason="ResourceConflicts"} == 1
+
+# Tenants with both failures and conflicts
+tenant_degraded_status{reason="ResourceFailuresAndConflicts"} == 1
+
+# Count tenants by degraded reason
+sum(tenant_degraded_status == 1) by (reason)
+```
+
+### Ready Condition Granularity
+
+Check why tenants are not ready:
+
+```promql
+# All not-ready tenants with detailed reason
+tenant_condition_status{type="Ready"} != 1
+
+# Degraded tenants with Ready=False
+tenant_condition_status{type="Ready"} != 1 and tenant_condition_status{type="Degraded"} == 1
+
+# Query tenant annotations for reason details (requires external tooling)
+# Reasons: ResourcesFailedAndConflicted, ResourcesConflicted,
+#          ResourcesFailed, NotAllResourcesReady
+```
+
+### Smart Reconciliation Monitoring
+
+Monitor the 30-second requeue behavior:
+
+```promql
+# Reconciliation frequency (should show ~2 per minute per tenant in v1.1.4+)
+rate(tenant_reconcile_duration_seconds_count[5m])
+
+# P50 latency (should remain low due to fast requeue)
+histogram_quantile(0.50, rate(tenant_reconcile_duration_seconds_bucket[5m]))
+
+# P95 latency (watch for spikes > 30s)
+histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m]))
+
+# Detect reconciliation bottlenecks
+histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m])) > 10
+
+# Status-only reconciliations (fast path)
+rate(tenant_reconcile_duration_seconds_count{result="status_only"}[5m])
+```
+
+### Readiness Tracking
+
+Track how quickly resources become ready:
+
+```promql
+# Percentage of resources ready
+(sum(tenant_resources_ready) / sum(tenant_resources_desired)) * 100
+
+# Tenants with incomplete readiness
+tenant_resources_ready < tenant_resources_desired
+
+# Average time to readiness (approximation via reconciliation duration)
+avg(rate(tenant_reconcile_duration_seconds_sum{result="success"}[5m]) /
+    rate(tenant_reconcile_duration_seconds_count{result="success"}[5m]))
 ```
 
 ## Tips for Using These Queries

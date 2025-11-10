@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
+	"github.com/kubernetes-tenants/tenant-operator/internal/status"
 	"github.com/kubernetes-tenants/tenant-operator/internal/template"
 )
 
@@ -45,9 +46,10 @@ func TestReconcile_TenantNotFound(t *testing.T) {
 	recorder := record.NewFakeRecorder(100)
 
 	r := &TenantReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Recorder: recorder,
+		Client:        fakeClient,
+		Scheme:        scheme,
+		Recorder:      recorder,
+		StatusManager: status.NewManager(fakeClient, status.WithSyncMode()),
 	}
 
 	req := ctrl.Request{
@@ -132,9 +134,10 @@ func TestReconcile_TenantWithFinalizer(t *testing.T) {
 			recorder := record.NewFakeRecorder(100)
 
 			r := &TenantReconciler{
-				Client:   fakeClient,
-				Scheme:   scheme,
-				Recorder: recorder,
+				Client:        fakeClient,
+				Scheme:        scheme,
+				Recorder:      recorder,
+				StatusManager: status.NewManager(fakeClient, status.WithSyncMode()),
 			}
 
 			req := ctrl.Request{

@@ -39,6 +39,7 @@ import (
 
 	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
 	"github.com/kubernetes-tenants/tenant-operator/internal/controller"
+	"github.com/kubernetes-tenants/tenant-operator/internal/status"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -229,12 +230,25 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "TenantTemplate")
 		os.Exit(1)
 	}
-	if err := (&controller.TenantReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Recorder: mgr.GetEventRecorderFor("tenant-controller"),
-	}).SetupWithManager(mgr, tenantConcurrency); err != nil {
+	// Create StatusManager for Tenant controller
+	statusManager := status.NewManager(mgr.GetClient())
+
+	tenantReconciler := &controller.TenantReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		Recorder:      mgr.GetEventRecorderFor("tenant-controller"),
+		StatusManager: statusManager,
+	}
+
+	if err := tenantReconciler.SetupWithManager(mgr, tenantConcurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Tenant")
+		os.Exit(1)
+	}
+
+	// Add StatusManager as a runnable to manager
+	// This ensures it's started and stopped with the manager
+	if err := mgr.Add(statusManager); err != nil {
+		setupLog.Error(err, "unable to add StatusManager to manager")
 		os.Exit(1)
 	}
 

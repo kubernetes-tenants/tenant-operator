@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
+	"github.com/kubernetes-tenants/tenant-operator/internal/fieldfilter"
 )
 
 const (
@@ -89,6 +90,7 @@ func NewApplier(c client.Client, scheme *runtime.Scheme) *Applier {
 
 // ApplyResource applies a resource using the specified patch strategy
 // Returns true if the resource was changed, false if no change was needed
+// ignoreFields: JSONPath expressions for fields to ignore (only effective on existing resources, not initial creation)
 func (a *Applier) ApplyResource(
 	ctx context.Context,
 	obj *unstructured.Unstructured,
@@ -96,6 +98,7 @@ func (a *Applier) ApplyResource(
 	conflictPolicy tenantsv1.ConflictPolicy,
 	patchStrategy tenantsv1.PatchStrategy,
 	deletionPolicy tenantsv1.DeletionPolicy,
+	ignoreFields []string,
 ) (bool, error) {
 	// Set owner reference or tracking labels based on namespace and deletion policy
 	if owner != nil {
@@ -153,6 +156,26 @@ func (a *Applier) ApplyResource(
 			logger.V(1).Info("Failed to remove orphan markers, continuing anyway", "error", err)
 		}
 		_ = removed // Will be used for event logging in controller
+	}
+
+	// Apply ignoreFields filtering if resource already exists
+	// On initial creation, all fields (including those in ignoreFields) should be applied
+	if existsBeforeApply && len(ignoreFields) > 0 {
+		filter, err := fieldfilter.NewFilter(ignoreFields)
+		if err != nil {
+			return false, fmt.Errorf("failed to create field filter: %w", err)
+		}
+
+		// Remove ignored fields from desired state before applying
+		if err := filter.RemoveIgnoredFields(obj); err != nil {
+			return false, fmt.Errorf("failed to remove ignored fields: %w", err)
+		}
+
+		logger := log.FromContext(ctx)
+		logger.V(1).Info("Applied field filter before resource apply",
+			"resource", fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName()),
+			"kind", obj.GetKind(),
+			"ignoreFields", ignoreFields)
 	}
 
 	// Apply resource based on patch strategy

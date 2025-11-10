@@ -26,6 +26,10 @@ linters:
       rules:
         - name: comment-spacings
         - name: import-shadowing
+    gocyclo:
+      # Allow slightly higher complexity for main Reconcile function
+      # (contains legacy code path for backward compatibility)
+      min-complexity: 35
   exclusions:
     generated: lax
     rules:
