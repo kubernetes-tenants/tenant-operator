@@ -110,6 +110,12 @@ func (c *Checker) IsReady(obj *unstructured.Unstructured) bool {
 		return c.isIngressReady(obj)
 	case "PersistentVolumeClaim":
 		return c.isPVCReady(obj)
+	case "PodDisruptionBudget":
+		return true // PDBs are ready immediately after creation
+	case "NetworkPolicy":
+		return true // NetworkPolicies are ready immediately after creation
+	case "HorizontalPodAutoscaler":
+		return c.isHPAReady(obj)
 	default:
 		// For custom resources, check status.conditions
 		return c.hasReadyCondition(obj)
@@ -237,6 +243,32 @@ func (c *Checker) isPVCReady(obj *unstructured.Unstructured) bool {
 	return phase == "Bound"
 }
 
+// isHPAReady checks if a HorizontalPodAutoscaler is ready
+func (c *Checker) isHPAReady(obj *unstructured.Unstructured) bool {
+	// Check for AbleToScale condition
+	conditions, found, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
+	if !found {
+		return false
+	}
+
+	for _, cond := range conditions {
+		condMap, ok := cond.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		condType, _, _ := unstructured.NestedString(condMap, "type")
+		condStatus, _, _ := unstructured.NestedString(condMap, "status")
+
+		// HPA is ready when AbleToScale condition is True
+		if condType == "AbleToScale" && condStatus == ConditionStatusTrue {
+			return true
+		}
+	}
+
+	return false
+}
+
 // hasReadyCondition checks for a Ready condition in status.conditions
 func (c *Checker) hasReadyCondition(obj *unstructured.Unstructured) bool {
 	conditions, found, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
@@ -282,6 +314,10 @@ func (c *Checker) GetReadinessMessage(obj *unstructured.Unstructured) string {
 		succeeded, _, _ := unstructured.NestedInt64(obj.Object, "status", "succeeded")
 		failed, _, _ := unstructured.NestedInt64(obj.Object, "status", "failed")
 		return fmt.Sprintf("Job status: %d succeeded, %d failed", succeeded, failed)
+	case "HorizontalPodAutoscaler":
+		currentReplicas, _, _ := unstructured.NestedInt64(obj.Object, "status", "currentReplicas")
+		desiredReplicas, _, _ := unstructured.NestedInt64(obj.Object, "status", "desiredReplicas")
+		return fmt.Sprintf("HPA status: %d current, %d desired replicas", currentReplicas, desiredReplicas)
 	default:
 		return "Waiting for resource to be ready"
 	}

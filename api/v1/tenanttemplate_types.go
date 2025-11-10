@@ -92,6 +92,24 @@ type TenantTemplateSpec struct {
 	// +listMapKey=id
 	CronJobs []TResource `json:"cronJobs,omitempty"`
 
+	// PodDisruptionBudgets defines PDB resources to create
+	// +optional
+	// +listType=map
+	// +listMapKey=id
+	PodDisruptionBudgets []TResource `json:"podDisruptionBudgets,omitempty"`
+
+	// NetworkPolicies defines NetworkPolicy resources to create
+	// +optional
+	// +listType=map
+	// +listMapKey=id
+	NetworkPolicies []TResource `json:"networkPolicies,omitempty"`
+
+	// HorizontalPodAutoscalers defines HPA resources to create
+	// +optional
+	// +listType=map
+	// +listMapKey=id
+	HorizontalPodAutoscalers []TResource `json:"horizontalPodAutoscalers,omitempty"`
+
 	// Manifests defines arbitrary Kubernetes resources as raw manifests
 	// Use this for any resource type not explicitly supported above
 	// +optional

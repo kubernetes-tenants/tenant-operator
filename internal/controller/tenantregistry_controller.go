@@ -359,17 +359,20 @@ func (r *TenantRegistryReconciler) renderAllTemplateResources(
 	engine := template.NewEngine()
 
 	spec := &tenantsv1.TenantSpec{
-		ServiceAccounts:        make([]tenantsv1.TResource, 0),
-		Deployments:            make([]tenantsv1.TResource, 0),
-		StatefulSets:           make([]tenantsv1.TResource, 0),
-		Services:               make([]tenantsv1.TResource, 0),
-		Ingresses:              make([]tenantsv1.TResource, 0),
-		ConfigMaps:             make([]tenantsv1.TResource, 0),
-		Secrets:                make([]tenantsv1.TResource, 0),
-		PersistentVolumeClaims: make([]tenantsv1.TResource, 0),
-		Jobs:                   make([]tenantsv1.TResource, 0),
-		CronJobs:               make([]tenantsv1.TResource, 0),
-		Manifests:              make([]tenantsv1.TResource, 0),
+		ServiceAccounts:          make([]tenantsv1.TResource, 0),
+		Deployments:              make([]tenantsv1.TResource, 0),
+		StatefulSets:             make([]tenantsv1.TResource, 0),
+		Services:                 make([]tenantsv1.TResource, 0),
+		Ingresses:                make([]tenantsv1.TResource, 0),
+		ConfigMaps:               make([]tenantsv1.TResource, 0),
+		Secrets:                  make([]tenantsv1.TResource, 0),
+		PersistentVolumeClaims:   make([]tenantsv1.TResource, 0),
+		Jobs:                     make([]tenantsv1.TResource, 0),
+		CronJobs:                 make([]tenantsv1.TResource, 0),
+		PodDisruptionBudgets:     make([]tenantsv1.TResource, 0),
+		NetworkPolicies:          make([]tenantsv1.TResource, 0),
+		HorizontalPodAutoscalers: make([]tenantsv1.TResource, 0),
+		Manifests:                make([]tenantsv1.TResource, 0),
 	}
 
 	// Render each resource type
@@ -423,6 +426,21 @@ func (r *TenantRegistryReconciler) renderAllTemplateResources(
 	spec.CronJobs, err = r.renderResourceList(engine, tmpl.Spec.CronJobs, vars)
 	if err != nil {
 		return nil, fmt.Errorf("failed to render cronJobs: %w", err)
+	}
+
+	spec.PodDisruptionBudgets, err = r.renderResourceList(engine, tmpl.Spec.PodDisruptionBudgets, vars)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render podDisruptionBudgets: %w", err)
+	}
+
+	spec.NetworkPolicies, err = r.renderResourceList(engine, tmpl.Spec.NetworkPolicies, vars)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render networkPolicies: %w", err)
+	}
+
+	spec.HorizontalPodAutoscalers, err = r.renderResourceList(engine, tmpl.Spec.HorizontalPodAutoscalers, vars)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render horizontalPodAutoscalers: %w", err)
 	}
 
 	spec.Manifests, err = r.renderResourceList(engine, tmpl.Spec.Manifests, vars)
@@ -738,6 +756,18 @@ func (r *TenantRegistryReconciler) countResourcesByType(spec *tenantsv1.TenantSp
 		counts["CronJobs"] = len(spec.CronJobs)
 		total += len(spec.CronJobs)
 	}
+	if len(spec.PodDisruptionBudgets) > 0 {
+		counts["PodDisruptionBudgets"] = len(spec.PodDisruptionBudgets)
+		total += len(spec.PodDisruptionBudgets)
+	}
+	if len(spec.NetworkPolicies) > 0 {
+		counts["NetworkPolicies"] = len(spec.NetworkPolicies)
+		total += len(spec.NetworkPolicies)
+	}
+	if len(spec.HorizontalPodAutoscalers) > 0 {
+		counts["HorizontalPodAutoscalers"] = len(spec.HorizontalPodAutoscalers)
+		total += len(spec.HorizontalPodAutoscalers)
+	}
 	if len(spec.Manifests) > 0 {
 		counts["Manifests"] = len(spec.Manifests)
 		total += len(spec.Manifests)
@@ -783,6 +813,15 @@ func (r *TenantRegistryReconciler) formatResourceDetails(counts map[string]int) 
 	}
 	if count, ok := counts["CronJobs"]; ok {
 		details = append(details, fmt.Sprintf("%d CronJob(s)", count))
+	}
+	if count, ok := counts["PodDisruptionBudgets"]; ok {
+		details = append(details, fmt.Sprintf("%d PodDisruptionBudget(s)", count))
+	}
+	if count, ok := counts["NetworkPolicies"]; ok {
+		details = append(details, fmt.Sprintf("%d NetworkPolicy(ies)", count))
+	}
+	if count, ok := counts["HorizontalPodAutoscalers"]; ok {
+		details = append(details, fmt.Sprintf("%d HorizontalPodAutoscaler(s)", count))
 	}
 	if count, ok := counts["Manifests"]; ok {
 		details = append(details, fmt.Sprintf("%d Manifest(s)", count))
@@ -935,6 +974,9 @@ func (r *TenantRegistryReconciler) processRetainResourcesForTenant(ctx context.C
 	allResources = append(allResources, tenant.Spec.PersistentVolumeClaims...)
 	allResources = append(allResources, tenant.Spec.Jobs...)
 	allResources = append(allResources, tenant.Spec.CronJobs...)
+	allResources = append(allResources, tenant.Spec.PodDisruptionBudgets...)
+	allResources = append(allResources, tenant.Spec.NetworkPolicies...)
+	allResources = append(allResources, tenant.Spec.HorizontalPodAutoscalers...)
 	allResources = append(allResources, tenant.Spec.Manifests...)
 
 	// Process each resource with Retain policy

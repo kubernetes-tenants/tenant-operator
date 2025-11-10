@@ -40,9 +40,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/client-go/tools/record"
 
 	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
@@ -117,7 +119,9 @@ const (
 // +kubebuilder:rbac:groups="",resources=serviceaccounts;services;configmaps;secrets;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets;daemonsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=batch,resources=jobs;cronjobs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses;networkpolicies,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 // NOTE: Cross-namespace resource support requires cluster-wide permissions for resource types
 // The above RBAC rules allow the operator to create resources in any namespace when targetNamespace is specified
@@ -592,6 +596,9 @@ func (r *TenantReconciler) collectResourcesFromTenant(tenant *tenantsv1.Tenant) 
 	resources = append(resources, tenant.Spec.PersistentVolumeClaims...)
 	resources = append(resources, tenant.Spec.Jobs...)
 	resources = append(resources, tenant.Spec.CronJobs...)
+	resources = append(resources, tenant.Spec.PodDisruptionBudgets...)
+	resources = append(resources, tenant.Spec.NetworkPolicies...)
+	resources = append(resources, tenant.Spec.HorizontalPodAutoscalers...)
 	resources = append(resources, tenant.Spec.Manifests...)
 
 	return resources
@@ -1063,6 +1070,13 @@ func (r *TenantReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) e
 				if !reflect.DeepEqual(obj.Status.LoadBalancer, oldIng.Status.LoadBalancer) {
 					return true
 				}
+			case *autoscalingv2.HorizontalPodAutoscaler:
+				oldHPA := e.ObjectOld.(*autoscalingv2.HorizontalPodAutoscaler)
+				if obj.Status.CurrentReplicas != oldHPA.Status.CurrentReplicas ||
+					obj.Status.DesiredReplicas != oldHPA.Status.DesiredReplicas ||
+					!reflect.DeepEqual(obj.Status.Conditions, oldHPA.Status.Conditions) {
+					return true
+				}
 			}
 
 			// Don't reconcile for other status-only changes
@@ -1093,6 +1107,9 @@ func (r *TenantReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) e
 		Owns(&batchv1.Job{}, builder.WithPredicates(ownedResourcePredicate)).
 		Owns(&batchv1.CronJob{}, builder.WithPredicates(ownedResourcePredicate)).
 		Owns(&networkingv1.Ingress{}, builder.WithPredicates(ownedResourcePredicate)).
+		Owns(&policyv1.PodDisruptionBudget{}, builder.WithPredicates(ownedResourcePredicate)).
+		Owns(&networkingv1.NetworkPolicy{}, builder.WithPredicates(ownedResourcePredicate)).
+		Owns(&autoscalingv2.HorizontalPodAutoscaler{}, builder.WithPredicates(ownedResourcePredicate)).
 		// Watch resources with label-based tracking (cross-namespace or resources without ownerReference support)
 		// These use labels for tracking: kubernetes-tenants.org/tenant and kubernetes-tenants.org/tenant-namespace
 		Watches(
@@ -1152,6 +1169,21 @@ func (r *TenantReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) e
 		).
 		Watches(
 			&networkingv1.Ingress{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&policyv1.PodDisruptionBudget{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&networkingv1.NetworkPolicy{},
+			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
+			builder.WithPredicates(ownedResourcePredicate),
+		).
+		Watches(
+			&autoscalingv2.HorizontalPodAutoscaler{},
 			handler.EnqueueRequestsFromMapFunc(r.findTenantForLabeledResource),
 			builder.WithPredicates(ownedResourcePredicate),
 		).
