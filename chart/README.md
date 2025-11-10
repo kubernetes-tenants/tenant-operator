@@ -356,7 +356,7 @@ helm template tenant-operator ./chart \
 
 ## Support
 
-- **Documentation**: https://kubernetes-tenants.github.io/tenant-operator
+- **Documentation**: https://docs.kubernetes-tenants.org/
 - **GitHub**: https://github.com/kubernetes-tenants/tenant-operator
 - **Issues**: https://github.com/kubernetes-tenants/tenant-operator/issues
 - **Discussions**: https://github.com/kubernetes-tenants/tenant-operator/discussions

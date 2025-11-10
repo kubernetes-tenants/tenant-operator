@@ -89,6 +89,8 @@ spec:
     nameTemplate: "{{ .uid }}-app"
     dependIds:
     - tenant-config
+    ignoreFields:
+    - "$.spec.replicas"
     spec:
       apiVersion: apps/v1
       kind: Deployment
@@ -152,6 +154,40 @@ spec:
           targetPort: 80
           protocol: TCP
           name: http
+
+  # HorizontalPodAutoscaler for tenant application
+  horizontalPodAutoscalers:
+  - id: tenant-hpa
+    nameTemplate: "{{ .uid }}-hpa"
+    dependIds:
+    - tenant-deployment
+    spec:
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        labels:
+          app: "{{ .uid }}"
+          tenant: "{{ .uid }}"
+      spec:
+        scaleTargetRef:
+          apiVersion: apps/v1
+          kind: Deployment
+          name: "{{ .uid }}-app"
+        minReplicas: 1
+        maxReplicas: 5
+        metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 70
+        - type: Resource
+          resource:
+            name: memory
+            target:
+              type: Utilization
+              averageUtilization: 80
 EOF
 echo -e "${GREEN}✓ TenantTemplate created${NC}"
 
@@ -199,6 +235,12 @@ echo ""
 echo -e "${BLUE}Resources Created:${NC}"
 echo "  TenantTemplate:   $TEMPLATE_NAME"
 echo ""
+echo -e "${BLUE}Template includes:${NC}"
+echo "  - ConfigMap (tenant configuration)"
+echo "  - Deployment (application, replicas ignored for HPA)"
+echo "  - Service (ClusterIP)"
+echo "  - HorizontalPodAutoscaler (min: 1, max: 5, CPU: 70%, Memory: 80%)"
+echo ""
 echo -e "${BLUE}Expected Active Tenants (from MySQL):${NC}"
 echo "  - tenant-alpha (activate=true)"
 echo "  - tenant-beta (activate=true)"
@@ -226,7 +268,10 @@ echo "  # Check if active tenants were created"
 echo "  kubectl get tenants -n $NAMESPACE | grep -E 'alpha|beta|gamma|epsilon'"
 echo ""
 echo "  # Check tenant resources"
-echo "  kubectl get deployments,services,configmaps -n $NAMESPACE -l tenant"
+echo "  kubectl get deployments,services,configmaps,hpa -n $NAMESPACE -l tenant"
+echo ""
+echo "  # Check HPA status"
+echo "  kubectl get hpa -n $NAMESPACE -l managed-by=tenant-operator"
 echo ""
 echo -e "${BLUE}Operator Logs:${NC}"
 echo "  kubectl logs -n tenant-operator-system -l control-plane=controller-manager -f --all-containers"

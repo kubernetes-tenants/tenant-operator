@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: docs-deploy
-  cancel-in-progress: true
+  group: gh-pages-deploy  # Share concurrency group with helm-release to prevent conflicts
+  cancel-in-progress: false  # Don't cancel in-progress deployments
 
 permissions:
   contents: write
@@ -59,3 +59,5 @@ jobs:
           # destination_dir: ${{ env.DOCS_VERSION }} # Legacy documentation structure
           commit_message: "docs: deploy ${{ env.DOCS_VERSION }}"
           cname: docs.kubernetes-tenants.org
+          keep_files: true  # Preserve Helm chart files (index.yaml, *.tgz, artifacthub-repo.yml)
+          exclude_assets: '.github'  # Exclude .github directory from gh-pages

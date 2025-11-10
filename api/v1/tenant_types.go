@@ -74,6 +74,18 @@ type TenantSpec struct {
 	// +optional
 	CronJobs []TResource `json:"cronJobs,omitempty"`
 
+	// PodDisruptionBudgets are the resolved PDB resources
+	// +optional
+	PodDisruptionBudgets []TResource `json:"podDisruptionBudgets,omitempty"`
+
+	// NetworkPolicies are the resolved NetworkPolicy resources
+	// +optional
+	NetworkPolicies []TResource `json:"networkPolicies,omitempty"`
+
+	// HorizontalPodAutoscalers are the resolved HPA resources
+	// +optional
+	HorizontalPodAutoscalers []TResource `json:"horizontalPodAutoscalers,omitempty"`
+
 	// Manifests are the resolved arbitrary resources
 	// +optional
 	Manifests []TResource `json:"manifests,omitempty"`

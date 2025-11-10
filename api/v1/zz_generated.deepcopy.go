@@ -392,6 +392,27 @@ func (in *TenantSpec) DeepCopyInto(out *TenantSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.PodDisruptionBudgets != nil {
+		in, out := &in.PodDisruptionBudgets, &out.PodDisruptionBudgets
+		*out = make([]TResource, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.NetworkPolicies != nil {
+		in, out := &in.NetworkPolicies, &out.NetworkPolicies
+		*out = make([]TResource, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.HorizontalPodAutoscalers != nil {
+		in, out := &in.HorizontalPodAutoscalers, &out.HorizontalPodAutoscalers
+		*out = make([]TResource, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Manifests != nil {
 		in, out := &in.Manifests, &out.Manifests
 		*out = make([]TResource, len(*in))
@@ -580,6 +601,27 @@ func (in *TenantTemplateSpec) DeepCopyInto(out *TenantTemplateSpec) {
 	}
 	if in.CronJobs != nil {
 		in, out := &in.CronJobs, &out.CronJobs
+		*out = make([]TResource, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.PodDisruptionBudgets != nil {
+		in, out := &in.PodDisruptionBudgets, &out.PodDisruptionBudgets
+		*out = make([]TResource, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.NetworkPolicies != nil {
+		in, out := &in.NetworkPolicies, &out.NetworkPolicies
+		*out = make([]TResource, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.HorizontalPodAutoscalers != nil {
+		in, out := &in.HorizontalPodAutoscalers, &out.HorizontalPodAutoscalers
 		*out = make([]TResource, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
