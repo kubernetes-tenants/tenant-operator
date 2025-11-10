@@ -1509,7 +1509,10 @@ func (r *TenantReconciler) reconcileSpec(ctx context.Context, tenant *tenantsv1.
 		logger.Error(err, "Failed to build template variables")
 		r.StatusManager.PublishReadyCondition(tenant, false, "VariablesBuildError", err.Error())
 		r.StatusManager.PublishDegradedCondition(tenant, true, "VariablesBuildError", err.Error())
-		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, "VariablesBuildError").Set(1)
+		// Publish metrics to ensure degraded status is tracked
+		r.StatusManager.PublishMetrics(tenant, 0, 0, 0, 0, []metav1.Condition{
+			{Type: "Degraded", Status: metav1.ConditionTrue, Reason: "VariablesBuildError"},
+		}, true, "VariablesBuildError")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
 	}
 
@@ -1522,7 +1525,10 @@ func (r *TenantReconciler) reconcileSpec(ctx context.Context, tenant *tenantsv1.
 		logger.Error(err, "Failed to build dependency graph")
 		r.StatusManager.PublishReadyCondition(tenant, false, "DependencyError", err.Error())
 		r.StatusManager.PublishDegradedCondition(tenant, true, "DependencyCycle", "Dependency cycle detected in resource graph")
-		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, "DependencyCycle").Set(1)
+		// Publish metrics to ensure degraded status is tracked
+		r.StatusManager.PublishMetrics(tenant, 0, 0, 0, 0, []metav1.Condition{
+			{Type: "Degraded", Status: metav1.ConditionTrue, Reason: "DependencyCycle"},
+		}, true, "DependencyCycle")
 		return ctrl.Result{}, err
 	}
 
@@ -1532,7 +1538,10 @@ func (r *TenantReconciler) reconcileSpec(ctx context.Context, tenant *tenantsv1.
 		logger.Error(err, "Failed to sort resources")
 		r.StatusManager.PublishReadyCondition(tenant, false, "SortError", err.Error())
 		r.StatusManager.PublishDegradedCondition(tenant, true, "DependencyCycle", err.Error())
-		metrics.TenantDegradedStatus.WithLabelValues(tenant.Name, tenant.Namespace, "DependencyCycle").Set(1)
+		// Publish metrics to ensure degraded status is tracked
+		r.StatusManager.PublishMetrics(tenant, 0, 0, 0, 0, []metav1.Condition{
+			{Type: "Degraded", Status: metav1.ConditionTrue, Reason: "DependencyCycle"},
+		}, true, "DependencyCycle")
 		return ctrl.Result{}, err
 	}
 
