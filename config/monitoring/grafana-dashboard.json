@@ -760,7 +760,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "tenant_degraded_status",
+          "expr": "max(tenant_degraded_status) by (tenant, namespace, reason) > 0",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -769,24 +769,6 @@
       ],
       "title": "Degraded Tenants",
       "transformations": [
-        {
-          "id": "filterByValue",
-          "options": {
-            "filters": [
-              {
-                "config": {
-                  "id": "greater",
-                  "options": {
-                    "value": 0
-                  }
-                },
-                "fieldName": "Value"
-              }
-            ],
-            "match": "all",
-            "type": "include"
-          }
-        },
         {
           "id": "organize",
           "options": {

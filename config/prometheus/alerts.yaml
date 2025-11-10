@@ -24,13 +24,13 @@ spec:
       rules:
         # Critical: Tenant is in degraded state
         - alert: TenantDegraded
-          expr: tenant_degraded_status > 0
+          expr: max(tenant_degraded_status) by (tenant, namespace, reason) > 0
           for: 5m
           labels:
             severity: critical
             component: tenant-operator
           annotations:
-            summary: "Tenant {{ $labels.tenant }} is degraded"
+            summary: "Tenant {{ $labels.tenant }} is degraded ({{ $labels.reason }})"
             description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has been in degraded state for 5+ minutes. Reason: {{ $labels.reason }}. This may indicate template errors, conflicts, or dependency issues."
             dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
             runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-degraded"

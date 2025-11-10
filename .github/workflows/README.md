@@ -1,201 +1,71 @@
 # GitHub Actions Workflows
 
-This directory contains automated CI/CD workflows for the Tenant Operator project.
+This directory contains automated workflows for the Tenant Operator project.
 
 ## Workflows
 
-### 🚀 Build and Push (`build-push.yml`)
+### 1. Deploy VitePress Docs (`deploy-docs-v1.yml`)
 
-Automatically builds and publishes container images to GitHub Container Registry (GHCR).
+**Trigger**: Push to `main` branch or manual dispatch
 
-**Triggers:**
-- Push to `main` branch
-- Version tags (`v*`)
-- Pull requests (build only, no push)
+**Purpose**: Builds and deploys VitePress documentation to GitHub Pages
 
-**Features:**
-- ✅ Multi-platform builds (`linux/amd64`, `linux/arm64`)
-- ✅ Automatic semantic versioning from git tags
-- ✅ Build caching for faster builds
-- ✅ SLSA provenance attestation for supply chain security
-- ✅ PR validation without publishing
+**Key Features**:
+- Builds VitePress site from `docs/` directory
+- Deploys to gh-pages branch using `peaceiris/actions-gh-pages@v4`
+- Uses `keep_files: true` to preserve Helm chart files (index.yaml, *.tgz, artifacthub-repo.yml)
+- Shares `gh-pages-deploy` concurrency group to prevent conflicts
 
-**Image Registry:** `ghcr.io/kubernetes-tenants/tenant-operator`
+### 2. Release Helm Chart (`helm-release.yml`)
 
-**Permissions Required:**
-- `contents: read` - Read repository code
-- `packages: write` - Push to GHCR
-- `id-token: write` - Generate attestations
+**Trigger**: Push of version tags (v*)
 
-### 🧪 Test (`test.yml`)
+**Purpose**: Packages and releases Helm chart to GitHub Pages Helm repository
 
-Runs unit tests on every push and pull request.
+**Key Features**:
+- Validates and packages Helm chart
+- Uploads chart package to GitHub Release
+- Updates Helm repository index (index.yaml) on gh-pages branch
+- Deploys Artifact Hub metadata using `peaceiris/actions-gh-pages@v4` with `keep_files: true`
+- Shares `gh-pages-deploy` concurrency group to prevent conflicts
 
-**Tests:**
-- Unit tests with coverage
-- Multiple Go versions
+## GitHub Pages Structure
 
-### 🧹 Lint (`lint.yml`)
+The `gh-pages` branch contains:
 
-Runs code quality checks.
-
-**Checks:**
-- `go fmt` formatting
-- `go vet` static analysis
-- golangci-lint
-
-### 🔬 E2E Tests (`test-e2e.yml`)
-
-Runs end-to-end tests against a real Kubernetes cluster.
-
-**Environment:**
-- Kind cluster
-- Full operator deployment
-- Integration with MySQL
-
-## Image Tagging Strategy
-
-| Event | Generated Tags | Example |
-|-------|---------------|---------|
-| Push to `main` | `main`, `latest`, `main-<sha>` | `main`, `latest`, `main-74bab2c` |
-| Tag `v1.2.3` | `v1.2.3`, `v1.2`, `v1`, `latest` | All semver variants |
-| PR #42 | `pr-42`, `sha-<sha>` | `pr-42`, `sha-74bab2c` (build only, not pushed) |
-
-## Using Pre-built Images
-
-### Pull the latest image
-```bash
-docker pull ghcr.io/kubernetes-tenants/tenant-operator:latest
+```
+gh-pages/
+├── index.html              # VitePress docs (root)
+├── assets/                 # VitePress assets
+├── guide/                  # VitePress guide pages
+├── api/                    # VitePress API docs
+├── index.yaml              # Helm repository index (from helm-release.yml)
+├── artifacthub-repo.yml    # Artifact Hub metadata (from helm-release.yml)
+├── tenant-operator-*.tgz   # Helm chart packages (from helm-release.yml)
+└── CNAME                   # Custom domain: docs.kubernetes-tenants.org
 ```
 
-### Deploy to Kubernetes
-```bash
-make deploy IMG=ghcr.io/kubernetes-tenants/tenant-operator:v1.0.0
-```
+## Concurrency Control
 
-### Verify image provenance
-```bash
-cosign verify-attestation \
-  --type slsaprovenance \
-  ghcr.io/kubernetes-tenants/tenant-operator:v1.0.0
-```
+Both workflows use the same concurrency group (`gh-pages-deploy`) with `cancel-in-progress: false` to:
+- Prevent simultaneous deployments that could conflict
+- Queue deployments sequentially
+- Ensure all files are preserved using `keep_files: true`
 
-## Workflow Configuration
+## Best Practices
 
-### Secrets Required
-
-No additional secrets needed! The workflows use the built-in `GITHUB_TOKEN` which is automatically provided by GitHub Actions.
-
-### Repository Settings
-
-To enable GHCR publishing:
-
-1. **Go to:** Repository Settings → Actions → General
-2. **Workflow permissions:** Set to "Read and write permissions"
-3. **Allow GitHub Actions to create and approve pull requests:** ✅ (optional)
-
-### Package Visibility
-
-After the first push, set package visibility:
-
-1. **Go to:** Repository → Packages → tenant-operator
-2. **Package settings → Change visibility**
-3. **Choose:** Public (recommended) or Private
-
-## Development
-
-### Testing Workflows Locally
-
-Use [act](https://github.com/nektos/act) to test workflows locally:
-
-```bash
-# Install act
-brew install act
-
-# Test the build workflow
-act push -j build-and-push --secret GITHUB_TOKEN=your_token
-
-# Test on pull_request event
-act pull_request
-```
-
-### Modifying Workflows
-
-When updating workflows:
-
-1. Test locally with `act` if possible
-2. Create a PR to trigger validation
-3. Check workflow runs in GitHub Actions tab
-4. Merge after all checks pass
-
-### Adding New Workflows
-
-1. Create `.github/workflows/new-workflow.yml`
-2. Follow GitHub Actions syntax
-3. Test with `act` or in a PR
-4. Document in this README
+1. **keep_files: true**: Both workflows use this option to preserve files from other workflows
+2. **Concurrency group**: Prevents race conditions when both workflows run simultaneously
+3. **Atomic deployments**: Each workflow only updates its own files, others are preserved
+4. **Idempotent**: Running workflows multiple times produces consistent results
 
 ## Troubleshooting
 
-### Build fails with "permission denied"
+### Issue: index.yaml disappears after docs deployment
+**Solution**: This was resolved by adding `keep_files: true` to the docs deployment workflow
 
-**Solution:** Check repository workflow permissions:
-- Settings → Actions → General → Workflow permissions
-- Select "Read and write permissions"
+### Issue: artifacthub-repo.yml not updating
+**Solution**: Ensure helm-release.yml completes successfully and uses peaceiris/actions-gh-pages with keep_files
 
-### Image not found after push
-
-**Solution:** Check package visibility:
-- Go to repository packages
-- Ensure tenant-operator package is set to Public
-- Verify the image exists at: https://github.com/orgs/kubernetes-tenants/packages
-
-### Multi-platform build timeout
-
-**Solution:**
-- Multi-arch builds take longer (especially arm64)
-- Increase timeout in workflow if needed
-- Use build caching (already enabled)
-
-### Provenance attestation fails
-
-**Solution:**
-- Requires `id-token: write` permission (already set)
-- Only runs on actual pushes (not PRs)
-- Check GitHub Actions logs for details
-
-## Monitoring
-
-### View Workflow Status
-
-**GitHub UI:**
-- Repository → Actions tab
-- See all workflow runs and their status
-
-**Badge in README:**
-```markdown
-[![Build Status](https://github.com/kubernetes-tenants/tenant-operator/actions/workflows/build-push.yml/badge.svg)](https://github.com/kubernetes-tenants/tenant-operator/actions/workflows/build-push.yml)
-```
-
-### View Published Images
-
-**GHCR Package Page:**
-https://github.com/kubernetes-tenants/tenant-operator/pkgs/container/tenant-operator
-
-**Docker Hub Alternative:**
-```bash
-# List all tags
-curl -s https://ghcr.io/v2/kubernetes-tenants/tenant-operator/tags/list
-```
-
-## References
-
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [Docker Build Push Action](https://github.com/docker/build-push-action)
-- [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
-- [SLSA Provenance](https://slsa.dev/provenance/)
-
-## Related Documentation
-
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Detailed deployment guide
-- [../../README.md](../../README.md) - Main project README
+### Issue: Race condition between workflows
+**Solution**: Both workflows share the `gh-pages-deploy` concurrency group to queue deployments

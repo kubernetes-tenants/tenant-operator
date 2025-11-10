@@ -127,3 +127,98 @@ spec:
                         name: "{{ .uid }}-api"
                         port:
                           number: 80
+
+  # Create PodDisruptionBudget for HA
+  podDisruptionBudgets:
+    - id: pdb
+      nameTemplate: "{{ .uid }}-api"
+      dependIds: [api]
+      spec:
+        apiVersion: policy/v1
+        kind: PodDisruptionBudget
+        metadata:
+          labels:
+            app: "{{ .uid }}"
+            kubernetes-tenants.org/uid: "{{ .uid }}"
+        spec:
+          minAvailable: 1
+          selector:
+            matchLabels:
+              app: "{{ .uid }}"
+
+  # Create NetworkPolicy for tenant isolation
+  networkPolicies:
+    - id: netpol
+      nameTemplate: "{{ .uid }}-isolation"
+      dependIds: [api]
+      spec:
+        apiVersion: networking.k8s.io/v1
+        kind: NetworkPolicy
+        metadata:
+          labels:
+            kubernetes-tenants.org/uid: "{{ .uid }}"
+        spec:
+          podSelector:
+            matchLabels:
+              app: "{{ .uid }}"
+          policyTypes:
+            - Ingress
+            - Egress
+          ingress:
+            # Allow traffic from Ingress controller
+            - from:
+              - namespaceSelector:
+                  matchLabels:
+                    name: ingress-nginx
+              ports:
+              - protocol: TCP
+                port: 8080
+          egress:
+            # Allow DNS
+            - to:
+              - namespaceSelector: {}
+                podSelector:
+                  matchLabels:
+                    k8s-app: kube-dns
+              ports:
+              - protocol: UDP
+                port: 53
+            # Allow external HTTPS (for API calls)
+            - to:
+              - namespaceSelector: {}
+              ports:
+              - protocol: TCP
+                port: 443
+
+  # Create HorizontalPodAutoscaler for auto-scaling
+  horizontalPodAutoscalers:
+    - id: hpa
+      nameTemplate: "{{ .uid }}-api"
+      dependIds: [api]
+      spec:
+        apiVersion: autoscaling/v2
+        kind: HorizontalPodAutoscaler
+        metadata:
+          labels:
+            app: "{{ .uid }}"
+            kubernetes-tenants.org/uid: "{{ .uid }}"
+        spec:
+          scaleTargetRef:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: "{{ .uid }}-api"
+          minReplicas: 2
+          maxReplicas: 10
+          metrics:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 70
+            - type: Resource
+              resource:
+                name: memory
+                target:
+                  type: Utilization
+                  averageUtilization: 80

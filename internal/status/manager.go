@@ -388,11 +388,14 @@ func (m *Manager) updateMetrics(key client.ObjectKey, metricsPayload *MetricsPay
 	if metricsPayload.IsDegraded {
 		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, metricsPayload.DegradedReason).Set(1)
 	} else {
-		// Reset all degraded metrics for this tenant
+		// Reset all possible degraded reasons for this tenant to ensure metrics are cleared
+		// This prevents stale degraded metrics from remaining after tenant recovers
 		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "ResourceFailures").Set(0)
 		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "ResourceConflicts").Set(0)
 		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "ResourceFailuresAndConflicts").Set(0)
+		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "ResourcesNotReady").Set(0)
 		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "TemplateRenderError").Set(0)
 		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "DependencyCycle").Set(0)
+		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "VariablesBuildError").Set(0)
 	}
 }
