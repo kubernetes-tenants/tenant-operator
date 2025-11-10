@@ -193,6 +193,65 @@ status:
   - type: Conflicted
     status: "False"
     reason: NoConflicts
+  - type: Degraded
+    status: "False"
+    reason: Healthy
+    message: "All resources are healthy"
+```
+
+#### Condition Types
+
+**Ready Condition**
+
+Indicates whether the tenant is fully reconciled and all resources are ready.
+
+**Status Values:**
+- `True`: All resources successfully reconciled and ready
+- `False`: Not all resources are ready or some have failed
+
+**Possible Reasons** (when `status=False`):
+- `ResourcesFailedAndConflicted`: Both failed and conflicted resources exist (highest priority)
+- `ResourcesConflicted`: One or more resources in conflict state
+- `ResourcesFailed`: One or more resources failed during reconciliation
+- `NotAllResourcesReady`: Resources exist but haven't reached ready state yet
+
+::: tip New in v1.1.4
+The Ready condition now provides granular reasons to help quickly identify the root cause of failures. Conflict-related reasons are prioritized for better visibility.
+:::
+
+**Progressing Condition**
+
+Indicates whether reconciliation is currently in progress.
+
+**Status Values:**
+- `True`: Reconciliation is actively applying changes
+- `False`: Reconciliation completed
+
+**Degraded Condition**
+
+::: tip New in v1.1.4
+The Degraded condition provides visibility into tenant health issues separate from the Ready condition.
+:::
+
+Indicates when a tenant is not functioning optimally, even if reconciliation has completed.
+
+**Status Values:**
+- `True`: Tenant has health issues
+- `False`: Tenant is healthy
+
+**Possible Reasons** (when `status=True`):
+- `ResourceFailuresAndConflicts`: Tenant has both failed and conflicted resources
+- `ResourceFailures`: Tenant has failed resources
+- `ResourceConflicts`: Tenant has conflicted resources
+- `ResourcesNotReady`: Not all resources have reached ready state (new in v1.1.4)
+
+**Conflicted Condition**
+
+Indicates whether any resources have ownership conflicts.
+
+**Status Values:**
+- `True`: One or more resources are in conflict
+- `False`: No conflicts detected
 ```
 
 ## Field Types

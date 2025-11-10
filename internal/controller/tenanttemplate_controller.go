@@ -211,7 +211,7 @@ func (r *TenantTemplateReconciler) checkTenantStatuses(ctx context.Context, tmpl
 
 			// Check if tenant is Ready
 			for _, condition := range tenant.Status.Conditions {
-				if condition.Type == "Ready" && condition.Status == metav1.ConditionTrue {
+				if condition.Type == ConditionTypeReady && condition.Status == metav1.ConditionTrue {
 					readyTenants++
 					break
 				}

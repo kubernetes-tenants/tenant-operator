@@ -183,7 +183,10 @@ func (r *TenantRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if existingTenant, exists := existing[key]; !exists {
 			// Create new Tenant
 			if err := r.createTenant(ctx, registry, desired.Template, desired.Row); err != nil {
-				logger.Error(err, "Failed to create Tenant", "template", key.TemplateName, "uid", key.UID)
+				// Ignore AlreadyExists errors (can happen due to concurrent reconciliations)
+				if !errors.IsAlreadyExists(err) {
+					logger.Error(err, "Failed to create Tenant", "template", key.TemplateName, "uid", key.UID)
+				}
 			}
 		} else {
 			// Update existing Tenant if data or template changed
@@ -619,18 +622,35 @@ func (r *TenantRegistryReconciler) updateTenant(ctx context.Context, registry *t
 	resourceCounts := r.countResourcesByType(renderedSpec)
 	totalResources := resourceCounts["total"]
 
-	// 6. Update Tenant annotations and spec
-	tenant.Annotations["kubernetes-tenants.org/hostOrUrl"] = row.HostOrURL
-	tenant.Annotations["kubernetes-tenants.org/activate"] = row.Activate
-	tenant.Annotations["kubernetes-tenants.org/extra"] = string(extraJSON)
-	tenant.Annotations["kubernetes-tenants.org/template-generation"] = newTemplateGeneration
+	// 6. Retry update on conflict (handles concurrent modifications by Tenant controller)
+	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Get the latest version of the Tenant
+		latest := &tenantsv1.Tenant{}
+		if err := r.Get(ctx, client.ObjectKeyFromObject(tenant), latest); err != nil {
+			return err
+		}
 
-	// Update spec with newly rendered resources
-	tenant.Spec = *renderedSpec
-	tenant.Spec.UID = row.UID
-	tenant.Spec.TemplateRef = tmpl.Name
+		// Update Tenant annotations and spec with latest version
+		if latest.Annotations == nil {
+			latest.Annotations = make(map[string]string)
+		}
+		latest.Annotations["kubernetes-tenants.org/hostOrUrl"] = row.HostOrURL
+		latest.Annotations["kubernetes-tenants.org/activate"] = row.Activate
+		latest.Annotations["kubernetes-tenants.org/extra"] = string(extraJSON)
+		latest.Annotations["kubernetes-tenants.org/template-generation"] = newTemplateGeneration
 
-	// 7. Emit detailed events based on what changed
+		// Update spec with newly rendered resources
+		latest.Spec = *renderedSpec
+		latest.Spec.UID = row.UID
+		latest.Spec.TemplateRef = tmpl.Name
+
+		// Perform the update with the latest version
+		return r.Update(ctx, latest)
+	}); err != nil {
+		return err
+	}
+
+	// 7. Emit detailed events based on what changed (only after successful update)
 	if templateChanged {
 		// Template changed - emit detailed Applied event
 		resourceDetails := r.formatResourceDetails(resourceCounts)
@@ -670,7 +690,7 @@ func (r *TenantRegistryReconciler) updateTenant(ctx context.Context, registry *t
 			tmpl.Name, newTemplateGeneration)
 	}
 
-	return r.Update(ctx, tenant)
+	return nil
 }
 
 // countResourcesByType counts resources by type in a TenantSpec

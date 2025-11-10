@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
+	"github.com/kubernetes-tenants/tenant-operator/internal/status"
 )
 
 // TestMainReconciliationWorkflow tests the complete workflow described in docs:
@@ -88,9 +89,10 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 		recorder := record.NewFakeRecorder(100)
 
 		r := &TenantReconciler{
-			Client:   fakeClient,
-			Scheme:   scheme,
-			Recorder: recorder,
+			Client:        fakeClient,
+			Scheme:        scheme,
+			Recorder:      recorder,
+			StatusManager: status.NewManager(fakeClient, status.WithSyncMode()),
 		}
 
 		req := ctrl.Request{
@@ -211,9 +213,10 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 		recorder := record.NewFakeRecorder(100)
 
 		r := &TenantReconciler{
-			Client:   fakeClient,
-			Scheme:   scheme,
-			Recorder: recorder,
+			Client:        fakeClient,
+			Scheme:        scheme,
+			Recorder:      recorder,
+			StatusManager: status.NewManager(fakeClient, status.WithSyncMode()),
 		}
 
 		req := ctrl.Request{
@@ -268,6 +271,7 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "tenant3-app",
 				Namespace:  "default",
+				Generation: 1, // Set generation to force spec reconcile
 				Finalizers: []string{TenantFinalizer},
 				Annotations: map[string]string{
 					"kubernetes-tenants.org/hostOrUrl": "https://tenant3.example.com",
@@ -281,6 +285,7 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 			},
 			Status: tenantsv1.TenantStatus{
 				// Previous reconciliation had this resource
+				ObservedGeneration: 0, // ObservedGeneration != Generation forces full reconcile
 				AppliedResources: []string{
 					"ConfigMap/default/old-config@old-cm",
 				},
@@ -296,9 +301,10 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 		recorder := record.NewFakeRecorder(100)
 
 		r := &TenantReconciler{
-			Client:   fakeClient,
-			Scheme:   scheme,
-			Recorder: recorder,
+			Client:        fakeClient,
+			Scheme:        scheme,
+			Recorder:      recorder,
+			StatusManager: status.NewManager(fakeClient, status.WithSyncMode()),
 		}
 
 		req := ctrl.Request{

@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
+	"github.com/kubernetes-tenants/tenant-operator/internal/status"
 )
 
 var _ = Describe("Tenant Controller", func() {
@@ -142,9 +143,10 @@ var _ = Describe("Tenant Controller", func() {
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &TenantReconciler{
-				Client:   k8sClient,
-				Scheme:   k8sClient.Scheme(),
-				Recorder: &fakeRecorder{},
+				Client:        k8sClient,
+				Scheme:        k8sClient.Scheme(),
+				Recorder:      &fakeRecorder{},
+				StatusManager: status.NewManager(k8sClient, status.WithSyncMode()),
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
