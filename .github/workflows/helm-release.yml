@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*'
 
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false  # Don't cancel in-progress deployments
+
 permissions:
   contents: write
   packages: write
@@ -99,30 +103,18 @@ jobs:
             --release-name-template "v{{ .Version }}" \
             --push
 
-      - name: Deploy Artifact Hub metadata to gh-pages
+      - name: Prepare Artifact Hub metadata
         run: |
-          # Clone gh-pages branch
-          git clone --single-branch --branch gh-pages https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/kubernetes-tenants/tenant-operator.git gh-pages-repo
+          mkdir -p .gh-pages-artifacts
+          cp chart/artifacthub-repo.yml .gh-pages-artifacts/
 
-          # Copy artifacthub-repo.yml to gh-pages root
-          cp chart/artifacthub-repo.yml gh-pages-repo/artifacthub-repo.yml
-
-          # Commit and push if changed
-          cd gh-pages-repo
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-
-          # Add the file first to stage any changes
-          git add artifacthub-repo.yml
-
-          # Check if there are staged changes
-          if git diff --cached --quiet; then
-            echo "No changes to artifacthub-repo.yml"
-          else
-            git commit -m "Update Artifact Hub repository metadata"
-            git push origin gh-pages
-            echo "✅ Artifact Hub metadata deployed to gh-pages"
-          fi
+      - name: Deploy Artifact Hub metadata to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .gh-pages-artifacts
+          keep_files: true  # Preserve Helm index, chart packages, and docs
+          commit_message: "chore: update Artifact Hub metadata"
 
       - name: Create release summary
         run: |
