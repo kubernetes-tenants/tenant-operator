@@ -16,9 +16,9 @@ export default withMermaid(
 
       nav: [
         { text: "Home", link: "/" },
-        { text: "Getting Started", link: "/quickstart" },
-        { text: "Guide", link: "/api" },
-        { text: "Reference", link: "/glossary" },
+        { text: "Quick Start", link: "/quickstart" },
+        { text: "Documentation", link: "/architecture" },
+        { text: "API", link: "/api" },
       ],
 
       sidebar: [
@@ -28,107 +28,42 @@ export default withMermaid(
           items: [
             { text: "Installation", link: "/installation" },
             { text: "Quick Start", link: "/quickstart" },
-            {
-              text: "Local Development (Minikube)",
-              link: "/local-development-minikube",
-            },
           ],
         },
         {
           text: "Core Concepts",
           collapsed: false,
           items: [
+            { text: "Architecture", link: "/architecture" },
             { text: "API Reference", link: "/api" },
+            { text: "Configuration", link: "/configuration" },
             { text: "Datasources", link: "/datasource" },
             { text: "Templates", link: "/templates" },
             { text: "Dependencies", link: "/dependencies" },
-            { text: "Policies", link: "/policies" },
-            { text: "Field-Level Ignore Control", link: "/field-ignore" },
+            {
+              text: "Policies",
+              collapsed: false,
+              items: [
+                { text: "Overview", link: "/policies" },
+                { text: "Examples", link: "/policies-examples" },
+                { text: "Field-Level Ignore", link: "/field-ignore" },
+              ],
+            },
           ],
-        },
-        {
-          text: "Configuration",
-          collapsed: false,
-          items: [{ text: "Configuration Guide", link: "/configuration" }],
         },
         {
           text: "Operations",
           collapsed: false,
           items: [
-            { text: "Monitoring & Observability", link: "/monitoring" },
+            {
+              text: "Monitoring & Observability",
+              link: "/monitoring",
+            },
+            { text: "Prometheus Queries", link: "/prometheus-queries" },
             { text: "Performance Tuning", link: "/performance" },
             { text: "Security", link: "/security" },
             { text: "Troubleshooting", link: "/troubleshooting" },
-            {
-              text: "Alert Runbooks",
-              collapsed: true,
-              items: [
-                {
-                  text: "Critical Alerts",
-                  collapsed: true,
-                  items: [
-                    {
-                      text: "Tenant Degraded",
-                      link: "/runbooks/tenant-degraded",
-                    },
-                    {
-                      text: "Tenant Resources Failed",
-                      link: "/runbooks/tenant-resources-failed",
-                    },
-                    {
-                      text: "Tenant Not Ready",
-                      link: "/runbooks/tenant-not-ready",
-                    },
-                    {
-                      text: "Tenant Status Unknown",
-                      link: "/runbooks/tenant-status-unknown",
-                    },
-                    {
-                      text: "Registry Many Tenants Failed",
-                      link: "/runbooks/registry-many-tenants-failed",
-                    },
-                  ],
-                },
-                {
-                  text: "Warning Alerts",
-                  collapsed: true,
-                  items: [
-                    {
-                      text: "Tenant Resources Mismatch",
-                      link: "/runbooks/tenant-resources-mismatch",
-                    },
-                    {
-                      text: "Tenant Resource Conflicts",
-                      link: "/runbooks/tenant-conflicts",
-                    },
-                    {
-                      text: "High Conflict Rate",
-                      link: "/runbooks/high-conflict-rate",
-                    },
-                    {
-                      text: "Registry Tenants Failed",
-                      link: "/runbooks/registry-tenants-failed",
-                    },
-                    {
-                      text: "Registry Sync Issues",
-                      link: "/runbooks/registry-sync-issues",
-                    },
-                    {
-                      text: "Reconciliation Errors",
-                      link: "/runbooks/reconciliation-errors",
-                    },
-                    {
-                      text: "Slow Reconciliation",
-                      link: "/runbooks/slow-reconciliation",
-                    },
-                    {
-                      text: "High Apply Failure Rate",
-                      link: "/runbooks/apply-failures",
-                    },
-                  ],
-                },
-              ],
-            },
+            { text: "Alert Runbooks", link: "/alert-runbooks" },
           ],
         },
         {
@@ -150,18 +85,21 @@ export default withMermaid(
           text: "Development",
           collapsed: false,
           items: [
+            {
+              text: "Local Development",
+              link: "/local-development-minikube",
+            },
             { text: "Development Guide", link: "/development" },
-            { text: "Contributing a Datasource", link: "/contributing-datasource" },
+            {
+              text: "Contributing",
+              link: "/contributing-datasource",
+            },
             { text: "Roadmap", link: "/roadmap" },
           ],
         },
         {
-          text: "Reference",
-          collapsed: false,
-          items: [
-            { text: "Glossary", link: "/glossary" },
-            { text: "Prometheus Queries", link: "/prometheus-queries" },
-          ],
+          text: "Glossary",
+          link: "/glossary",
         },
       ],
 
@@ -213,7 +151,7 @@ export default withMermaid(
     vue: {
       template: {
         compilerOptions: {
-          isCustomElement: (tag) => false,
+          isCustomElement: () => false,
         },
       },
     },

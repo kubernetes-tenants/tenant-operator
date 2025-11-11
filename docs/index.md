@@ -31,7 +31,7 @@ features:
 
   - icon: 🧩
     title: Native + Custom Resources
-    details: Provision any API resource—including your own CRDs—alongside core Kubernetes objects with the same template workflow
+    details: Provision any API resource (including your own CRDs) alongside core Kubernetes objects with the same template workflow
 
   - icon: 📊
     title: Dependency Management
@@ -58,27 +58,130 @@ features:
     details: External datasource support (MySQL), External-DNS, Terraform Operator, and custom resources
 ---
 
-## Quick Example
+## Why Tenant Operator?
 
-### 1. Define a Registry (External Datasource)
+<p style="font-size: 1.05rem; color: var(--vp-c-text-2); margin: 1.5rem 0">
+Managing hundreds or thousands of tenants in Kubernetes shouldn't require custom scripts, manual updates, or rebuilding Helm charts every time your data changes.
+</p>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; margin: 1.5rem 0;">
+<div>
+
+### ❌ Traditional Approaches Fall Short
+
+<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px; margin-bottom: 0.75rem; margin-top: 1rem;">
+<strong style="display: block; margin-bottom: 0.5rem;">Helm Charts</strong>
+<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
+Static values files. Adding 10 new tenants? Manually create 10 new releases and track them separately.
+</p>
+</div>
+
+<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px; margin-bottom: 0.75rem;">
+<strong style="display: block; margin-bottom: 0.5rem;">GitOps Only</strong>
+<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
+New customer signs up? Commit YAML, wait for CI/CD, manually sync. Not dynamic enough for real-time provisioning.
+</p>
+</div>
+
+<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px;">
+<strong style="display: block; margin-bottom: 0.5rem;">Custom Scripts</strong>
+<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
+kubectl apply in bash loops. Works until you need drift detection, conflict handling, or dependency ordering.
+</p>
+</div>
+
+</div>
+<div>
+
+### ✅ Tenant Operator Solves This
+
+<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px; margin-bottom: 0.75rem; margin-top: 1rem; border-left: 3px solid var(--vp-c-brand);">
+<strong style="display: block; margin-bottom: 0.5rem;">Database-Driven Automation</strong>
+<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
+Your existing database is the source of truth. No YAML commits, no manual kubectl commands.
+</p>
+</div>
+
+<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px; margin-bottom: 0.75rem; border-left: 3px solid var(--vp-c-brand);">
+<strong style="display: block; margin-bottom: 0.5rem;">Real-Time Synchronization</strong>
+<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
+Add a tenant → resources created in 30 seconds. Deactivate a tenant → everything cleaned up automatically.
+</p>
+</div>
+
+<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px; border-left: 3px solid var(--vp-c-brand);">
+<strong style="display: block; margin-bottom: 0.5rem;">Production-Grade Control</strong>
+<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
+Built-in policies, drift detection, conflict resolution, dependency management, and comprehensive observability.
+</p>
+</div>
+
+</div>
+</div>
+
+<div style="margin: 2.5rem 0; padding: 2rem; background: var(--vp-c-bg-soft); border-radius: 12px; border: 1px solid var(--vp-c-divider);">
+
+<h3 style="margin: 0">Perfect For</h3>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+<div style="text-align: center;">
+<div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🏢</div>
+<strong style="display: block; margin-bottom: 0.5rem;">SaaS Platforms</strong>
+<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
+Each customer gets isolated infrastructure provisioned from your user database
+</p>
+</div>
+
+<div style="text-align: center;">
+<div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🌍</div>
+<strong style="display: block; margin-bottom: 0.5rem;">Multi-Environment Apps</strong>
+<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
+Spin up dev/staging/prod environments dynamically per team or feature branch
+</p>
+</div>
+
+<div style="text-align: center;">
+<div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🔧</div>
+<strong style="display: block; margin-bottom: 0.5rem;">Internal Platforms</strong>
+<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
+Self-service infrastructure for teams without manual ticket workflows
+</p>
+</div>
+</div>
+
+</div>
+
+<div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #42b883 0%, #35495e 100%); border-radius: 12px; margin: 2.5rem 0;">
+<div style="color: white;">
+<div style="font-size: clamp(1.25rem, 3vw, 1.75rem); font-weight: bold; margin-bottom: 0.75rem;">
+Stop Managing Tenants Manually
+</div>
+<p style="font-size: clamp(0.9rem, 2vw, 1.05rem); opacity: 0.95; margin: 0 0 1.5rem; line-height: 1.5;">
+Let your database drive your infrastructure. Focus on your product, not kubectl commands.
+</p>
+<a href="/quickstart" style="display: inline-block; padding: 0.75rem 2rem; background: white; color: #42b883; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 1rem;">
+Get Started in 5 Minutes →
+</a>
+</div>
+</div>
+
+## See It In Action
+
+<p style="font-size: 1.05rem; color: var(--vp-c-text-2); margin-bottom: 2rem">
+Define your tenant data source and resource templates, then let the operator handle the rest.
+</p>
+
+<div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin: 2rem 0">
 
 ```yaml
+# Connect to your tenant database
 apiVersion: operator.kubernetes-tenants.org/v1
 kind: TenantRegistry
 metadata:
-  name: my-saas-registry
+  name: production-tenants
 spec:
   source:
     type: mysql
-    mysql:
-      host: mysql.default.svc.cluster.local
-      port: 3306
-      database: tenants
-      table: tenant_data
-      username: tenant_reader
-      passwordRef:
-        name: mysql-secret
-        key: password
     syncInterval: 30s
   valueMappings:
     uid: tenant_id
@@ -86,258 +189,236 @@ spec:
     activate: is_active
 ```
 
-### 2. Create a Template
-
 ```yaml
+# Define what to create per tenant
 apiVersion: operator.kubernetes-tenants.org/v1
 kind: TenantTemplate
 metadata:
-  name: web-app
+  name: saas-stack
 spec:
-  registryId: my-saas-registry
+  registryId: production-tenants
   deployments:
-    - id: app-deployment
-      nameTemplate: "{{ .uid }}-app"
+    - nameTemplate: "{{ .uid }}-api"
       spec:
-        apiVersion: apps/v1
-        kind: Deployment
-        spec:
-          replicas: 2
-          template:
-            spec:
-              containers:
-                - name: app
-                  image: "nginx:latest"
-                  env:
-                    - name: TENANT_ID
-                      value: "{{ .uid }}"
-                    - name: DOMAIN
-                      value: "{{ .host }}"
+        # ... Deployment configuration with {{ .uid }}, {{ .host }} templating
+  services:
+    - nameTemplate: "{{ .uid }}-svc"
+      # ... Service configuration
+  ingresses:
+    - nameTemplate: "{{ .uid }}-ingress"
+      # ... Ingress with {{ .host }} routing
 ```
 
-### 3. Automatic Tenant Provisioning
+</div>
 
-The operator automatically creates Tenant CRs for each active row:
+<div style="padding: 1.25rem; background: var(--vp-c-bg-soft); border-radius: 8px; border-left: 3px solid var(--vp-c-brand); margin: 1.5rem 0">
+  <p style="margin: 0; font-size: 1rem">
+    <strong>Result:</strong> For each active tenant row, the operator automatically provisions a complete isolated stack with proper naming, configuration, and lifecycle management.
+  </p>
+</div>
 
-```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: Tenant
-metadata:
-  name: acme-web-app
-spec:
-  uid: acme
-  templateRef: web-app
-  registryId: my-saas-registry
-  # ... auto-populated resources
-status:
-  desiredResources: 10
-  readyResources: 10
-  failedResources: 0
-  conditions:
-    - type: Ready
-      status: "True"
-```
-
-## Architecture
-
-### System Overview
-
-```mermaid
-flowchart TB
-    subgraph External["External Data Source"]
-        DB[(MySQL / PostgreSQL*)]
-    end
-
-    subgraph Cluster["Kubernetes Cluster"]
-        direction TB
-
-        subgraph Controllers["Operator Controllers"]
-            RC[TenantRegistry Controller]
-            TC[TenantTemplate Controller]
-            TNC[Tenant Controller]
-        end
-
-        subgraph CRDs["Custom Resources"]
-            TR[TenantRegistry]
-            TT[TenantTemplate]
-            T[Tenant CRs]
-        end
-
-        subgraph Engine["Apply Engine"]
-            SSA["SSA Apply Engine<br/>(fieldManager: tenant-operator)"]
-        end
-
-        subgraph Resources["Kubernetes Resources"]
-            DEP[Deployments]
-            SVC[Services]
-            ING[Ingresses]
-            etc[ConfigMaps, Secrets, ...]
-        end
-
-        API[(etcd / K8s API Server)]
-    end
-
-    DB -->|"syncInterval<br/>(e.g., 1m)"| RC
-    RC -->|"Creates/Updates/Deletes<br/>Tenant CRs"| API
-    API -->|"Stores"| TR
-    API -->|"Stores"| TT
-    API -->|"Stores"| T
-
-    TC -->|"Validates<br/>template-registry linkage"| API
-    TNC -->|"Reconciles<br/>each Tenant"| SSA
-    SSA -->|"Server-Side Apply"| API
-
-    API -->|"Creates"| DEP
-    API -->|"Creates"| SVC
-    API -->|"Creates"| ING
-    API -->|"Creates"| etc
-
-    style RC fill:#e3f2fd,stroke:#64b5f6,stroke-width:2px
-    style TC fill:#e8f5e9,stroke:#81c784,stroke-width:2px
-    style TNC fill:#fff3e0,stroke:#ffb74d,stroke-width:2px
-    style SSA fill:#fce4ec,stroke:#f06292,stroke-width:2px
-    style DB fill:#f3e5f5,stroke:#ba68c8,stroke-width:2px
-```
-
-::: info Database Support
-* **MySQL**: Fully supported (v1.0+)
-* **PostgreSQL**: Planned for v1.2
+::: tip Ready to try it?
+Follow the [Quick Start Guide](/quickstart) for a complete walkthrough with a working example in 5 minutes.
 :::
 
-### Reconciliation Flow
+## How It Works
+
+<p style="font-size: 1.15rem; color: var(--vp-c-text-2); margin-bottom: 2rem">
+Turn database rows into production-ready tenant infrastructure, automatically.
+</p>
+
+<div style="margin: 2.5rem auto; text-align: center; max-width: 900px">
 
 ```mermaid
-sequenceDiagram
-    participant DB as MySQL Database
-    participant RC as Registry Controller
-    participant API as K8s API Server
-    participant TC as Template Controller
-    participant TNC as Tenant Controller
-    participant SSA as SSA Engine
+%%{init: {'theme':'base', 'themeVariables': { 'fontSize':'16px'}}}%%
+flowchart LR
+    DB[("📊<br/><b>Database</b><br/><br/>tenant_id<br/>domain<br/>is_active")]
 
-    Note over DB,SSA: Registry Sync Cycle (e.g., every 1 minute)
+    Operator["⚙️<br/><b>Tenant Operator</b><br/><br/>Sync every 1m<br/>Apply templates<br/>Manage lifecycle"]
 
-    RC->>DB: SELECT * FROM tenants WHERE activate=TRUE
-    DB-->>RC: Active tenant rows
+    Resources["☸️<br/><b>Kubernetes</b><br/><br/>Deployments<br/>Services<br/>Ingresses"]
 
-    RC->>API: Create/Update Tenant CRs (desired set)
-    RC->>API: Delete Tenants not in desired set
+    DB -->|"Read active tenants"| Operator
+    Operator -->|"Create & sync resources"| Resources
 
-    TC->>API: Validate Template-Registry linkage
-    TC->>API: Ensure consistency
-
-    loop For Each Tenant
-        TNC->>API: Get Tenant spec
-        TNC->>TNC: Build dependency graph (dependIds)
-        TNC->>TNC: Topological sort resources
-
-        loop For Each Resource (in order)
-            TNC->>TNC: Render templates (name, namespace, spec)
-            TNC->>SSA: Apply resource with conflict policy
-            SSA->>API: Server-Side Apply (force or not)
-
-            alt waitForReady = true
-                TNC->>API: Wait for resource Ready condition
-                API-->>TNC: Ready (or timeout)
-            end
-        end
-
-        TNC->>API: Update Tenant status (ready/failed counts)
-    end
-
-    RC->>API: Update Registry status (desired/ready/failed)
+    style DB fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    style Operator fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    style Resources fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
 ```
 
-## Key Features
+</div>
 
-### 🎯 Three-Controller Design
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 3rem 0">
+  <div style="text-align: center; padding: 2rem 1.5rem; background: var(--vp-c-bg-soft); border-radius: 12px">
+    <div style="font-size: 2.5rem; margin-bottom: 0.75rem">1️⃣</div>
+    <h3 style="margin: 0.5rem 0 0.75rem">Connect Your Data</h3>
+    <p style="margin: 0; color: var(--vp-c-text-2); font-size: 0.95rem; line-height: 1.6">
+      Point to your MySQL database where tenant information lives. The operator reads active tenants automatically.
+    </p>
+  </div>
 
-1. **TenantRegistry Controller**: Syncs database (e.g., 1m interval) → Creates/Updates/Deletes Tenant CRs
-2. **TenantTemplate Controller**: Validates template-registry linkage and invariants
-3. **Tenant Controller**: Renders templates → Resolves dependencies → Applies resources via SSA
+  <div style="text-align: center; padding: 2rem 1.5rem; background: var(--vp-c-bg-soft); border-radius: 12px">
+    <div style="font-size: 2.5rem; margin-bottom: 0.75rem">2️⃣</div>
+    <h3 style="margin: 0.5rem 0 0.75rem">Define Your Template</h3>
+    <p style="margin: 0; color: var(--vp-c-text-2); font-size: 0.95rem; line-height: 1.6">
+      Write one template describing what each tenant needs: deployments, services, ingresses, and any custom resources.
+    </p>
+  </div>
 
-### 📦 CRD Architecture
+  <div style="text-align: center; padding: 2rem 1.5rem; background: var(--vp-c-bg-soft); border-radius: 12px">
+    <div style="font-size: 2.5rem; margin-bottom: 0.75rem">3️⃣</div>
+    <h3 style="margin: 0.5rem 0 0.75rem">Deploy Automatically</h3>
+    <p style="margin: 0; color: var(--vp-c-text-2); font-size: 0.95rem; line-height: 1.6">
+      Every active tenant gets isolated infrastructure. Resources are created, updated, and cleaned up automatically as your data changes.
+    </p>
+  </div>
+</div>
 
-- **TenantRegistry**: Defines external datasource, sync interval, value mappings
-- **TenantTemplate**: Blueprint for resources (Deployments, Services, Ingresses, etc.)
-- **Tenant**: Instance representing a single tenant with status tracking
+<div style="text-align: center; padding: 2.5rem 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; margin: 3rem 0">
+  <div style="color: white;">
+    <div style="font-size: clamp(1.5rem, 4vw, 2.25rem); font-weight: bold; margin-bottom: 0.75rem; line-height: 1.2">
+      1 Database Row = 1 Complete Stack
+    </div>
+    <p style="font-size: clamp(0.95rem, 2vw, 1.1rem); opacity: 0.95; margin: 0; line-height: 1.5">
+      Add a tenant to your database → Get Deployment + Service + Ingress + DNS + whatever you need
+    </p>
+  </div>
+</div>
 
-### 🔧 Advanced Capabilities
+::: tip Start in 5 minutes
+Follow the [Quick Start Guide](/quickstart) to see this in action with a working MySQL database and sample templates.
+:::
 
-- **Multi-template support**: One registry → multiple templates
-- **Custom-resource friendly**: Render and apply arbitrary CRs once their CRD exists in the cluster
-- **Garbage collection**: Auto-delete when rows removed or activate=false
-- **Drift detection**: Event-driven watches with auto-correction
-- **Smart requeue**: 30-second intervals for fast status reflection
-- **Resource readiness**: 11+ resource types with custom checks
-- **Finalizers**: Safe cleanup respecting deletion policies
+## Kubernetes Compatibility
 
-## Supported Versions & Upgrade Policy
-
-- **Compatibility philosophy**: The operator relies only on GA/stable Kubernetes APIs and controller-runtime patterns, so it is not tightly coupled to a specific cluster release and is designed to work across the supported upstream version skew.
-- **Validated range**: End-to-end tests and production verification currently cover Kubernetes clusters from v1.28 through v1.33, with live production tenants running on v1.33 today. Earlier or newer versions are expected to function, but validate in a staging environment before rolling out broadly.
-- **Upgrade guidance**: Review the Helm chart `values.yaml` and the release notes, then use `helm upgrade --install` to perform rolling upgrades. Any breaking changes or API removals are called out explicitly in the release notes and CHANGELOG.
-
-| Kubernetes Version | Status |
-|--------------------|--------|
-| v1.28              | ✅ Validated |
-| v1.29              | ✅ Validated |
-| v1.30              | ✅ Validated |
-| v1.31              | ✅ Validated |
-| v1.32              | ✅ Validated |
-| v1.33              | ✅ Validated |
-| Other GA releases  | ⚠️ Expected |
+<div style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: var(--vp-c-bg-soft); border-radius: 8px; margin: 2.5rem 0">
+  <div style="font-size: 2rem">✅</div>
+  <div>
+    <strong style="font-size: 1.05rem">Validated on Kubernetes v1.28 – v1.33</strong>
+    <p style="margin: 0.5rem 0 0; font-size: 0.9rem; color: var(--vp-c-text-2)">
+      Production-tested across multiple versions • See <a href="/installation#kubernetes-compatibility">compatibility details</a>
+    </p>
+  </div>
+</div>
 
 ## Documentation
 
-<div class="vp-doc">
-  <div class="custom-block tip">
-    <p class="custom-block-title">Getting Started</p>
-    <ul>
-      <li><a href="/installation">Installation Guide</a> - Deploy to your cluster</li>
-      <li><a href="/quickstart">Quick Start</a> - Get up and running in 5 minutes</li>
-      <li><a href="/local-development-minikube">Local Development</a> - Minikube setup</li>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2.5rem 0">
+  <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px; border-left: 4px solid #42b883">
+    <h3 style="margin: 0 0 1rem">🚀 Getting Started</h3>
+    <ul style="list-style: none; padding: 0; margin: 0">
+      <li style="margin: 0.75rem 0">
+        <a href="/installation"><strong>Installation</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Deploy the operator to your cluster</span>
+      </li>
+      <li style="margin: 0.75rem 0">
+        <a href="/quickstart"><strong>Quick Start</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Complete tutorial in 5 minutes</span>
+      </li>
+      <li style="margin: 0.75rem 0">
+        <a href="/local-development-minikube"><strong>Local Development</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Set up with Minikube</span>
+      </li>
     </ul>
   </div>
 
-  <div class="custom-block info">
-    <p class="custom-block-title">Core Concepts</p>
-    <ul>
-      <li><a href="/api">API Reference</a> - Complete CRD documentation</li>
-      <li><a href="/datasource">Datasources</a> - External data integration</li>
-      <li><a href="/templates">Templates</a> - Go template system</li>
-      <li><a href="/policies">Policies</a> - Lifecycle management</li>
+  <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px; border-left: 4px solid #3b82f6">
+    <h3 style="margin: 0 0 1rem">📚 Core Concepts</h3>
+    <ul style="list-style: none; padding: 0; margin: 0">
+      <li style="margin: 0.75rem 0">
+        <a href="/architecture"><strong>Architecture</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">System design and reconciliation flow</span>
+      </li>
+      <li style="margin: 0.75rem 0">
+        <a href="/api"><strong>API Reference</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Complete CRD specification</span>
+      </li>
+      <li style="margin: 0.75rem 0">
+        <a href="/templates"><strong>Templates</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Go templates with 200+ functions</span>
+      </li>
+      <li style="margin: 0.75rem 0">
+        <a href="/policies"><strong>Policies</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Lifecycle and conflict management</span>
+      </li>
+      <li style="margin: 0.75rem 0">
+        <a href="/datasource"><strong>Datasources</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">External data integration (MySQL)</span>
+      </li>
     </ul>
   </div>
 
-  <div class="custom-block warning">
-    <p class="custom-block-title">Operations</p>
-    <ul>
-      <li><a href="/monitoring">Monitoring</a> - Prometheus metrics & alerts</li>
-      <li><a href="/security">Security</a> - RBAC & best practices</li>
-      <li><a href="/troubleshooting">Troubleshooting</a> - Common issues</li>
+  <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px; border-left: 4px solid #f59e0b">
+    <h3 style="margin: 0 0 1rem">⚙️ Operations</h3>
+    <ul style="list-style: none; padding: 0; margin: 0">
+      <li style="margin: 0.75rem 0">
+        <a href="/monitoring"><strong>Monitoring</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Prometheus metrics, alerts, and Grafana</span>
+      </li>
+      <li style="margin: 0.75rem 0">
+        <a href="/performance"><strong>Performance</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Tuning and scalability</span>
+      </li>
+      <li style="margin: 0.75rem 0">
+        <a href="/security"><strong>Security</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">RBAC, credentials, and best practices</span>
+      </li>
+      <li style="margin: 0.75rem 0">
+        <a href="/troubleshooting"><strong>Troubleshooting</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Common issues and solutions</span>
+      </li>
     </ul>
   </div>
 
-  <div class="custom-block note">
-    <p class="custom-block-title">Integrations</p>
-    <ul>
-      <li><a href="/integration-external-dns">ExternalDNS</a> - Automate DNS lifecycle per tenant</li>
-      <li><a href="/integration-terraform-operator">Terraform Operator</a> - Provision cloud services via GitOps</li>
-      <li><a href="/integration-argocd">Argo CD</a> - 1:1 Tenant ↔ Application GitOps delivery</li>
+  <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px; border-left: 4px solid #8b5cf6">
+    <h3 style="margin: 0 0 1rem">🔌 Integrations</h3>
+    <ul style="list-style: none; padding: 0; margin: 0">
+      <li style="margin: 0.75rem 0">
+        <a href="/integration-external-dns"><strong>External DNS</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Automatic DNS per tenant</span>
+      </li>
+      <li style="margin: 0.75rem 0">
+        <a href="/integration-terraform-operator"><strong>Terraform Operator</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Cloud resource provisioning</span>
+      </li>
+      <li style="margin: 0.75rem 0">
+        <a href="/integration-argocd"><strong>Argo CD</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">GitOps delivery pipeline</span>
+      </li>
     </ul>
   </div>
 </div>
 
-## Community
+## Resources & Community
 
-- **GitHub**: [kubernetes-tenants/tenant-operator](https://github.com/kubernetes-tenants/tenant-operator)
-- **Issues**: [Report bugs or request features](https://github.com/kubernetes-tenants/tenant-operator/issues)
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin: 2.5rem 0 0">
+  <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px">
+    <h3 style="margin: 0 0 0.75rem">📦 GitHub Repository</h3>
+    <p style="margin: 0 0 0.5rem">
+      <a href="https://github.com/kubernetes-tenants/tenant-operator">kubernetes-tenants/tenant-operator</a>
+    </p>
+    <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2)">
+      Source code, releases, and project roadmap
+    </p>
+  </div>
 
-## Star History
+  <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px">
+    <h3 style="margin: 0 0 0.75rem">🐛 Issue Tracker</h3>
+    <p style="margin: 0 0 0.5rem">
+      <a href="https://github.com/kubernetes-tenants/tenant-operator/issues">Report Issues</a>
+    </p>
+    <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2)">
+      Bug reports, feature requests, and discussions
+    </p>
+  </div>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=kubernetes-tenants/tenant-operator&type=date&theme=dark&legend=top-left" />
-  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=kubernetes-tenants/tenant-operator&type=date&legend=top-left" />
-  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=kubernetes-tenants/tenant-operator&type=date&legend=top-left" />
-</picture>
+  <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px">
+    <h3 style="margin: 0 0 0.75rem">📖 Documentation</h3>
+    <p style="margin: 0 0 0.5rem">
+      <a href="/installation">Get Started →</a>
+    </p>
+    <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2)">
+      Comprehensive guides and API reference
+    </p>
+  </div>
+</div>

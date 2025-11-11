@@ -1,0 +1,683 @@
+# Alert Runbooks
+
+Comprehensive troubleshooting guide for Tenant Operator alerts. Each alert includes diagnosis steps and resolution procedures.
+
+[[toc]]
+
+## Overview
+
+This page provides detailed runbooks for all Tenant Operator alerts, organized by severity:
+
+- **Critical Alerts**: Require immediate action - production impact
+- **Warning Alerts**: Require investigation - potential issues
+- **Info Alerts**: Informational - awareness only
+
+::: tip Quick Navigation
+Use the table of contents (right sidebar) to jump directly to a specific alert.
+:::
+
+---
+
+## Critical Alerts
+
+### TenantDegraded
+
+**Alert Name:** `TenantDegraded`
+**Severity:** Critical
+**Threshold:** `tenant_degraded_status > 0` for 5+ minutes
+
+#### Description
+
+Tenant CR has entered a degraded state, indicating the operator cannot successfully reconcile the tenant's resources. This is a critical condition preventing normal tenant operation.
+
+#### Symptoms
+
+- Tenant's `Ready` condition is `False`
+- `status.degraded` shows specific degradation reason
+- Resources may be partially applied or stuck
+- Events show template, conflict, or dependency errors
+
+#### Possible Causes
+
+1. **Template Rendering Errors** - Missing variables, syntax errors, type conversion failures
+2. **Dependency Cycles** - Circular dependencies between resources
+3. **Resource Conflicts** - Resources exist with different owners (`ConflictPolicy: Stuck`)
+4. **External Dependencies** - Missing ConfigMaps, Secrets, or Namespaces
+5. **RBAC Issues** - Operator lacks permissions
+
+#### Diagnosis
+
+```bash
+# Check tenant status
+kubectl get tenant <tenant-name> -n <namespace> -o yaml
+
+# Review events
+kubectl describe tenant <tenant-name> -n <namespace>
+
+# Check operator logs
+kubectl logs -n tenant-operator-system -l control-plane=controller-manager --tail=100 | grep <tenant-name>
+
+# Validate template variables
+kubectl get tenant <tenant-name> -n <namespace> -o jsonpath='{.metadata.annotations}'
+```
+
+#### Resolution
+
+**For Template Errors:**
+```bash
+# Check TenantRegistry extraValueMappings
+kubectl get tenantregistry <registry-name> -o yaml
+
+# Verify TenantTemplate syntax
+kubectl get tenanttemplate <template-name> -o yaml
+```
+
+**For Dependency Cycles:**
+```bash
+# Review dependIds configuration
+kubectl get tenant <tenant-name> -o jsonpath='{.spec.*.dependIds}'
+
+# Remove circular dependencies in template
+kubectl edit tenanttemplate <template-name>
+```
+
+**For Resource Conflicts:**
+```bash
+# Check conflicting resources
+kubectl get <resource-type> <resource-name> -o yaml | grep -A 10 metadata
+
+# Option 1: Delete conflicting resource
+kubectl delete <resource-type> <resource-name>
+
+# Option 2: Change ConflictPolicy to Force
+kubectl edit tenanttemplate <template-name>
+```
+
+---
+
+### TenantResourcesFailed
+
+**Alert Name:** `TenantResourcesFailed`
+**Severity:** Critical
+**Threshold:** `tenant_resources_failed > 0` for 5+ minutes
+
+#### Description
+
+Tenant has one or more resources that failed to apply or became unhealthy, indicating critical provisioning failure.
+
+#### Symptoms
+
+- `status.failedResources > 0`
+- Specific resources not created or in error state
+- Events show apply failures or timeout errors
+
+#### Diagnosis
+
+```bash
+# Check failed resources count
+kubectl get tenant <tenant-name> -o jsonpath='{.status.failedResources}'
+
+# List applied resources
+kubectl get tenant <tenant-name> -o jsonpath='{.status.appliedResources}'
+
+# Check events for failures
+kubectl get events --field-selector involvedObject.kind=Tenant,involvedObject.name=<tenant-name>
+```
+
+#### Resolution
+
+**For Apply Failures:**
+```bash
+# Check RBAC permissions
+kubectl auth can-i create <resource-type> --as=system:serviceaccount:tenant-operator-system:tenant-operator
+
+# Review resource spec in template
+kubectl get tenanttemplate <template-name> -o yaml
+```
+
+**For Readiness Timeouts:**
+```bash
+# Increase timeout
+kubectl edit tenanttemplate <template-name>
+# Set: timeoutSeconds: 600
+
+# Or disable readiness wait
+# Set: waitForReady: false
+```
+
+---
+
+### TenantNotReady
+
+**Alert Name:** `TenantNotReady`
+**Severity:** Critical
+**Threshold:** `tenant_condition_status{type="Ready"} == 0` for 15+ minutes
+
+#### Description
+
+Tenant has not reached Ready state for an extended period, indicating persistent provisioning issues.
+
+#### Symptoms
+
+- `Ready` condition is `False` for 15+ minutes
+- Resources may be pending, creating, or failing health checks
+- Tenant status shows ongoing reconciliation
+
+#### Diagnosis
+
+```bash
+# Check Ready condition
+kubectl get tenant <tenant-name> -o jsonpath='{.status.conditions[?(@.type=="Ready")]}'
+
+# Check resource readiness
+kubectl get tenant <tenant-name> -o jsonpath='{.status.readyResources}/{.status.desiredResources}'
+
+# Identify slow resources
+kubectl get all -l kubernetes-tenants.org/tenant=<tenant-name>
+```
+
+#### Resolution
+
+```bash
+# Check if resources are progressing
+kubectl describe <resource-type> <resource-name>
+
+# Review readiness probes
+kubectl get pod <pod-name> -o yaml | grep -A 10 readinessProbe
+
+# Check dependencies
+kubectl get tenant <tenant-name> -o jsonpath='{.spec.*.dependIds}'
+```
+
+---
+
+### TenantStatusUnknown
+
+**Alert Name:** `TenantStatusUnknown`
+**Severity:** Critical
+**Threshold:** `tenant_condition_status{type="Ready"} == 2` for 10+ minutes
+
+#### Description
+
+Tenant status is Unknown, indicating potential controller or API server communication issues.
+
+#### Symptoms
+
+- `Ready` condition status is `Unknown`
+- Status updates not propagating
+- Controller may be unreachable or crashed
+
+#### Diagnosis
+
+```bash
+# Check controller pods
+kubectl get pods -n tenant-operator-system
+
+# Check controller logs
+kubectl logs -n tenant-operator-system -l control-plane=controller-manager --tail=100
+
+# Check API server connectivity
+kubectl get --raw /healthz
+```
+
+#### Resolution
+
+```bash
+# Restart controller if unhealthy
+kubectl rollout restart deployment -n tenant-operator-system tenant-operator-controller-manager
+
+# Check for resource pressure
+kubectl top pods -n tenant-operator-system
+
+# Review recent changes
+kubectl rollout history deployment -n tenant-operator-system tenant-operator-controller-manager
+```
+
+---
+
+### RegistryManyTenantsFailure
+
+**Alert Name:** `RegistryManyTenantsFailure`
+**Severity:** Critical
+**Threshold:** `registry_failed > 5` or `registry_failed / registry_desired > 0.5` for 5+ minutes
+
+#### Description
+
+Registry has widespread tenant failures (>5 tenants or >50% failure rate), indicating systemic issue affecting multiple tenants.
+
+#### Symptoms
+
+- High number of failed tenants in registry
+- Multiple tenants showing similar errors
+- Pattern of failures across all tenants
+
+#### Diagnosis
+
+```bash
+# Check registry status
+kubectl get tenantregistry <registry-name> -o yaml
+
+# List failed tenants
+kubectl get tenants -l operator.kubernetes-tenants.org/registry=<registry-name> \
+  --field-selector status.phase=Failed
+
+# Check database connectivity
+kubectl logs -n tenant-operator-system -l control-plane=controller-manager | grep "database\|mysql"
+```
+
+#### Resolution
+
+**For Database Issues:**
+```bash
+# Verify database connectivity
+kubectl get secret <db-secret> -o yaml
+
+# Check database availability
+kubectl run mysql-test --rm -it --image=mysql:8 -- \
+  mysql -h <db-host> -u <db-user> -p<db-password> -e "SELECT 1"
+
+# Review registry sync interval
+kubectl get tenantregistry <registry-name> -o jsonpath='{.spec.source.syncInterval}'
+```
+
+**For Template Issues:**
+```bash
+# Check template validity
+kubectl get tenanttemplate -l operator.kubernetes-tenants.org/registry=<registry-name>
+
+# Review template syntax
+kubectl get tenanttemplate <template-name> -o yaml
+
+# Validate template rendering
+kubectl describe tenant <any-failed-tenant>
+```
+
+---
+
+## Warning Alerts
+
+### TenantResourcesMismatch
+
+**Alert Name:** `TenantResourcesMismatch`
+**Severity:** Warning
+**Threshold:** `tenant_resources_ready != tenant_resources_desired` (no failures) for 15+ minutes
+
+#### Description
+
+Tenant's ready resource count doesn't match desired count, but no failures are detected. Reconciliation may be stuck or slow.
+
+#### Diagnosis
+
+```bash
+# Check resource counts
+kubectl get tenant <tenant-name> -o jsonpath='Ready: {.status.readyResources}, Desired: {.status.desiredResources}, Failed: {.status.failedResources}'
+
+# Check if resources are progressing
+kubectl get all -l kubernetes-tenants.org/tenant=<tenant-name>
+```
+
+#### Resolution
+
+```bash
+# Check for pending resources
+kubectl get events --field-selector involvedObject.name=<resource-name>
+
+# Verify dependencies are satisfied
+kubectl get tenant <tenant-name> -o jsonpath='{.spec.*.dependIds}'
+
+# Force reconciliation
+kubectl annotate tenant <tenant-name> operator.kubernetes-tenants.org/reconcile="$(date +%s)" --overwrite
+```
+
+---
+
+### TenantResourcesConflicted
+
+**Alert Name:** `TenantResourcesConflicted`
+**Severity:** Warning
+**Threshold:** `tenant_resources_conflicted > 0` for 10+ minutes
+
+#### Description
+
+Tenant has resources in conflict state, usually indicating ownership conflicts with existing resources.
+
+#### Diagnosis
+
+```bash
+# Check conflicted resources
+kubectl get tenant <tenant-name> -o jsonpath='{.status.conflictedResources}'
+
+# Check conflict count
+kubectl get tenant <tenant-name> -o jsonpath='{.status.resourcesConflicted}'
+
+# Review conflict events
+kubectl describe tenant <tenant-name> | grep Conflict
+```
+
+#### Resolution
+
+```bash
+# Identify conflicting resources
+kubectl get events --field-selector reason=ResourceConflict
+
+# Option 1: Delete conflicting resources
+kubectl delete <resource-type> <resource-name>
+
+# Option 2: Use unique naming
+kubectl edit tenanttemplate <template-name>
+# Update nameTemplate: "{{ .uid }}-{{ .planId }}-app"
+
+# Option 3: Change to Force policy
+kubectl edit tenanttemplate <template-name>
+# Set: conflictPolicy: Force
+```
+
+---
+
+### TenantHighConflictRate
+
+**Alert Name:** `TenantHighConflictRate`
+**Severity:** Warning
+**Threshold:** `rate(tenant_conflicts_total[5m]) > 0.1` for 10+ minutes
+
+#### Description
+
+High rate of conflicts detected, indicating recurring ownership or naming issues.
+
+#### Diagnosis
+
+```bash
+# Check conflict rate
+kubectl get --raw /metrics | grep tenant_conflicts_total
+
+# Identify conflict patterns
+kubectl logs -n tenant-operator-system -l control-plane=controller-manager | grep -i conflict
+```
+
+#### Resolution
+
+```bash
+# Review naming templates
+kubectl get tenanttemplate <template-name> -o yaml | grep nameTemplate
+
+# Ensure unique names per tenant
+# Use: nameTemplate: "{{ .uid }}-{{ sha1sum .host | trunc 8 }}-app"
+
+# Consider Force policy if appropriate
+kubectl patch tenanttemplate <template-name> --type=merge -p '{"spec":{"deployments":[{"conflictPolicy":"Force"}]}}'
+```
+
+---
+
+### RegistryTenantsFailure
+
+**Alert Name:** `RegistryTenantsFailure`
+**Severity:** Warning
+**Threshold:** `0 < registry_failed <= 5` for 10+ minutes
+
+#### Description
+
+Registry has some failed tenants (1-5), indicating isolated provisioning issues.
+
+#### Diagnosis
+
+```bash
+# List failed tenants
+kubectl get tenants -l operator.kubernetes-tenants.org/registry=<registry-name> \
+  | grep -v "True"
+
+# Check specific tenant
+kubectl describe tenant <failed-tenant-name>
+```
+
+#### Resolution
+
+```bash
+# Investigate individual tenant failures
+kubectl logs -n tenant-operator-system -l control-plane=controller-manager | grep <failed-tenant-name>
+
+# Check tenant-specific data
+kubectl get tenant <failed-tenant-name> -o yaml
+
+# Verify database row
+# (Connect to database and check tenant_id row)
+```
+
+---
+
+### RegistryDesiredCountMismatch
+
+**Alert Name:** `RegistryDesiredCountMismatch`
+**Severity:** Warning
+**Threshold:** `registry_ready != registry_desired` (no failures) for 20+ minutes
+
+#### Description
+
+Registry's ready tenant count doesn't match desired count, but no failures detected. Sync may be delayed.
+
+#### Diagnosis
+
+```bash
+# Check registry status
+kubectl get tenantregistry <registry-name> -o jsonpath='Desired: {.status.desired}, Ready: {.status.ready}, Failed: {.status.failed}'
+
+# List all tenants
+kubectl get tenants -l operator.kubernetes-tenants.org/registry=<registry-name>
+
+# Check sync interval
+kubectl get tenantregistry <registry-name> -o jsonpath='{.spec.source.syncInterval}'
+```
+
+#### Resolution
+
+```bash
+# Force registry sync
+kubectl annotate tenantregistry <registry-name> operator.kubernetes-tenants.org/sync="$(date +%s)" --overwrite
+
+# Check database for new rows
+# Verify activate=true for expected tenants
+
+# Review registry controller logs
+kubectl logs -n tenant-operator-system -l control-plane=controller-manager | grep "registry.*<registry-name>"
+```
+
+---
+
+### TenantReconciliationErrors
+
+**Alert Name:** `TenantReconciliationErrors`
+**Severity:** Warning
+**Threshold:** Error rate `> 10%` for 10+ minutes
+
+#### Description
+
+High error rate in tenant reconciliations, indicating controller issues, API problems, or resource contention.
+
+#### Diagnosis
+
+```bash
+# Check error rate
+kubectl get --raw /metrics | grep 'tenant_reconcile_duration_seconds_count{result="error"}'
+
+# Review controller logs for errors
+kubectl logs -n tenant-operator-system -l control-plane=controller-manager --tail=200 | grep -i error
+
+# Check API server health
+kubectl get --raw /healthz
+kubectl get --raw /readyz
+```
+
+#### Resolution
+
+```bash
+# Check controller resource usage
+kubectl top pods -n tenant-operator-system
+
+# Increase controller resources if needed
+kubectl edit deployment -n tenant-operator-system tenant-operator-controller-manager
+
+# Review concurrent reconciliation settings
+kubectl get deployment -n tenant-operator-system tenant-operator-controller-manager -o yaml | grep concurrent
+```
+
+---
+
+### TenantReconciliationSlow
+
+**Alert Name:** `TenantReconciliationSlow`
+**Severity:** Warning
+**Threshold:** P95 duration `> 30s` for 15+ minutes
+
+#### Description
+
+Slow reconciliation detected (P95 > 30s), indicating performance issues, resource contention, or complex configurations.
+
+#### Diagnosis
+
+```bash
+# Check reconciliation duration
+kubectl get --raw /metrics | grep tenant_reconcile_duration_seconds
+
+# Identify slow tenants
+kubectl get tenants --sort-by='.status.lastReconcileTime'
+
+# Check for large templates
+kubectl get tenanttemplates -o json | jq '.items[] | {name: .metadata.name, resources: (.spec | [.deployments, .services, .configMaps] | flatten | length)}'
+```
+
+#### Resolution
+
+```bash
+# Optimize template complexity
+# - Reduce resource count per tenant
+# - Use efficient dependency chains
+# - Avoid unnecessary waitForReady
+
+# Increase concurrency
+kubectl patch deployment -n tenant-operator-system tenant-operator-controller-manager \
+  --type=json -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--tenant-concurrency=20"}]'
+
+# Consider sharding by namespace
+# Deploy multiple operators with namespace filters
+```
+
+---
+
+### HighApplyFailureRate
+
+**Alert Name:** `HighApplyFailureRate`
+**Severity:** Warning
+**Threshold:** Apply failure rate `> 20%` for 10+ minutes
+
+#### Description
+
+High failure rate for resource applies, indicating template issues or RBAC permission problems.
+
+#### Diagnosis
+
+```bash
+# Check apply metrics
+kubectl get --raw /metrics | grep apply_attempts_total
+
+# Identify failing resource types
+kubectl logs -n tenant-operator-system -l control-plane=controller-manager | grep "Failed to apply"
+
+# Check RBAC for resource types
+kubectl auth can-i create deployment --as=system:serviceaccount:tenant-operator-system:tenant-operator
+```
+
+#### Resolution
+
+```bash
+# Verify RBAC permissions
+kubectl describe clusterrole tenant-operator-role
+
+# Add missing permissions
+kubectl edit clusterrole tenant-operator-role
+
+# Validate resource templates
+kubectl get tenanttemplate <template-name> -o yaml
+
+# Check for API deprecations
+kubectl api-resources | grep <resource-kind>
+```
+
+---
+
+## Info Alerts
+
+### TenantNewConflictsDetected
+
+**Alert Name:** `TenantNewConflictsDetected`
+**Severity:** Info
+**Threshold:** `increase(tenant_conflicts_total[5m]) > 0` for 2+ minutes
+
+#### Description
+
+New conflicts detected in the last 5 minutes. Informational alert for conflict awareness.
+
+#### Diagnosis
+
+```bash
+# Check recent conflicts
+kubectl get events --sort-by='.lastTimestamp' | grep Conflict | head -20
+
+# View conflict details
+kubectl describe tenant <tenant-name> | grep -A 5 Conflict
+```
+
+#### Resolution
+
+If conflicts persist, escalate to TenantResourcesConflicted or TenantHighConflictRate resolution procedures.
+
+---
+
+## General Troubleshooting Tips
+
+### Quick Diagnostic Commands
+
+```bash
+# Overall operator health
+kubectl get pods -n tenant-operator-system
+kubectl top pods -n tenant-operator-system
+
+# All tenant statuses
+kubectl get tenants -A
+
+# Recent events
+kubectl get events -A --sort-by='.lastTimestamp' | tail -50
+
+# Operator logs (last 1 hour)
+kubectl logs -n tenant-operator-system -l control-plane=controller-manager --since=1h
+```
+
+### Common Fixes
+
+1. **Force Reconciliation:**
+   ```bash
+   kubectl annotate tenant <name> operator.kubernetes-tenants.org/reconcile="$(date +%s)" --overwrite
+   ```
+
+2. **Restart Controller:**
+   ```bash
+   kubectl rollout restart deployment -n tenant-operator-system tenant-operator-controller-manager
+   ```
+
+3. **Validate Configuration:**
+   ```bash
+   kubectl get tenantregistry,tenanttemplate -A -o wide
+   ```
+
+### When to Escalate
+
+- Multiple critical alerts firing simultaneously
+- Repeated failures after following runbook procedures
+- Suspected operator bug or API server issues
+- Database connectivity or performance problems
+
+## See Also
+
+- [Monitoring & Observability Guide](monitoring.md)
+- [Troubleshooting Guide](troubleshooting.md)
+- [Performance Tuning](performance.md)
+- [Prometheus Alerts Configuration](https://github.com/kubernetes-tenants/tenant-operator/blob/main/config/prometheus/alerts.yaml)

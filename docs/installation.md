@@ -33,6 +33,28 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 
 - **MySQL database** for tenant data source (PostgreSQL support planned for v1.2)
 
+## Kubernetes Compatibility
+
+### Supported Versions
+
+The operator relies only on GA/stable Kubernetes APIs and controller-runtime patterns, making it compatible across the supported upstream version skew.
+
+**Validated versions** (end-to-end tested and production-verified):
+
+| Kubernetes Version | Status |
+|--------------------|--------|
+| v1.28              | ✅ Validated |
+| v1.29              | ✅ Validated |
+| v1.30              | ✅ Validated |
+| v1.31              | ✅ Validated |
+| v1.32              | ✅ Validated |
+| v1.33              | ✅ Validated |
+| Other GA releases  | ⚠️ Expected to work |
+
+::: tip Compatibility Philosophy
+The operator is designed to work across Kubernetes version skew. Earlier or newer versions are expected to function, but validate in a staging environment before rolling out broadly.
+:::
+
 ## Installation Methods
 
 ### Method 1: Install with Helm (Recommended)
