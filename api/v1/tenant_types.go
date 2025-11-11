@@ -46,6 +46,10 @@ type TenantSpec struct {
 	// +optional
 	StatefulSets []TResource `json:"statefulSets,omitempty"`
 
+	// DaemonSets are the resolved DaemonSet resources
+	// +optional
+	DaemonSets []TResource `json:"daemonSets,omitempty"`
+
 	// Services are the resolved Service resources
 	// +optional
 	Services []TResource `json:"services,omitempty"`

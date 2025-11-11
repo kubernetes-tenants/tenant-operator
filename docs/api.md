@@ -33,9 +33,6 @@ spec:
         key: string                  # Secret key
       database: string               # Database name (required)
       table: string                  # Table name (required)
-      maxOpenConns: int              # Max open connections (optional, default: 10)
-      maxIdleConns: int              # Max idle connections (optional, default: 5)
-      connMaxLifetime: duration      # Connection lifetime (optional, default: 5m)
     syncInterval: duration           # Sync interval (required, e.g., "1m")
   
   # Required column mappings
@@ -97,6 +94,9 @@ spec:
   jobs: []TResource
   cronJobs: []TResource
   ingresses: []TResource
+  podDisruptionBudgets: []TResource  # PodDisruptionBudget resources
+  networkPolicies: []TResource       # NetworkPolicy resources
+  horizontalPodAutoscalers: []TResource  # HorizontalPodAutoscaler resources
   manifests: []TResource             # Raw unstructured resources
 ```
 
