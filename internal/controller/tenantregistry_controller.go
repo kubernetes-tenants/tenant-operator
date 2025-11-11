@@ -393,6 +393,11 @@ func (r *TenantRegistryReconciler) renderAllTemplateResources(
 		return nil, fmt.Errorf("failed to render statefulSets: %w", err)
 	}
 
+	spec.DaemonSets, err = r.renderResourceList(engine, tmpl.Spec.DaemonSets, vars)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render daemonSets: %w", err)
+	}
+
 	spec.Services, err = r.renderResourceList(engine, tmpl.Spec.Services, vars)
 	if err != nil {
 		return nil, fmt.Errorf("failed to render services: %w", err)
@@ -967,6 +972,7 @@ func (r *TenantRegistryReconciler) processRetainResourcesForTenant(ctx context.C
 	allResources = append(allResources, tenant.Spec.ServiceAccounts...)
 	allResources = append(allResources, tenant.Spec.Deployments...)
 	allResources = append(allResources, tenant.Spec.StatefulSets...)
+	allResources = append(allResources, tenant.Spec.DaemonSets...)
 	allResources = append(allResources, tenant.Spec.Services...)
 	allResources = append(allResources, tenant.Spec.Ingresses...)
 	allResources = append(allResources, tenant.Spec.ConfigMaps...)

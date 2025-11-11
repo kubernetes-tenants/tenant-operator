@@ -55,7 +55,7 @@ features:
 
   - icon: 🔌
     title: Extensible Integration
-    details: External datasource support (MySQL), External-DNS, Terraform Operator, and custom resources
+    details: External datasource support (MySQL), Crossplane, External-DNS, Terraform Operator, and custom resources
 ---
 
 ## Why Tenant Operator?
@@ -373,6 +373,10 @@ Follow the [Quick Start Guide](/quickstart) to see this in action with a working
   <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px; border-left: 4px solid #8b5cf6">
     <h3 style="margin: 0 0 1rem">🔌 Integrations</h3>
     <ul style="list-style: none; padding: 0; margin: 0">
+      <li style="margin: 0.75rem 0">
+        <a href="/integration-crossplane"><strong>Crossplane</strong></a><br/>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">K8s-native cloud provisioning</span>
+      </li>
       <li style="margin: 0.75rem 0">
         <a href="/integration-external-dns"><strong>External DNS</strong></a><br/>
         <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Automatic DNS per tenant</span>

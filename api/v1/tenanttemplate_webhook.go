@@ -61,6 +61,7 @@ func (d *TenantTemplateDefaulter) Default(ctx context.Context, obj runtime.Objec
 	SetDefaultsForTResourceList(tmpl.Spec.ServiceAccounts)
 	SetDefaultsForTResourceList(tmpl.Spec.Deployments)
 	SetDefaultsForTResourceList(tmpl.Spec.StatefulSets)
+	SetDefaultsForTResourceList(tmpl.Spec.DaemonSets)
 	SetDefaultsForTResourceList(tmpl.Spec.Services)
 	SetDefaultsForTResourceList(tmpl.Spec.Ingresses)
 	SetDefaultsForTResourceList(tmpl.Spec.ConfigMaps)
@@ -68,6 +69,9 @@ func (d *TenantTemplateDefaulter) Default(ctx context.Context, obj runtime.Objec
 	SetDefaultsForTResourceList(tmpl.Spec.PersistentVolumeClaims)
 	SetDefaultsForTResourceList(tmpl.Spec.Jobs)
 	SetDefaultsForTResourceList(tmpl.Spec.CronJobs)
+	SetDefaultsForTResourceList(tmpl.Spec.PodDisruptionBudgets)
+	SetDefaultsForTResourceList(tmpl.Spec.NetworkPolicies)
+	SetDefaultsForTResourceList(tmpl.Spec.HorizontalPodAutoscalers)
 	SetDefaultsForTResourceList(tmpl.Spec.Manifests)
 
 	return nil
@@ -251,6 +255,7 @@ func (v *TenantTemplateValidator) collectAllResources(tmpl *TenantTemplate) []TR
 	resources = append(resources, tmpl.Spec.ServiceAccounts...)
 	resources = append(resources, tmpl.Spec.Deployments...)
 	resources = append(resources, tmpl.Spec.StatefulSets...)
+	resources = append(resources, tmpl.Spec.DaemonSets...)
 	resources = append(resources, tmpl.Spec.Services...)
 	resources = append(resources, tmpl.Spec.Ingresses...)
 	resources = append(resources, tmpl.Spec.ConfigMaps...)
@@ -258,6 +263,9 @@ func (v *TenantTemplateValidator) collectAllResources(tmpl *TenantTemplate) []TR
 	resources = append(resources, tmpl.Spec.PersistentVolumeClaims...)
 	resources = append(resources, tmpl.Spec.Jobs...)
 	resources = append(resources, tmpl.Spec.CronJobs...)
+	resources = append(resources, tmpl.Spec.PodDisruptionBudgets...)
+	resources = append(resources, tmpl.Spec.NetworkPolicies...)
+	resources = append(resources, tmpl.Spec.HorizontalPodAutoscalers...)
 	resources = append(resources, tmpl.Spec.Manifests...)
 
 	return resources

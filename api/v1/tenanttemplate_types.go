@@ -50,6 +50,12 @@ type TenantTemplateSpec struct {
 	// +listMapKey=id
 	StatefulSets []TResource `json:"statefulSets,omitempty"`
 
+	// DaemonSets defines DaemonSet resources to create
+	// +optional
+	// +listType=map
+	// +listMapKey=id
+	DaemonSets []TResource `json:"daemonSets,omitempty"`
+
 	// Services defines Service resources to create
 	// +optional
 	// +listType=map

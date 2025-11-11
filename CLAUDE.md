@@ -73,7 +73,7 @@ Tenant Controller -> Reconciles each Tenant -> SSA applies resources
 
 **Key Points**:
 - References a `registryId`
-- Contains arrays of resource types: `serviceAccounts`, `deployments`, `services`, `ingresses`, `configMaps`, `secrets`, `jobs`, `cronJobs`, `manifests` (raw)
+- Contains arrays of resource types: `serviceAccounts`, `deployments`, `statefulSets`, `daemonSets`, `services`, `ingresses`, `configMaps`, `secrets`, `persistentVolumeClaims`, `jobs`, `cronJobs`, `podDisruptionBudgets`, `networkPolicies`, `horizontalPodAutoscalers`, `manifests` (raw)
 - Each resource follows `TResource` structure (see api/v1/common_types.go:58)
 - All `*Template` fields support Go `text/template` + sprig functions
 

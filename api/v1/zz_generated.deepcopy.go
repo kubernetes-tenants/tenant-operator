@@ -343,6 +343,13 @@ func (in *TenantSpec) DeepCopyInto(out *TenantSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.DaemonSets != nil {
+		in, out := &in.DaemonSets, &out.DaemonSets
+		*out = make([]TResource, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Services != nil {
 		in, out := &in.Services, &out.Services
 		*out = make([]TResource, len(*in))
@@ -552,6 +559,13 @@ func (in *TenantTemplateSpec) DeepCopyInto(out *TenantTemplateSpec) {
 	}
 	if in.StatefulSets != nil {
 		in, out := &in.StatefulSets, &out.StatefulSets
+		*out = make([]TResource, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.DaemonSets != nil {
+		in, out := &in.DaemonSets, &out.DaemonSets
 		*out = make([]TResource, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

@@ -70,7 +70,8 @@ export default withMermaid(
           text: "Integrations",
           collapsed: false,
           items: [
-            { text: "External DNS", link: "/integration-external-dns" },
+            { text: "Crossplane (Recommended)", link: "/integration-crossplane" },
+            { text: "External DNS (Recommended)", link: "/integration-external-dns" },
             {
               text: "Terraform Operator",
               link: "/integration-terraform-operator",
