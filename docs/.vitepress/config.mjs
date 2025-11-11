@@ -8,7 +8,7 @@ export default withMermaid(
     description: "Multi-Tenant Kubernetes Automation Platform",
     base: "/",
     srcDir: ".",
-    ignoreDeadLinks: true,
+    ignoreDeadLinks: false,
 
     themeConfig: {
       // https://vitepress.dev/reference/default-theme-config

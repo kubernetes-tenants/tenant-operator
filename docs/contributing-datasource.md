@@ -711,7 +711,7 @@ If you need assistance:
 1. **Check Examples**: Review MySQL adapter implementation
 2. **Ask Questions**: Open a [GitHub Discussion](https://github.com/kubernetes-tenants/tenant-operator/discussions)
 3. **Report Issues**: File a [bug report](https://github.com/kubernetes-tenants/tenant-operator/issues)
-4. **Community**: Join our [community calls](../CONTRIBUTING.md#regular-meetings)
+4. **Contributing**: See [Contributing Guidelines](https://github.com/kubernetes-tenants/tenant-operator/blob/main/CONTRIBUTING.md)
 
 ## Recognition
 

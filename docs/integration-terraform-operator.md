@@ -293,7 +293,7 @@ spec:
 5. When tenant is deleted, `terraform destroy` runs automatically
 
 ::: tip More Examples
-For detailed examples including RDS databases, CloudFront CDN, Kafka topics, RabbitMQ, Redis, and more, see [Terraform Examples](terraform-examples.md).
+Additional examples including RDS databases, CloudFront CDN, Kafka topics, RabbitMQ, and Redis are provided throughout this guide below.
 :::
 
 ## How It Works
@@ -518,7 +518,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "tenant_bucket_lifecycle" {
 
 ## See Also
 
-- **[Terraform Examples](terraform-examples.md)** - Detailed examples for RDS, Kafka, RabbitMQ, Redis, and more
 - [Tofu Controller (OpenTofu/Terraform)](https://github.com/flux-iac/tofu-controller)
 - [Flux Documentation](https://fluxcd.io/docs/)
 - [Terraform Registry - All Providers](https://registry.terraform.io/browse/providers)

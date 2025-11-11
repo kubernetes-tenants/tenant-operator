@@ -417,6 +417,6 @@ You've successfully:
 
 ## Need Help?
 
-- 📖 **Documentation**: See [documentation site](.) for detailed guides
+- 📖 **Documentation**: See [documentation site](./) for detailed guides
 - 🐛 **Issues**: [GitHub Issues](https://github.com/kubernetes-tenants/tenant-operator/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/kubernetes-tenants/tenant-operator/discussions)
