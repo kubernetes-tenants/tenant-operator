@@ -33,7 +33,7 @@ spec:
             summary: "Tenant {{ $labels.tenant }} is degraded ({{ $labels.reason }})"
             description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has been in degraded state for 5+ minutes. Reason: {{ $labels.reason }}. This may indicate template errors, conflicts, or dependency issues."
             dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-degraded"
+            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantdegraded"
 
         # Critical: Tenant has failed resources
         - alert: TenantResourcesFailed
@@ -46,7 +46,7 @@ spec:
             summary: "Tenant {{ $labels.tenant }} has {{ $value }} failed resource(s)"
             description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $value }} failed resources for 5+ minutes. This indicates critical provisioning failure."
             dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-resources-failed"
+            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantresourcesfailed"
 
         # Critical: Tenant not ready for extended period
         - alert: TenantNotReady
@@ -59,7 +59,7 @@ spec:
             summary: "Tenant {{ $labels.tenant }} not ready for 15+ minutes"
             description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has been not ready for more than 15 minutes. Immediate investigation required."
             dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-not-ready"
+            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantnotready"
 
         # Critical: Tenant in unknown state
         - alert: TenantStatusUnknown
@@ -72,7 +72,7 @@ spec:
             summary: "Tenant {{ $labels.tenant }} status unknown"
             description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has been in unknown state for 10+ minutes. This indicates potential controller or API server issues."
             dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-status-unknown"
+            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantstatusunknown"
 
         # Critical: Registry has widespread tenant failures
         - alert: RegistryManyTenantsFailure
@@ -85,7 +85,7 @@ spec:
             summary: "Registry {{ $labels.registry }} has widespread failures"
             description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $value }} failed tenants (>5 or >50% of desired). This indicates a systemic issue requiring immediate attention."
             dashboard: "https://grafana.example.com/d/tenant-operator/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/registry-many-tenants-failed"
+            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#registrymanytenantsfailure"
 
     # ========================================
     # Warning Alerts - Attention Required
@@ -107,7 +107,7 @@ spec:
             summary: "Tenant {{ $labels.tenant }} has resource count mismatch"
             description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $labels.tenant_resources_ready }} ready resources but desires {{ $labels.tenant_resources_desired }}. No failures detected but reconciliation may be stuck."
             dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-resources-mismatch"
+            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantresourcesmismatch"
 
         # Warning: Tenant has conflicted resources
         - alert: TenantResourcesConflicted
@@ -120,7 +120,7 @@ spec:
             summary: "Tenant {{ $labels.tenant }} has {{ $value }} conflicted resource(s)"
             description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $value }} resources in conflict state. This usually indicates ownership conflicts with existing resources."
             dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-conflicts"
+            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantresourcesconflicted"
 
         # Warning: High rate of conflicts
         - alert: TenantHighConflictRate
@@ -133,7 +133,7 @@ spec:
             summary: "High conflict rate for tenant {{ $labels.tenant }}"
             description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} is experiencing {{ printf \"%.2f\" $value }} conflicts/sec for {{ $labels.resource_kind }}. Policy: {{ $labels.conflict_policy }}. Review naming templates or conflict policies."
             dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/high-conflict-rate"
+            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenanthighconflictrate"
 
         # Warning: Registry has failed tenants
         - alert: RegistryTenantsFailure
@@ -146,7 +146,7 @@ spec:
             summary: "Registry {{ $labels.registry }} has {{ $value }} failed tenant(s)"
             description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $value }} failed tenants for 10+ minutes. This may indicate provisioning issues affecting some tenants."
             dashboard: "https://grafana.example.com/d/tenant-operator/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/registry-tenants-failed"
+            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#registrytenantsfailure"
 
         # Warning: Registry sync issues
         - alert: RegistryDesiredCountMismatch
@@ -162,7 +162,7 @@ spec:
             summary: "Registry {{ $labels.registry }} has tenant count mismatch"
             description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $labels.registry_ready }} ready tenants but desires {{ $labels.registry_desired }}. No failures detected but sync may be delayed."
             dashboard: "https://grafana.example.com/d/tenant-operator/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/registry-sync-issues"
+            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#registrydesiredcountmismatch"
 
         # Warning: High reconciliation error rate
         - alert: TenantReconciliationErrors
@@ -179,7 +179,7 @@ spec:
             summary: "High tenant reconciliation error rate"
             description: "Tenant operator is experiencing {{ printf \"%.1f\" (mul $value 100) }}% error rate in reconciliations. This may indicate controller issues, API server problems, or resource contention."
             dashboard: "https://grafana.example.com/d/tenant-operator/controller-health"
-            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/reconciliation-errors"
+            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantreconciliationerrors"
 
         # Warning: Slow reconciliation (P95)
         - alert: TenantReconciliationSlow
@@ -195,7 +195,7 @@ spec:
             summary: "Slow tenant reconciliation detected"
             description: "95th percentile of successful tenant reconciliation duration is {{ printf \"%.1f\" $value }}s (threshold: 30s). This may indicate performance issues, resource contention, or complex tenant configurations."
             dashboard: "https://grafana.example.com/d/tenant-operator/controller-health"
-            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/slow-reconciliation"
+            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantreconciliationslow"
 
         # Warning: High apply failure rate
         - alert: HighApplyFailureRate
@@ -212,7 +212,7 @@ spec:
             summary: "High apply failure rate for {{ $labels.kind }}"
             description: "Resource kind {{ $labels.kind }} is experiencing {{ printf \"%.1f\" (mul $value 100) }}% apply failure rate. Review resource templates and RBAC permissions."
             dashboard: "https://grafana.example.com/d/tenant-operator/controller-health"
-            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/apply-failures"
+            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#highapplyfailurerate"
 
     # ========================================
     # Info Alerts - Informational
@@ -231,4 +231,4 @@ spec:
             summary: "New conflicts detected for tenant {{ $labels.tenant }}"
             description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} encountered {{ printf \"%.0f\" $value }} new conflict(s) in the last 5 minutes for {{ $labels.resource_kind }}. Conflict policy: {{ $labels.conflict_policy }}."
             dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-conflicts"
+            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantresourcesconflicted"

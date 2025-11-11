@@ -177,10 +177,10 @@ Define actionable alert thresholds (latency, failure rates) once production benc
 ### Sharding
 
 ::: details Planned feature
-Sharding support is under design for v1.2 to scale across multiple controller replicas.
+Sharding support is under design for v1.3 to scale across multiple controller replicas.
 :::
 
-**Note:** Not yet implemented, planned for v1.2
+**Note:** Not yet implemented, planned for v1.3
 
 ## See Also
 

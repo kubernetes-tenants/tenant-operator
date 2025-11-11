@@ -1,6 +1,6 @@
 # Monitoring & Observability Guide
 
-This guide covers metrics, logging, events, and alerting for Tenant Operator.
+Comprehensive guide for monitoring Tenant Operator with Prometheus, Grafana, and Kubernetes events.
 
 [[toc]]
 
@@ -52,22 +52,53 @@ kubectl apply -k config/default
 After redeploying, confirm that a `ServiceMonitor` named `tenant-operator-controller-manager` appears and that Prometheus discovers the target.
 :::
 
-## Metrics
+## Metrics Overview
 
-Tenant Operator exposes the following custom Prometheus metrics at `:8443/metrics`.
+Tenant Operator exposes 12 custom Prometheus metrics organized into four categories:
 
-### Controller Metrics
+### Metrics Summary
 
-#### `tenant_reconcile_duration_seconds`
+| Metric | Type | Description | Key Labels |
+|--------|------|-------------|------------|
+| **Controller Metrics** |
+| `tenant_reconcile_duration_seconds` | Histogram | Tenant reconciliation duration | `result` |
+| **Resource Metrics** |
+| `tenant_resources_desired` | Gauge | Desired resource count per tenant | `tenant`, `namespace` |
+| `tenant_resources_ready` | Gauge | Ready resource count per tenant | `tenant`, `namespace` |
+| `tenant_resources_failed` | Gauge | Failed resource count per tenant | `tenant`, `namespace` |
+| **Registry Metrics** |
+| `registry_desired` | Gauge | Desired tenant CRs for a registry | `registry`, `namespace` |
+| `registry_ready` | Gauge | Ready tenant CRs for a registry | `registry`, `namespace` |
+| `registry_failed` | Gauge | Failed tenant CRs for a registry | `registry`, `namespace` |
+| **Apply Metrics** |
+| `apply_attempts_total` | Counter | Resource apply attempts | `kind`, `result`, `conflict_policy` |
+| **Status Metrics** |
+| `tenant_condition_status` | Gauge | Tenant condition status (0=False, 1=True, 2=Unknown) | `tenant`, `namespace`, `type` |
+| `tenant_conflicts_total` | Counter | Total resource conflicts | `tenant`, `namespace`, `resource_kind`, `conflict_policy` |
+| `tenant_resources_conflicted` | Gauge | Current resources in conflict state | `tenant`, `namespace` |
+| `tenant_degraded_status` | Gauge | Tenant degraded status (0=Not degraded, 1=Degraded) | `tenant`, `namespace`, `reason` |
 
-Histogram of tenant reconciliation duration.
+::: tip Detailed Queries
+For comprehensive PromQL query examples, see [Prometheus Query Examples](prometheus-queries.md).
+:::
 
-**Labels:**
-- `result`: `success` or `error`
+### Quick Start Queries
 
-**Queries:**
+**Tenant Health:**
 ```promql
-# 95th percentile reconciliation time
+# Ready tenants
+tenant_condition_status{type="Ready"} == 1
+
+# Degraded tenants
+tenant_degraded_status == 1
+
+# Resource readiness percentage
+(tenant_resources_ready / tenant_resources_desired) * 100
+```
+
+**Performance:**
+```promql
+# P95 reconciliation latency
 histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m]))
 
 # Reconciliation rate
@@ -77,304 +108,29 @@ rate(tenant_reconcile_duration_seconds_count[5m])
 rate(tenant_reconcile_duration_seconds{result="error"}[5m])
 ```
 
-**Alerts:**
-```yaml
-- alert: SlowTenantReconciliation
-  expr: histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m])) > 30
-  for: 5m
-  annotations:
-    summary: Tenant reconciliation taking > 30s
-
-- alert: TenantReconciliationErrors
-  expr: rate(tenant_reconcile_duration_seconds{result="error"}[5m]) > 0.1
-  annotations:
-    summary: High tenant reconciliation error rate
-```
-
-### Resource Metrics
-
-#### `tenant_resources_desired`
-
-Gauge of desired resources for a tenant.
-
-**Labels:**
-- `tenant`: Tenant name
-- `namespace`: Tenant namespace
-
-**Queries:**
-```promql
-# Total desired resources
-sum(tenant_resources_desired)
-
-# Per tenant
-tenant_resources_desired{tenant="acme-prod-template"}
-```
-
-#### `tenant_resources_ready`
-
-Gauge of ready resources for a tenant.
-
-**Labels:**
-- `tenant`: Tenant name
-- `namespace`: Tenant namespace
-
-**Queries:**
-```promql
-# Total ready resources
-sum(tenant_resources_ready)
-
-# Readiness percentage
-sum(tenant_resources_ready) / sum(tenant_resources_desired) * 100
-```
-
-#### `tenant_resources_failed`
-
-Gauge of failed resources for a tenant.
-
-**Labels:**
-- `tenant`: Tenant name
-- `namespace`: Tenant namespace
-
-**Alerts:**
-```yaml
-- alert: TenantResourcesFailed
-  expr: tenant_resources_failed > 0
-  for: 5m
-  annotations:
-    summary: Tenant {{ $labels.tenant }} has {{ $value }} failed resources
-```
-
-### Registry Metrics
-
-#### `registry_desired`
-
-Gauge of desired tenant CRs for a registry.
-
-**Labels:**
-- `registry`: Registry name
-- `namespace`: Registry namespace
-
-**Queries:**
-```promql
-# Total desired tenants across all registries
-sum(registry_desired)
-
-# Per registry
-registry_desired{registry="my-saas-registry"}
-```
-
-#### `registry_ready`
-
-Gauge of ready tenant CRs for a registry.
-
-**Queries:**
+**Registry Health:**
 ```promql
 # Registry health percentage
-sum(registry_ready) / sum(registry_desired) * 100
+(registry_ready / registry_desired) * 100
+
+# Total desired tenants
+sum(registry_desired)
 ```
 
-#### `registry_failed`
-
-Gauge of failed tenant CRs for a registry.
-
-**Alerts:**
-```yaml
-- alert: RegistryUnhealthy
-  expr: registry_failed > 0
-  for: 10m
-  annotations:
-    summary: Registry {{ $labels.registry }} has {{ $value }} failed tenants
-```
-
-### Apply Metrics
-
-#### `apply_attempts_total`
-
-Counter of resource apply attempts.
-
-**Labels:**
-- `kind`: Resource kind (Deployment, Service, etc.)
-- `result`: `success` or `error`
-- `conflict_policy`: `Stuck` or `Force`
-
-**Queries:**
+**Conflicts:**
 ```promql
-# Apply success rate
-rate(apply_attempts_total{result="success"}[5m]) / rate(apply_attempts_total[5m])
-
-# Applies per kind
-sum(rate(apply_attempts_total[5m])) by (kind)
-
-# Conflict policy usage
-sum(rate(apply_attempts_total[5m])) by (conflict_policy)
-```
-
-**Alerts:**
-```yaml
-- alert: HighApplyFailureRate
-  expr: rate(apply_attempts_total{result="error"}[5m]) / rate(apply_attempts_total[5m]) > 0.1
-  annotations:
-    summary: > 10% of apply attempts failing
-```
-
-### Conflict and Failure Metrics
-
-#### `tenant_condition_status`
-
-Gauge tracking the status of tenant conditions.
-
-**Labels:**
-- `tenant`: Tenant name
-- `namespace`: Tenant namespace
-- `type`: Condition type (Ready, Progressing, Conflicted, Degraded)
-
-**Values:**
-- `0`: False
-- `1`: True
-- `2`: Unknown
-
-**Queries:**
-```promql
-# Check if tenants are ready
-tenant_condition_status{type="Ready"} == 1
-
-# Count tenants not ready
-count(tenant_condition_status{type="Ready"} != 1)
-
-# Check degraded tenants (v1.1.4+)
-tenant_condition_status{type="Degraded"} == 1
-
-# Count degraded tenants
-count(tenant_condition_status{type="Degraded"} == 1)
-```
-
-**Alerts:**
-```yaml
-- alert: TenantNotReady
-  expr: tenant_condition_status{type="Ready"} != 1
-  for: 10m
-  annotations:
-    summary: Tenant {{ $labels.tenant }} is not ready
-```
-
-#### `tenant_conflicts_total`
-
-Counter tracking the total number of resource conflicts encountered.
-
-**Labels:**
-- `tenant`: Tenant name
-- `namespace`: Tenant namespace
-- `resource_kind`: Kind of resource in conflict (Deployment, Service, etc.)
-- `conflict_policy`: Applied policy (Stuck or Force)
-
-**Queries:**
-```promql
-# Total conflicts
-sum(tenant_conflicts_total)
-
-# Conflicts per tenant
-sum(rate(tenant_conflicts_total[5m])) by (tenant)
-
-# Conflicts by resource kind
-sum(rate(tenant_conflicts_total[5m])) by (resource_kind)
-
-# Conflicts by policy
-sum(rate(tenant_conflicts_total[5m])) by (conflict_policy)
-```
-
-**Alerts:**
-```yaml
-- alert: HighConflictRate
-  expr: rate(tenant_conflicts_total[5m]) > 0.1
-  for: 10m
-  annotations:
-    summary: High conflict rate for tenant {{ $labels.tenant }}
-
-- alert: NewConflictsDetected
-  expr: increase(tenant_conflicts_total[5m]) > 0
-  for: 1m
-  annotations:
-    summary: New conflicts detected for tenant {{ $labels.tenant }}
-```
-
-#### `tenant_resources_conflicted`
-
-Gauge tracking the current number of resources in conflict state.
-
-**Labels:**
-- `tenant`: Tenant name
-- `namespace`: Tenant namespace
-
-**Queries:**
-```promql
-# Total resources in conflict
+# Current conflicts
 sum(tenant_resources_conflicted)
 
-# Tenants with conflicts
-tenant_resources_conflicted > 0
-
-# Conflict percentage
-sum(tenant_resources_conflicted) / sum(tenant_resources_desired) * 100
+# Conflict rate
+rate(tenant_conflicts_total[5m])
 ```
 
-**Alerts:**
-```yaml
-- alert: TenantResourcesConflicted
-  expr: tenant_resources_conflicted > 0
-  for: 10m
-  annotations:
-    summary: Tenant {{ $labels.tenant }} has {{ $value }} resources in conflict
-```
+::: tip Complete Query Reference
+See [Prometheus Query Examples](prometheus-queries.md) for 50+ production-ready queries organized by use case.
+:::
 
-#### `tenant_degraded_status`
-
-Gauge indicating if a tenant is in degraded state.
-
-**Labels:**
-- `tenant`: Tenant name
-- `namespace`: Tenant namespace
-- `reason`: Reason for degradation (TemplateRenderError, ConflictDetected, DependencyCycle, ResourceFailuresAndConflicts, ResourceFailures, ResourceConflicts, ResourcesNotReady)
-
-**Values:**
-- `0`: Not degraded
-- `1`: Degraded
-
-**Queries:**
-```promql
-# Count degraded tenants
-count(tenant_degraded_status == 1)
-
-# List degraded tenants with reasons
-tenant_degraded_status{reason!=""} == 1
-
-# Degraded tenants by reason
-sum(tenant_degraded_status) by (reason)
-
-# Tenants with resources not ready (v1.1.4+)
-tenant_degraded_status{reason="ResourcesNotReady"} == 1
-
-# Count by specific degraded reason
-sum(tenant_degraded_status{reason="ResourcesNotReady"})
-```
-
-**Alerts:**
-```yaml
-- alert: TenantDegraded
-  expr: tenant_degraded_status > 0
-  for: 5m
-  annotations:
-    summary: Tenant {{ $labels.tenant }} is degraded
-    description: "Reason: {{ $labels.reason }}"
-
-- alert: TenantNotAllResourcesReady
-  expr: tenant_degraded_status{reason="ResourcesNotReady"} == 1
-  for: 5m
-  annotations:
-    summary: Tenant {{ $labels.tenant }} has resources that are not ready
-    description: Check tenant status for readiness details
-```
-
-### Smart Reconciliation Metrics
+### Smart Reconciliation Metrics (v1.1.4+)
 
 ::: tip New in v1.1.4
 v1.1.4 introduces enhanced status tracking with a 30-second requeue interval for fast status reflection.
@@ -403,27 +159,6 @@ histogram_quantile(0.50, rate(tenant_reconcile_duration_seconds_bucket[5m]))
 
 # P95 latency (watch for spikes > 30s)
 histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m]))
-
-# Status-only reconciliations (fast path)
-rate(tenant_reconcile_duration_seconds_count{result="status_only"}[5m])
-```
-
-**Alert for Reconciliation Bottlenecks:**
-
-```yaml
-- alert: SlowReconciliation
-  expr: histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m])) > 30
-  for: 5m
-  annotations:
-    summary: Tenant reconciliation P95 latency > 30s
-    description: May indicate controller performance issues or resource readiness delays
-
-- alert: HighReconciliationRate
-  expr: rate(tenant_reconcile_duration_seconds_count[5m]) > 5
-  for: 10m
-  annotations:
-    summary: Unusually high reconciliation rate
-    description: May indicate reconciliation loop or frequent resource changes
 ```
 
 **Best Practices:**
@@ -458,31 +193,7 @@ To enable ServiceMonitor, uncomment the prometheus section in `config/default/ku
 #- ../prometheus
 ```
 
-The ServiceMonitor configuration (already available in `config/prometheus/monitor.yaml`):
-
-```yaml
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  labels:
-    control-plane: controller-manager
-    app.kubernetes.io/name: tenant-operator
-    app.kubernetes.io/managed-by: kustomize
-  name: controller-manager-metrics-monitor
-  namespace: tenant-operator-system
-spec:
-  endpoints:
-  - path: /metrics
-    port: https
-    scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
-    tlsConfig:
-      insecureSkipVerify: true
-  selector:
-    matchLabels:
-      control-plane: controller-manager
-      app.kubernetes.io/name: tenant-operator
-```
+The ServiceMonitor configuration is available in `config/prometheus/monitor.yaml`.
 
 **Note:** For production, use cert-manager for metrics TLS by enabling the cert patch in `config/default/kustomization.yaml`.
 
@@ -657,33 +368,11 @@ A comprehensive Grafana dashboard is available at: `config/monitoring/grafana-da
 9. **Apply Rate by Kind** - Apply attempts by resource type
 10. **Work Queue Depth** - Controller queue depths
 
-### Sample Queries
-
-**Reconciliation Performance:**
-```promql
-# P50, P95, P99 latency
-histogram_quantile(0.50, rate(tenant_reconcile_duration_seconds_bucket[5m]))
-histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m]))
-histogram_quantile(0.99, rate(tenant_reconcile_duration_seconds_bucket[5m]))
-```
-
-**Resource Health:**
-```promql
-# % of resources ready
-sum(tenant_resources_ready) / sum(tenant_resources_desired) * 100
-```
-
-**Top Slow Tenants:**
-```promql
-# Tenants with most failed resources
-topk(10, tenant_resources_failed)
-```
-
 ## Alerting
 
 ### Prometheus Alert Rules
 
-A comprehensive set of Prometheus alert rules is available at `config/prometheus/alerts.yaml`.
+A comprehensive set of Prometheus alert rules is available at: **`config/prometheus/alerts.yaml`**
 
 **To deploy the alerts:**
 
@@ -695,29 +384,43 @@ kubectl apply -f config/prometheus/alerts.yaml
 kubectl apply -k config/prometheus
 ```
 
-**Alert Categories:**
+### Alert Categories
 
-1. **Critical Alerts**
-   - `TenantResourcesFailed` - Tenant has failed resources
-   - `TenantDegraded` - Tenant is in degraded state
-   - `TenantNotReady` - Tenant not ready for extended period
-   - `RegistryManyTenantsFailure` - Many tenants failing in a registry
+The alert configuration includes three severity levels:
 
-2. **Warning Alerts**
-   - `TenantResourcesConflicted` - Resources in conflict state
-   - `TenantHighConflictRate` - High rate of conflicts
-   - `TenantResourcesMismatch` - Ready count doesn't match desired
-   - `RegistryTenantsFailure` - Some tenants failing
-   - `TenantReconciliationErrors` - High error rate
-   - `TenantReconciliationSlow` - Slow reconciliation performance
+| Severity | Alerts | Description |
+|----------|--------|-------------|
+| **Critical** | 5 alerts | Immediate action required - production impact |
+| **Warning** | 8 alerts | Investigation needed - potential issues |
+| **Info** | 1 alert | Informational - awareness only |
 
-3. **Info Alerts**
-   - `TenantNewConflictsDetected` - New conflicts detected
+**Critical Alerts:**
+- `TenantDegraded` - Tenant in degraded state
+- `TenantResourcesFailed` - Tenant has failed resources
+- `TenantNotReady` - Tenant not ready for extended period
+- `TenantStatusUnknown` - Tenant condition status unknown
+- `RegistryManyTenantsFailure` - Many tenants failing in a registry
+
+**Warning Alerts:**
+- `TenantResourcesMismatch` - Ready count doesn't match desired
+- `TenantResourcesConflicted` - Resources in conflict state
+- `TenantHighConflictRate` - High rate of conflicts
+- `RegistryTenantsFailure` - Some tenants failing
+- `RegistrySyncIssues` - Registry sync problems
+- `TenantReconciliationErrors` - High error rate
+- `TenantReconciliationSlow` - Slow reconciliation performance
+- `HighApplyFailureRate` - High apply failure rate
+
+**Info Alerts:**
+- `TenantNewConflictsDetected` - New conflicts detected
+
+::: tip Alert Configuration
+For complete alert definitions with thresholds and runbook links, see `config/prometheus/alerts.yaml`.
+:::
 
 ### Sample Alert Rules
 
-#### Critical Alerts
-
+**Critical:**
 ```yaml
 # Tenant has failed resources
 - alert: TenantResourcesFailed
@@ -726,30 +429,11 @@ kubectl apply -k config/prometheus
   labels:
     severity: critical
   annotations:
-    summary: "Tenant {{ $labels.tenant }} has failed resources"
-
-# Tenant is degraded
-- alert: TenantDegraded
-  expr: tenant_degraded_status > 0
-  for: 5m
-  labels:
-    severity: critical
-  annotations:
-    summary: "Tenant {{ $labels.tenant }} is in degraded state"
-    description: "Reason: {{ $labels.reason }}"
-
-# Registry has many failed tenants
-- alert: RegistryManyTenantsFailure
-  expr: registry_failed > 5 or (registry_failed / registry_desired > 0.5 and registry_desired > 0)
-  for: 5m
-  labels:
-    severity: critical
-  annotations:
-    summary: "Registry {{ $labels.registry }} has many failed tenants"
+    summary: "Tenant {{ $labels.tenant }} has {{ $value }} failed resource(s)"
+    runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-resources-failed"
 ```
 
-#### Warning Alerts
-
+**Warning:**
 ```yaml
 # Resources in conflict
 - alert: TenantResourcesConflicted
@@ -759,37 +443,7 @@ kubectl apply -k config/prometheus
     severity: warning
   annotations:
     summary: "Tenant {{ $labels.tenant }} has resources in conflict"
-
-# High conflict rate
-- alert: TenantHighConflictRate
-  expr: rate(tenant_conflicts_total[5m]) > 0.1
-  for: 10m
-  labels:
-    severity: warning
-  annotations:
-    summary: "High conflict rate for tenant {{ $labels.tenant }}"
-```
-
-#### Performance Alerts
-
-```yaml
-# Slow reconciliation
-- alert: TenantReconciliationSlow
-  expr: histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m])) > 30
-  for: 10m
-  labels:
-    severity: warning
-  annotations:
-    summary: "Slow tenant reconciliation"
-
-# High error rate
-- alert: TenantReconciliationErrors
-  expr: rate(tenant_reconcile_duration_seconds_count{result="error"}[5m]) > 0.1
-  for: 10m
-  labels:
-    severity: warning
-  annotations:
-    summary: "High tenant reconciliation error rate"
+    runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-conflicts"
 ```
 
 ### Alert Routing (AlertManager)
@@ -809,13 +463,11 @@ route:
   - match:
       severity: critical
     receiver: 'pagerduty'
-    continue: true
 
   # Warning alerts to Slack
   - match:
       severity: warning
     receiver: 'slack'
-    continue: true
 
   # Info alerts to email
   - match:
@@ -823,10 +475,6 @@ route:
     receiver: 'email'
 
 receivers:
-- name: 'default'
-  webhook_configs:
-  - url: 'http://example.com/webhook'
-
 - name: 'pagerduty'
   pagerduty_configs:
   - service_key: '<pagerduty-key>'
@@ -835,23 +483,7 @@ receivers:
   slack_configs:
   - api_url: '<slack-webhook>'
     channel: '#tenant-operator-alerts'
-    text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
-
-- name: 'email'
-  email_configs:
-  - to: 'team@example.com'
-    from: 'alertmanager@example.com'
 ```
-
-## Tracing
-
-### Distributed Tracing (Future)
-
-Planned for v1.2:
-- OpenTelemetry integration
-- Trace reconciliation across controllers
-- Span for each resource apply
-- Database query tracing
 
 ## Best Practices
 
@@ -997,5 +629,8 @@ For production, use cert-manager by enabling the cert patch in `config/default/k
 
 ## See Also
 
+- **[Prometheus Query Examples](prometheus-queries.md)** - 50+ ready-to-use PromQL queries
+- **`config/prometheus/alerts.yaml`** - Complete alert rule definitions
+- **`config/monitoring/grafana-dashboard.json`** - Grafana dashboard
 - [Performance Guide](performance.md) - Performance tuning
 - [Troubleshooting Guide](troubleshooting.md) - Common issues
