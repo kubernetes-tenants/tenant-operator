@@ -52,6 +52,18 @@ export default withMermaid(
           ],
         },
         {
+          text: "Advanced Use Cases",
+          collapsed: false,
+          items: [
+            { text: "Overview", link: "/advanced-use-cases" },
+            { text: "Custom Domains", link: "/use-case-custom-domains" },
+            { text: "Multi-Tier Stack", link: "/use-case-multi-tier" },
+            { text: "Blue-Green Deployments", link: "/use-case-blue-green" },
+            { text: "Database-per-Tenant", link: "/use-case-database-per-tenant" },
+            { text: "Feature Flags", link: "/use-case-feature-flags" },
+          ],
+        },
+        {
           text: "Operations",
           collapsed: false,
           items: [
