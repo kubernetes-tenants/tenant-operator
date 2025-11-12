@@ -423,7 +423,7 @@ const outputPaths = ref([
 @keyframes resourceSlideIn {
   0% {
     opacity: 0;
-    transform: translateY(-50%) translateX(40px);
+    transform: translateY(-50%) translateX(-40px);
   }
   100% {
     opacity: 1;
@@ -433,7 +433,7 @@ const outputPaths = ref([
 
 .resource-node {
   position: absolute;
-  right: 0;
+  left: -120px;
   transform: translateY(-50%);
   display: flex;
   align-items: center;
@@ -442,7 +442,7 @@ const outputPaths = ref([
 }
 
 .resource-node:hover {
-  transform: translateY(-50%) translateX(-8px);
+  transform: translateY(-50%) translateX(8px);
 }
 
 .resource-label {
