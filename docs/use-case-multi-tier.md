@@ -8,7 +8,7 @@ Deploy complex applications spanning multiple services (web, API, workers, cache
 
 ```mermaid
 graph TB
-    Registry["LynqHub<br/>production-tenants"]
+    Registry["LynqHub<br/>production-nodes"]
 
     WebTemplate["LynqForm<br/>web-tier"]
     ApiTemplate["LynqForm<br/>api-tier"]
