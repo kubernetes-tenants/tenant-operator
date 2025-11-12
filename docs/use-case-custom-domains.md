@@ -2,7 +2,7 @@
 
 ## Overview
 
-Enable each tenant to have their own custom domain with automatic DNS and SSL certificate management using **Let's Encrypt** and **cert-manager**.
+Enable each node to have their own custom domain with automatic DNS and SSL certificate management using **Let's Encrypt** and **cert-manager**.
 
 **Key Features:**
 - Automatic DNS record creation via External DNS
@@ -16,7 +16,7 @@ Enable each tenant to have their own custom domain with automatic DNS and SSL ce
 flowchart LR
     DB[("Database<br/>tenant_id<br/>custom_domain<br/>domain_verified")]
 
-    TO["Tenant Operator<br/>Creates Ingress<br/>per tenant"]
+    TO["Lynq<br/>Creates Ingress<br/>per tenant"]
 
     ED["External DNS<br/>Syncs to<br/>DNS Provider"]
 
@@ -56,14 +56,14 @@ INSERT INTO tenants VALUES
   ('demo-user', 'demo', NULL, FALSE, NULL, TRUE, 'basic');
 ```
 
-## TenantRegistry Configuration
+## LynqHub Configuration
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: domain-enabled-tenants
-  namespace: tenant-operator-system
+  name: domain-enabled-nodes
+  namespace: lynq-system
 spec:
   source:
     type: mysql
@@ -121,19 +121,19 @@ helm install external-dns external-dns/external-dns \
   --set domainFilters[0]=saas.example.com \
   --set policy=sync \
   --set registry=txt \
-  --set txtOwnerId=tenant-operator-cluster
+  --set txtOwnerId=lynq-cluster
 ```
 
-## TenantTemplate Configuration
+## LynqForm Configuration
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
-  name: custom-domain-tenants
-  namespace: tenant-operator-system
+  name: custom-domain-nodes
+  namespace: lynq-system
 spec:
-  registryId: domain-enabled-tenants
+  registryId: domain-enabled-nodes
 
   # Create namespace per tenant for better isolation
   manifests:
@@ -265,7 +265,7 @@ spec:
 
 ## Custom Domain Support
 
-For tenants with verified custom domains, add additional Ingress resources:
+For nodes with verified custom domains, add additional Ingress resources:
 
 ```yaml
   # Custom domain Ingress (for verified domains)
@@ -297,14 +297,14 @@ For tenants with verified custom domains, add additional Ingress resources:
                         number: 80
 ```
 
-**Note:** Filter tenants with verified domains using a database view:
+**Note:** Filter nodes with verified domains using a database view:
 
 ```sql
 CREATE VIEW tenants_with_custom_domains AS
 SELECT * FROM tenants WHERE custom_domain IS NOT NULL AND domain_verified = TRUE;
 ```
 
-Create a separate TenantRegistry and Template for custom domains to avoid creating Ingress for unverified domains.
+Create a separate LynqHub and Template for custom domains to avoid creating Ingress for unverified domains.
 
 ## Domain Verification Workflow
 
@@ -313,7 +313,7 @@ Create a separate TenantRegistry and Template for custom domains to avoid creati
 3. **CNAME Target Provided**: Show user: "Point CNAME for `custom.com` to `acme-corp.saas.example.com`"
 4. **Background Verification**: Your verification service checks DNS periodically
 5. **Mark as Verified**: Once CNAME is detected, update `domain_verified=TRUE`
-6. **Automatic Deployment**: Tenant Operator creates Ingress with cert-manager annotation
+6. **Automatic Deployment**: Lynq creates Ingress with cert-manager annotation
 7. **DNS Propagation**: External DNS creates Route53/Cloudflare records
 8. **SSL Certificate**: cert-manager issues Let's Encrypt certificate via HTTP-01 or DNS-01 challenge
 9. **Certificate Storage**: cert-manager stores certificate in Secret `<tenant>-custom-tls`
@@ -321,13 +321,13 @@ Create a separate TenantRegistry and Template for custom domains to avoid creati
 ## Monitoring
 
 ```promql
-# Count tenants with custom domains
-sum(tenant_resources_ready{resource_name=~".*-ingress"})
+# Count nodes with custom domains
+sum(lynqnode_resources_ready{resource_name=~".*-ingress"})
 
 # Alert on ingress failures
 ALERT CustomDomainIngressFailed
   FOR 10m
-  WHERE tenant_resources_failed{resource_name=~".*-ingress"} > 0
+  WHERE lynqnode_resources_failed{resource_name=~".*-ingress"} > 0
   ANNOTATIONS {
     summary = "Ingress failed for tenant {{ $labels.tenant }}"
   }

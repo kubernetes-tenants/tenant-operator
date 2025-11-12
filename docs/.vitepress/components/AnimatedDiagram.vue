@@ -193,9 +193,9 @@
         >
           <div class="node-icon">
             <div class="operator-glow"></div>
-            <img src="/logo.png" alt="Tenant Operator" class="operator-logo" />
+            <img src="/logo.png" alt="Lynq" class="operator-logo" />
           </div>
-          <div class="node-title">Tenant Operator</div>
+          <div class="node-title">Lynq</div>
           <div class="node-subtitle">3 Controllers</div>
         </div>
       </div>

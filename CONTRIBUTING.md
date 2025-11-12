@@ -1,6 +1,6 @@
-# Contributing to Tenant Operator
+# Contributing to Lynq
 
-Thank you for your interest in contributing to Tenant Operator! This guide will help you get started.
+Thank you for your interest in contributing to Lynq! This guide will help you get started.
 
 ## Code of Conduct
 
@@ -11,7 +11,7 @@ We are committed to providing a welcoming and inclusive environment. Please be r
 ### Reporting Bugs
 
 Before creating a bug report:
-1. Check [existing issues](https://github.com/kubernetes-tenants/tenant-operator/issues)
+1. Check [existing issues](https://github.com/k8s-lynq/lynq/issues)
 2. Ensure you're using the latest version
 3. Collect relevant information (logs, YAML files, etc.)
 
@@ -51,7 +51,7 @@ Paste relevant logs here
 ### Requesting Features
 
 Feature requests are welcome! Please:
-1. Check [existing requests](https://github.com/kubernetes-tenants/tenant-operator/discussions/categories/feature-requests)
+1. Check [existing requests](https://github.com/k8s-lynq/lynq/discussions/categories/feature-requests)
 2. Describe your use case
 3. Explain why existing features don't work
 4. Propose a solution if possible
@@ -108,8 +108,8 @@ The adapter pattern makes it easy - check out the [detailed guide](docs/contribu
 1. **Fork the Repository**
    ```bash
    # Click "Fork" on GitHub
-   git clone https://github.com/YOUR_USERNAME/tenant-operator.git
-   cd tenant-operator
+   git clone https://github.com/YOUR_USERNAME/lynq.git
+   cd lynq
    ```
 
 2. **Create a Branch**
@@ -152,7 +152,7 @@ The adapter pattern makes it easy - check out the [detailed guide](docs/contribu
    ```
 
 7. **Open a Pull Request**
-   - Go to https://github.com/kubernetes-tenants/tenant-operator
+   - Go to https://github.com/k8s-lynq/lynq
    - Click "Compare & pull request"
    - Fill out the PR template
    - Link related issues
@@ -340,8 +340,8 @@ See [Development Guide](docs/development.md) for detailed setup instructions.
 **Quick Start:**
 ```bash
 # Clone and setup
-git clone https://github.com/YOUR_USERNAME/tenant-operator.git
-cd tenant-operator
+git clone https://github.com/YOUR_USERNAME/lynq.git
+cd lynq
 go mod download
 
 # Create test cluster
@@ -356,20 +356,20 @@ make run
 
 ### Communication Channels
 
-- 💬 **Discussions**: https://github.com/kubernetes-tenants/tenant-operator/discussions
-- 🐛 **Issues**: https://github.com/kubernetes-tenants/tenant-operator/issues
+- 💬 **Discussions**: https://github.com/k8s-lynq/lynq/discussions
+- 🐛 **Issues**: https://github.com/k8s-lynq/lynq/issues
 - 📧 **Email**: rationlunas@gmail.com
 
 ### Getting Help
 
 - Check [documentation](docs/)
-- Search [existing issues](https://github.com/kubernetes-tenants/tenant-operator/issues)
-- Ask in [discussions](https://github.com/kubernetes-tenants/tenant-operator/discussions)
+- Search [existing issues](https://github.com/k8s-lynq/lynq/issues)
+- Ask in [discussions](https://github.com/k8s-lynq/lynq/discussions)
 
 ### Regular Meetings
 
 - **Community Call**: First Tuesday of each month, 3PM UTC
-- **Agenda**: https://github.com/kubernetes-tenants/tenant-operator/discussions
+- **Agenda**: https://github.com/k8s-lynq/lynq/discussions
 
 ## Recognition
 
@@ -385,6 +385,6 @@ By contributing, you agree that your contributions will be licensed under the Ap
 ## Questions?
 
 Feel free to reach out:
-- Open a [discussion](https://github.com/kubernetes-tenants/tenant-operator/discussions)
+- Open a [discussion](https://github.com/k8s-lynq/lynq/discussions)
 
-Thank you for contributing to Tenant Operator! 🎉
+Thank you for contributing to Lynq! 🎉

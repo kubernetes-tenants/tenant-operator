@@ -148,7 +148,7 @@ sequenceDiagram
 
 ```bash
 # Remove the created-once annotation to allow re-adoption
-kubectl annotate pvc acme-data kubernetes-tenants.org/created-once-
+kubectl annotate pvc acme-data lynq.sh/created-once-
 
 # Next reconciliation will call ApplyResource and remove orphan markers
 ```
@@ -455,7 +455,7 @@ sequenceDiagram
     Note over Tenant,ConfigMap: Phase 1: Active Updates
     User->>Tenant: Create Tenant (uid: acme)
     Tenant->>Operator: Reconcile
-    Operator->>ConfigMap: Create ConfigMap<br/>Labels: tenant=acme-web<br/>NO ownerReference
+    Operator->>ConfigMap: Create ConfigMap<br/>Labels: lynqnode=acme-web<br/>NO ownerReference
     Note over ConfigMap: Active & Managed<br/>Syncs with template
 
     User->>Tenant: Update Template<br/>(change config data)

@@ -19,7 +19,7 @@
               placeholder="my-registry"
               class="form-input"
             />
-            <span class="hint">Reference to your TenantRegistry</span>
+            <span class="hint">Reference to your LynqHub</span>
           </div>
         </section>
 
@@ -119,7 +119,7 @@
           <textarea
             v-model="yamlEditorContent"
             class="yaml-editor"
-            placeholder="Paste your TenantTemplate YAML here..."
+            placeholder="Paste your LynqForm YAML here..."
             spellcheck="false"
           ></textarea>
           <div v-if="parseError" class="parse-error">
@@ -347,8 +347,8 @@ const generatedYaml = computed(() => {
   }
 
   const template = {
-    apiVersion: 'operator.kubernetes-tenants.org/v1',
-    kind: 'TenantTemplate',
+    apiVersion: 'operator.lynq.sh/v1',
+    kind: 'LynqForm',
     metadata: {
       name: 'my-template'
     },
@@ -509,7 +509,7 @@ const importFromYaml = () => {
     const parsed = yaml.load(yamlEditorContent.value);
 
     if (!parsed || !parsed.spec) {
-      parseError.value = 'Invalid TenantTemplate: missing spec field';
+      parseError.value = 'Invalid LynqForm: missing spec field';
       return;
     }
 

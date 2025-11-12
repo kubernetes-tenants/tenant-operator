@@ -239,7 +239,7 @@ func Test_sha1sum(t *testing.T) {
 		},
 		{
 			name:  "longer string",
-			input: "tenant-operator-kubernetes",
+			input: "lynq-operator-kubernetes",
 			want:  "8c6976e5b5410415bde908bd4dee15dfb167a9c8",
 		},
 		{

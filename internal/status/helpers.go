@@ -19,13 +19,13 @@ package status
 import (
 	"time"
 
-	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
+	lynqv1 "github.com/k8s-lynq/lynq/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // PublishResourceCounts is a helper to publish resource count updates
-func (m *Manager) PublishResourceCounts(tenant *tenantsv1.Tenant, ready, failed, desired, conflicted int32) {
+func (m *Manager) PublishResourceCounts(tenant *lynqv1.LynqNode, ready, failed, desired, conflicted int32) {
 	m.Publish(StatusEvent{
 		Type:      EventResourceCountsUpdated,
 		TenantKey: client.ObjectKeyFromObject(tenant),
@@ -40,7 +40,7 @@ func (m *Manager) PublishResourceCounts(tenant *tenantsv1.Tenant, ready, failed,
 }
 
 // PublishCondition is a helper to publish condition updates
-func (m *Manager) PublishCondition(tenant *tenantsv1.Tenant, conditionType string, status metav1.ConditionStatus, reason, message string) {
+func (m *Manager) PublishCondition(tenant *lynqv1.LynqNode, conditionType string, status metav1.ConditionStatus, reason, message string) {
 	m.Publish(StatusEvent{
 		Type:      EventConditionChanged,
 		TenantKey: client.ObjectKeyFromObject(tenant),
@@ -58,7 +58,7 @@ func (m *Manager) PublishCondition(tenant *tenantsv1.Tenant, conditionType strin
 }
 
 // PublishReadyCondition is a helper to publish the Ready condition
-func (m *Manager) PublishReadyCondition(tenant *tenantsv1.Tenant, isReady bool, reason, message string) {
+func (m *Manager) PublishReadyCondition(tenant *lynqv1.LynqNode, isReady bool, reason, message string) {
 	status := metav1.ConditionTrue
 	if !isReady {
 		status = metav1.ConditionFalse
@@ -67,7 +67,7 @@ func (m *Manager) PublishReadyCondition(tenant *tenantsv1.Tenant, isReady bool, 
 }
 
 // PublishProgressingCondition is a helper to publish the Progressing condition
-func (m *Manager) PublishProgressingCondition(tenant *tenantsv1.Tenant, isProgressing bool, reason, message string) {
+func (m *Manager) PublishProgressingCondition(tenant *lynqv1.LynqNode, isProgressing bool, reason, message string) {
 	status := metav1.ConditionTrue
 	if !isProgressing {
 		status = metav1.ConditionFalse
@@ -82,7 +82,7 @@ func (m *Manager) PublishProgressingCondition(tenant *tenantsv1.Tenant, isProgre
 }
 
 // PublishConflictedCondition is a helper to publish the Conflicted condition
-func (m *Manager) PublishConflictedCondition(tenant *tenantsv1.Tenant, hasConflict bool) {
+func (m *Manager) PublishConflictedCondition(tenant *lynqv1.LynqNode, hasConflict bool) {
 	status := metav1.ConditionFalse
 	reason := "NoConflict"
 	message := "No resource conflicts detected"
@@ -97,7 +97,7 @@ func (m *Manager) PublishConflictedCondition(tenant *tenantsv1.Tenant, hasConfli
 }
 
 // PublishDegradedCondition is a helper to publish the Degraded condition
-func (m *Manager) PublishDegradedCondition(tenant *tenantsv1.Tenant, isDegraded bool, reason, message string) {
+func (m *Manager) PublishDegradedCondition(tenant *lynqv1.LynqNode, isDegraded bool, reason, message string) {
 	status := metav1.ConditionFalse
 	if isDegraded {
 		status = metav1.ConditionTrue
@@ -106,7 +106,7 @@ func (m *Manager) PublishDegradedCondition(tenant *tenantsv1.Tenant, isDegraded 
 }
 
 // PublishObservedGeneration is a helper to publish ObservedGeneration updates
-func (m *Manager) PublishObservedGeneration(tenant *tenantsv1.Tenant, generation int64) {
+func (m *Manager) PublishObservedGeneration(tenant *lynqv1.LynqNode, generation int64) {
 	m.Publish(StatusEvent{
 		Type:      EventObservedGenerationUpdated,
 		TenantKey: client.ObjectKeyFromObject(tenant),
@@ -118,7 +118,7 @@ func (m *Manager) PublishObservedGeneration(tenant *tenantsv1.Tenant, generation
 }
 
 // PublishAppliedResources is a helper to publish applied resources list
-func (m *Manager) PublishAppliedResources(tenant *tenantsv1.Tenant, keys []string) {
+func (m *Manager) PublishAppliedResources(tenant *lynqv1.LynqNode, keys []string) {
 	m.Publish(StatusEvent{
 		Type:      EventAppliedResourcesUpdated,
 		TenantKey: client.ObjectKeyFromObject(tenant),
@@ -130,7 +130,7 @@ func (m *Manager) PublishAppliedResources(tenant *tenantsv1.Tenant, keys []strin
 }
 
 // PublishMetrics is a helper to publish all metrics at once
-func (m *Manager) PublishMetrics(tenant *tenantsv1.Tenant, ready, failed, desired, conflicted int32, conditions []metav1.Condition, isDegraded bool, degradedReason string) {
+func (m *Manager) PublishMetrics(tenant *lynqv1.LynqNode, ready, failed, desired, conflicted int32, conditions []metav1.Condition, isDegraded bool, degradedReason string) {
 	m.Publish(StatusEvent{
 		Type:      EventMetricsUpdate,
 		TenantKey: client.ObjectKeyFromObject(tenant),
@@ -149,7 +149,7 @@ func (m *Manager) PublishMetrics(tenant *tenantsv1.Tenant, ready, failed, desire
 
 // PublishFullStatus is a helper to publish all status updates at once
 // This is useful at the end of reconciliation to update everything together
-func (m *Manager) PublishFullStatus(tenant *tenantsv1.Tenant, ready, failed, desired, conflicted int32, conditions []metav1.Condition, appliedKeys []string, isDegraded bool, degradedReason string) {
+func (m *Manager) PublishFullStatus(tenant *lynqv1.LynqNode, ready, failed, desired, conflicted int32, conditions []metav1.Condition, appliedKeys []string, isDegraded bool, degradedReason string) {
 	key := client.ObjectKeyFromObject(tenant)
 	now := time.Now()
 

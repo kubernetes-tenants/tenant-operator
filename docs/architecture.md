@@ -1,6 +1,6 @@
 # Architecture
 
-This document provides a detailed overview of the Tenant Operator's architecture, including system components, reconciliation flow, and key design decisions.
+This document provides a detailed overview of the Lynq's architecture, including system components, reconciliation flow, and key design decisions.
 
 ## System Overview
 
@@ -14,19 +14,19 @@ flowchart TB
         direction TB
 
         subgraph Controllers["Operator Controllers"]
-            RC[TenantRegistry Controller]
-            TC[TenantTemplate Controller]
+            RC[LynqHub Controller]
+            TC[LynqForm Controller]
             TNC[Tenant Controller]
         end
 
         subgraph CRDs["Custom Resources"]
-            TR[TenantRegistry]
-            TT[TenantTemplate]
+            TR[LynqHub]
+            TT[LynqForm]
             T[Tenant CRs]
         end
 
         subgraph Engine["Apply Engine"]
-            SSA["SSA Apply Engine<br/>(fieldManager: tenant-operator)"]
+            SSA["SSA Apply Engine<br/>(fieldManager: lynq)"]
         end
 
         subgraph Resources["Kubernetes Resources"]
@@ -73,11 +73,11 @@ Quick reference for the three main components:
 
 | Component          | Purpose                                 | Example                               |
 | ------------------ | --------------------------------------- | ------------------------------------- |
-| **TenantRegistry** | Connects to database, syncs tenant rows | MySQL every 30s → Creates Tenant CRs  |
-| **TenantTemplate** | Defines resource blueprint              | Deployment + Service per tenant       |
+| **LynqHub** | Connects to database, syncs tenant rows | MySQL every 30s → Creates Tenant CRs  |
+| **LynqForm** | Defines resource blueprint              | Deployment + Service per tenant       |
 | **Tenant**         | Instance of a single tenant             | `acme-corp-web-app` → 5 K8s resources |
 
-**Workflow**: Database row → TenantRegistry syncs → Creates Tenant CR → Tenant controller applies TenantTemplate → Kubernetes resources created.
+**Workflow**: Database row → LynqHub syncs → Creates Tenant CR → Tenant controller applies LynqForm → Kubernetes resources created.
 
 ---
 
@@ -129,7 +129,7 @@ sequenceDiagram
 
 The operator uses a three-controller architecture to separate concerns and optimize reconciliation:
 
-### 1. TenantRegistry Controller
+### 1. LynqHub Controller
 
 **Purpose**: Syncs database (e.g., 1m interval) → Creates/Updates/Deletes Tenant CRs
 
@@ -149,17 +149,17 @@ The operator uses a three-controller architecture to separate concerns and optim
 status:
   referencingTemplates: 2 # Number of templates using this registry
   desired: 6 # referencingTemplates × activeRows
-  ready: 5 # Ready Tenants across all templates
-  failed: 1 # Failed Tenants across all templates
+  ready: 5 # Ready Nodes across all templates
+  failed: 1 # Failed Nodes across all templates
 ```
 
-### 2. TenantTemplate Controller
+### 2. LynqForm Controller
 
 **Purpose**: Validates template-registry linkage and invariants
 
 **Responsibilities**:
 
-- Validates that `spec.registryId` references an existing TenantRegistry
+- Validates that `spec.registryId` references an existing LynqHub
 - Ensures template syntax is valid (Go text/template)
 - Validates resource IDs are unique within template
 - Detects dependency cycles in `dependIds`
@@ -182,13 +182,13 @@ status:
 
 ## CRD Architecture
 
-### TenantRegistry
+### LynqHub
 
 Defines external datasource configuration and sync behavior:
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
   name: my-saas-registry
 spec:
@@ -213,15 +213,15 @@ spec:
     deployImage: container_image
 ```
 
-**Multi-Template Support**: One registry can be referenced by multiple TenantTemplates, creating separate Tenant CRs for each template-row combination.
+**Multi-Template Support**: One registry can be referenced by multiple LynqForms, creating separate Tenant CRs for each template-row combination.
 
-### TenantTemplate
+### LynqForm
 
 Blueprint for resources to create per tenant:
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: web-app
 spec:
@@ -254,8 +254,8 @@ spec:
 Instance representing a single tenant:
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: Tenant
+apiVersion: operator.lynq.sh/v1
+kind: LynqNode
 metadata:
   name: acme-web-app
 spec:
@@ -280,7 +280,7 @@ status:
 
 ### Server-Side Apply (SSA)
 
-All resources are applied using Kubernetes Server-Side Apply with `fieldManager: tenant-operator`. This provides:
+All resources are applied using Kubernetes Server-Side Apply with `fieldManager: lynq`. This provides:
 
 - **Conflict-free updates**: Multiple controllers can manage different fields
 - **Declarative management**: Operator owns only fields it sets
@@ -300,7 +300,7 @@ Two mechanisms based on namespace and deletion policy:
    - Cross-namespace resources
    - Namespace resources
    - Resources with `DeletionPolicy=Retain`
-   - Labels: `kubernetes-tenants.org/tenant`, `kubernetes-tenants.org/tenant-namespace`
+   - Labels: `lynq.sh/node`, `lynq.sh/node-namespace`
 
 ### Dependency Management
 
@@ -354,9 +354,9 @@ When resources are removed from templates:
 
 - Detected via comparison of `status.appliedResources`
 - Resource key format: `kind/namespace/name@id`
-- DeletionPolicy preserved in annotation: `kubernetes-tenants.org/deletion-policy`
+- DeletionPolicy preserved in annotation: `lynq.sh/deletion-policy`
 - Orphaned resources marked with:
-  - Label: `kubernetes-tenants.org/orphaned: "true"`
+  - Label: `lynq.sh/orphaned: "true"`
   - Annotations: `orphaned-at`, `orphaned-reason`
 - Re-adoption: Orphan markers removed when resource re-added to template
 
@@ -366,9 +366,9 @@ When resources are removed from templates:
 
 Configurable worker pools for each controller:
 
-- `--registry-concurrency=N` (default: 3)
-- `--template-concurrency=N` (default: 5)
-- `--tenant-concurrency=N` (default: 10)
+- `--hub-concurrency=N` (default: 3)
+- `--form-concurrency=N` (default: 5)
+- `--node-concurrency=N` (default: 10)
 
 ### Reconciliation Optimization
 

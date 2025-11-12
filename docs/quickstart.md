@@ -1,6 +1,6 @@
 # Quick Start with Minikube
 
-Get Tenant Operator running on Minikube in under 5 minutes using automated scripts.
+Get Lynq running on Minikube in under 5 minutes using automated scripts.
 
 [[toc]]
 
@@ -8,15 +8,15 @@ Get Tenant Operator running on Minikube in under 5 minutes using automated scrip
 
 This guide uses automated scripts to set up a complete local environment:
 1. **Minikube cluster** with **cert-manager** (automatically installed)
-2. **Tenant Operator** deployed and running with webhooks enabled
+2. **Lynq** deployed and running with webhooks enabled
 3. **MySQL test database** for tenant data
-4. **Sample TenantRegistry** and **TenantTemplate**
+4. **Sample LynqHub** and **LynqForm**
 5. **Live tenant provisioning** from database
 
 ```mermaid
 flowchart LR
     Cluster["Minikube Cluster"]
-    Operator["Tenant Operator"]
+    Operator["Lynq"]
     Database["MySQL Test DB"]
     Templates["Sample Registry & Template"]
     Tenants["Tenant CRs & Resources"]
@@ -58,15 +58,15 @@ cert-manager is **automatically installed** by the setup script. It's required f
 Create a Minikube cluster with all prerequisites:
 
 ```bash
-cd /path/to/tenant-operator
+cd /path/to/lynq
 ./scripts/setup-minikube.sh
 ```
 
 **What this does:**
 - ✅ Creates Minikube cluster (2 CPUs, 2GB RAM)
 - ✅ **Installs cert-manager v1.13.2** (required for webhooks)
-- ✅ Installs Tenant Operator CRDs
-- ✅ Creates namespaces: `tenant-operator-system`, `tenant-operator-test`
+- ✅ Installs Lynq CRDs
+- ✅ Creates namespaces: `lynq-system`, `lynq-test`
 
 ::: warning cert-manager is Essential
 cert-manager provides webhook TLS certificates for validation and defaulting. It's no longer optional, even for local development, to ensure consistency with production environments.
@@ -76,7 +76,7 @@ cert-manager provides webhook TLS certificates for validation and defaulting. It
 
 ---
 
-### Step 2: Deploy Tenant Operator
+### Step 2: Deploy Lynq
 
 Build and deploy the operator to Minikube:
 
@@ -87,7 +87,7 @@ Build and deploy the operator to Minikube:
 **What this does:**
 - ✅ Builds operator Docker image with timestamp tag
 - ✅ Loads image into Minikube's internal registry
-- ✅ Deploys operator to `tenant-operator-system` namespace
+- ✅ Deploys operator to `lynq-system` namespace
 - ✅ Waits for operator to be ready
 
 **Time:** ~2 minutes
@@ -103,7 +103,7 @@ Deploy a MySQL database with sample tenant data:
 ```
 
 **What this does:**
-- ✅ Deploys MySQL 8.0 to `tenant-operator-test` namespace
+- ✅ Deploys MySQL 8.0 to `lynq-test` namespace
 - ✅ Creates `tenants` database and `tenant_configs` table
 - ✅ Inserts 3 sample tenant rows
 - ✅ Creates read-only user `tenant_reader`
@@ -122,16 +122,16 @@ gamma-llc       https://gamma.example.com       0           trial
 
 ---
 
-### Step 4: Deploy TenantRegistry
+### Step 4: Deploy LynqHub
 
-Create a TenantRegistry that connects to the MySQL database:
+Create a LynqHub that connects to the MySQL database:
 
 ```bash
-./scripts/deploy-tenantregistry.sh
+./scripts/deploy-lynqhub.sh
 ```
 
 **What this does:**
-- ✅ Creates TenantRegistry CR named `test-registry`
+- ✅ Creates LynqHub CR named `test-registry`
 - ✅ Configures MySQL connection to test database
 - ✅ Sets up column mappings (uid, hostOrUrl, activate)
 - ✅ Starts syncing every 30 seconds
@@ -140,27 +140,27 @@ Create a TenantRegistry that connects to the MySQL database:
 
 ---
 
-### Step 5: Deploy TenantTemplate
+### Step 5: Deploy LynqForm
 
-Create a TenantTemplate that provisions resources for each tenant:
+Create a LynqForm that provisions resources for each node:
 
 ```bash
-./scripts/deploy-tenanttemplate.sh
+./scripts/deploy-lynqform.sh
 ```
 
 **What this does:**
-- ✅ Creates TenantTemplate CR named `test-template`
+- ✅ Creates LynqForm CR named `test-template`
 - ✅ Defines resource blueprints (Deployment, Service)
 - ✅ Links to `test-registry`
 - ✅ Triggers automatic tenant provisioning
 
 **Time:** ~30 seconds
 
-## 🎉 Success! You're Running Tenant Operator
+## 🎉 Success! You're Running Lynq
 
 You now have:
 - ✅ **Minikube cluster** with **cert-manager** (for webhook TLS)
-- ✅ **Tenant Operator** managing tenants with **webhooks enabled**
+- ✅ **Lynq** managing nodes with **webhooks enabled**
 - ✅ **MySQL database** with 3 tenant rows
 - ✅ **2 Active Tenants** (acme-corp, beta-inc) fully provisioned
 - ✅ **Live sync** between database and Kubernetes
@@ -178,13 +178,13 @@ Tenant CR: acme-corp-test-template
 **Verify your setup:**
 ```bash
 # Check Tenant CRs
-kubectl get tenants
+kubectl get lynqnodes
 
 # Check tenant resources
-kubectl get deployments,services -l kubernetes-tenants.org/tenant
+kubectl get deployments,services -l lynq.sh/node
 
 # View operator logs
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager -f
+kubectl logs -n lynq-system -l control-plane=controller-manager -f
 ```
 
 ## Real-World Example
@@ -206,7 +206,7 @@ Within 30 seconds (syncInterval), the operator creates:
 
 ```bash
 # 1. Tenant CR
-kubectl get tenant acme-corp-test-template
+kubectl get lynqnode acme-corp-test-template
 
 # 2. Namespace (if configured)
 kubectl get namespace acme-corp-namespace
@@ -252,8 +252,8 @@ Add a row to the database:
 
 ```bash
 # Connect to MySQL
-kubectl exec -it deployment/mysql -n tenant-operator-test -- \
-  mysql -u root -p$(kubectl get secret mysql-root-password -n tenant-operator-test -o jsonpath='{.data.password}' | base64 -d) tenants
+kubectl exec -it deployment/mysql -n lynq-test -- \
+  mysql -u root -p$(kubectl get secret mysql-root-password -n lynq-test -o jsonpath='{.data.password}' | base64 -d) tenants
 
 # Insert new tenant
 INSERT INTO tenant_configs (tenant_id, tenant_url, is_active, subscription_plan)
@@ -265,7 +265,7 @@ exit
 **Wait 30 seconds** (syncInterval), then verify:
 
 ```bash
-kubectl get tenant delta-co-test-template
+kubectl get lynqnode delta-co-test-template
 kubectl get deployment delta-co-app
 ```
 
@@ -273,15 +273,15 @@ kubectl get deployment delta-co-app
 
 ```bash
 # Update database
-kubectl exec -it deployment/mysql -n tenant-operator-test -- \
-  mysql -u root -p$(kubectl get secret mysql-root-password -n tenant-operator-test -o jsonpath='{.data.password}' | base64 -d) -e \
+kubectl exec -it deployment/mysql -n lynq-test -- \
+  mysql -u root -p$(kubectl get secret mysql-root-password -n lynq-test -o jsonpath='{.data.password}' | base64 -d) -e \
   "UPDATE tenants.tenant_configs SET is_active = 0 WHERE tenant_id = 'acme-corp';"
 ```
 
 **Wait 30 seconds**, then verify resources are cleaned up:
 
 ```bash
-kubectl get tenant acme-corp-test-template  # Not found
+kubectl get lynqnode acme-corp-test-template  # Not found
 kubectl get deployment acme-corp-app        # Not found
 ```
 
@@ -290,37 +290,37 @@ kubectl get deployment acme-corp-app        # Not found
 Edit the template to add more resources:
 
 ```bash
-kubectl edit tenanttemplate test-template
+kubectl edit lynqform test-template
 ```
 
-Changes automatically apply to all tenants. Monitor reconciliation:
+Changes automatically apply to all nodes. Monitor reconciliation:
 
 ```bash
-kubectl get tenants --watch
+kubectl get lynqnodes --watch
 ```
 
 ### View Metrics
 
 ```bash
 # Port-forward metrics endpoint
-kubectl port-forward -n tenant-operator-system deployment/tenant-operator-controller-manager 8080:8080
+kubectl port-forward -n lynq-system deployment/lynq-controller-manager 8080:8080
 
 # View metrics
-curl http://localhost:8080/metrics | grep tenant_
+curl http://localhost:8080/metrics | grep lynqnode_
 ```
 
 ## Cleanup
 
 ### Option 1: Clean Resources Only
 
-Keep the cluster, remove operator and tenants:
+Keep the cluster, remove operator and nodes:
 
 ```bash
-kubectl delete tenants --all
-kubectl delete tenanttemplate test-template
-kubectl delete tenantregistry test-registry
-kubectl delete deployment,service,pvc mysql -n tenant-operator-test
-kubectl delete deployment tenant-operator-controller-manager -n tenant-operator-system
+kubectl delete lynqnodes --all
+kubectl delete lynqform test-template
+kubectl delete lynqhub test-registry
+kubectl delete deployment,service,pvc mysql -n lynq-test
+kubectl delete deployment lynq-controller-manager -n lynq-system
 ```
 
 ### Option 2: Full Cleanup
@@ -339,18 +339,18 @@ This script interactively prompts for MySQL, operator, cluster, context, and ima
 
 ```bash
 # Check operator status
-kubectl get pods -n tenant-operator-system
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager
+kubectl get pods -n lynq-system
+kubectl logs -n lynq-system -l control-plane=controller-manager
 
 # Check registry sync
-kubectl get tenantregistry test-registry -o yaml
+kubectl get lynqhub test-registry -o yaml
 
 # Check tenant status
-kubectl get tenant <tenant-name> -o yaml
+kubectl get lynqnode <lynqnode-name> -o yaml
 
 # Check database connection
-kubectl exec -it deployment/mysql -n tenant-operator-test -- \
-  mysql -u tenant_reader -p$(kubectl get secret mysql-credentials -n tenant-operator-test -o jsonpath='{.data.password}' | base64 -d) \
+kubectl exec -it deployment/mysql -n lynq-test -- \
+  mysql -u tenant_reader -p$(kubectl get secret mysql-credentials -n lynq-test -o jsonpath='{.data.password}' | base64 -d) \
   -e "SELECT * FROM tenants.tenant_configs;"
 ```
 
@@ -372,7 +372,7 @@ All scripts support environment variables for customization:
 MINIKUBE_CPUS=8 MINIKUBE_MEMORY=16384 ./scripts/setup-minikube.sh
 
 # Example: Custom image tag
-IMG=tenant-operator:my-tag ./scripts/deploy-to-minikube.sh
+IMG=lynq:my-tag ./scripts/deploy-to-minikube.sh
 
 # Example: Custom namespace
 MYSQL_NAMESPACE=my-test-ns ./scripts/deploy-mysql.sh
@@ -382,7 +382,7 @@ Run any script with `--help` for full options.
 
 ## What's Next?
 
-Now that you have Tenant Operator running, explore these topics:
+Now that you have Lynq running, explore these topics:
 
 ### Concepts & Configuration
 
@@ -407,10 +407,10 @@ Now that you have Tenant Operator running, explore these topics:
 ## Summary
 
 You've successfully:
-- ✅ Set up Minikube with Tenant Operator in ~5 minutes
+- ✅ Set up Minikube with Lynq in ~5 minutes
 - ✅ Deployed MySQL with sample tenant data
-- ✅ Created TenantRegistry and TenantTemplate
-- ✅ Provisioned tenants automatically from database
+- ✅ Created LynqHub and LynqForm
+- ✅ Provisioned nodes automatically from database
 - ✅ Tested tenant lifecycle (create, update, delete)
 
 **Next:** Experiment with templates, policies, and template functions to build your multi-tenant platform!
@@ -418,5 +418,5 @@ You've successfully:
 ## Need Help?
 
 - 📖 **Documentation**: See [documentation site](./) for detailed guides
-- 🐛 **Issues**: [GitHub Issues](https://github.com/kubernetes-tenants/tenant-operator/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/kubernetes-tenants/tenant-operator/discussions)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/k8s-lynq/lynq/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/k8s-lynq/lynq/discussions)

@@ -1,12 +1,12 @@
 # Contributing a New Datasource
 
-This guide walks you through implementing a new datasource adapter for Tenant Operator. The operator uses an adapter pattern to support multiple data sources, making it easy to add support for new databases or data sources.
+This guide walks you through implementing a new datasource adapter for Lynq. The operator uses an adapter pattern to support multiple data sources, making it easy to add support for new databases or data sources.
 
 [[toc]]
 
 ## Overview
 
-Tenant Operator uses a pluggable datasource architecture:
+Lynq uses a pluggable datasource architecture:
 
 ```mermaid
 flowchart LR
@@ -110,7 +110,7 @@ func (a *MySQLAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]
     var tenants []TenantRow
     for rows.Next() {
         // Map columns to TenantRow
-        // Filter active tenants
+        // Filter active nodes
     }
 
     return tenants, nil
@@ -178,7 +178,7 @@ func NewYourAdapter(config Config) (*YourAdapter, error) {
     return &YourAdapter{conn: conn}, nil
 }
 
-// QueryTenants queries active tenants from [YourDatasource]
+// QueryTenants queries active nodes from [YourDatasource]
 func (a *YourAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]TenantRow, error) {
     // 1. Build query/request
     //    Use config.Table for table/collection name
@@ -202,7 +202,7 @@ func (a *YourAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]T
             row.Extra[key] = "" // Get value from result
         }
 
-        // Filter: only include active tenants with valid hostOrUrl
+        // Filter: only include active nodes with valid hostOrUrl
         if isActive(row.Activate) && row.HostOrURL != "" {
             tenants = append(tenants, row)
         }
@@ -242,7 +242,7 @@ Every `TenantRow` must have:
 
 ::: warning Filtering
 Always filter out:
-- Inactive tenants (`activate` is false/0)
+- Inactive nodes (`activate` is false/0)
 - Tenants without `hostOrUrl`
 :::
 
@@ -277,7 +277,7 @@ func NewDatasource(sourceType SourceType, config Config) (Datasource, error) {
 
 ### Step 6: Add API Support
 
-Update the CRD API types in `api/v1/tenantregistry_types.go`:
+Update the CRD API types in `api/v1/lynqhub_types.go`:
 
 ```go
 // SourceType defines the type of external data source
@@ -289,8 +289,8 @@ const (
     SourceTypeYours      SourceType = "yourdatasource" // Add
 )
 
-// TenantRegistrySourceSpec defines the data source configuration
-type TenantRegistrySourceSpec struct {
+// LynqHubSourceSpec defines the data source configuration
+type LynqHubSourceSpec struct {
     // Type of the data source
     // +kubebuilder:validation:Enum=mysql;postgresql;yourdatasource
     // +kubebuilder:validation:Required
@@ -329,11 +329,11 @@ type YourDatasourceSpec struct {
 
 ### Step 7: Update Controller Logic
 
-The controller (`internal/controller/tenantregistry_controller.go`) may need updates for password extraction:
+The controller (`internal/controller/lynqhub_controller.go`) may need updates for password extraction:
 
 ```go
-// buildDatasourceConfig builds datasource configuration from TenantRegistry spec
-func (r *TenantRegistryReconciler) buildDatasourceConfig(registry *tenantsv1.TenantRegistry, password string) (datasource.Config, string, error) {
+// buildDatasourceConfig builds datasource configuration from LynqHub spec
+func (r *LynqHubReconciler) buildDatasourceConfig(registry *tenantsv1.LynqHub, password string) (datasource.Config, string, error) {
     switch registry.Spec.Source.Type {
     case tenantsv1.SourceTypeMySQL:
         // ... existing MySQL logic
@@ -449,7 +449,7 @@ Create documentation in `docs/datasource-[yours].md`:
 ```markdown
 # [YourDatasource] Datasource Configuration
 
-This guide covers configuring Tenant Operator with [YourDatasource].
+This guide covers configuring Lynq with [YourDatasource].
 
 ## Prerequisites
 
@@ -460,8 +460,8 @@ This guide covers configuring Tenant Operator with [YourDatasource].
 ## Basic Configuration
 
 \```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
   name: my-registry
 spec:
@@ -554,8 +554,8 @@ stringData:
 
 `config/samples/yourdatasource/registry.yaml`:
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
   name: yourdatasource-registry
   namespace: default
@@ -603,9 +603,9 @@ kubectl apply -f config/samples/yourdatasource/secret.yaml
 kubectl apply -f config/samples/yourdatasource/registry.yaml
 
 # 7. Verify
-kubectl get tenantregistries
-kubectl describe tenantregistry yourdatasource-registry
-kubectl get tenants
+kubectl get lynqhubs
+kubectl describe lynqhub yourdatasource-registry
+kubectl get lynqnodes
 ```
 
 **Test Checklist:**
@@ -709,9 +709,9 @@ for key, col := range config.ExtraMappings {
 If you need assistance:
 
 1. **Check Examples**: Review MySQL adapter implementation
-2. **Ask Questions**: Open a [GitHub Discussion](https://github.com/kubernetes-tenants/tenant-operator/discussions)
-3. **Report Issues**: File a [bug report](https://github.com/kubernetes-tenants/tenant-operator/issues)
-4. **Contributing**: See [Contributing Guidelines](https://github.com/kubernetes-tenants/tenant-operator/blob/main/CONTRIBUTING.md)
+2. **Ask Questions**: Open a [GitHub Discussion](https://github.com/k8s-lynq/lynq/discussions)
+3. **Report Issues**: File a [bug report](https://github.com/k8s-lynq/lynq/issues)
+4. **Contributing**: See [Contributing Guidelines](https://github.com/k8s-lynq/lynq/blob/main/CONTRIBUTING.md)
 
 ## Recognition
 
@@ -854,10 +854,10 @@ func joinColumnsPostgres(columns []string) string {
 
 After your PR is merged:
 
-1. **Announce**: Share your contribution in [discussions](https://github.com/kubernetes-tenants/tenant-operator/discussions)
+1. **Announce**: Share your contribution in [discussions](https://github.com/k8s-lynq/lynq/discussions)
 2. **Blog**: Consider writing a blog post about your datasource
 3. **Maintain**: Help maintain and improve your adapter
 4. **Support**: Answer questions from users
 5. **Evolve**: Propose enhancements
 
-Thank you for contributing to Tenant Operator! Your datasource adapter will help the community build multi-tenant applications with their preferred data sources. 🚀
+Thank you for contributing to Lynq! Your datasource adapter will help the community build multi-tenant applications with their preferred data sources. 🚀

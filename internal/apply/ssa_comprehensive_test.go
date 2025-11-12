@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
+	lynqv1 "github.com/k8s-lynq/lynq/api/v1"
 )
 
 func TestNewApplier(t *testing.T) {
@@ -68,16 +68,16 @@ func TestConflictError(t *testing.T) {
 func TestApplyResource_WithOwnerReference(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = corev1.AddToScheme(scheme)
-	_ = tenantsv1.AddToScheme(scheme)
+	_ = lynqv1.AddToScheme(scheme)
 
 	tests := []struct {
 		name           string
 		setupClient    func() *fake.ClientBuilder
 		obj            *unstructured.Unstructured
-		owner          *tenantsv1.Tenant
-		conflictPolicy tenantsv1.ConflictPolicy
-		patchStrategy  tenantsv1.PatchStrategy
-		deletionPolicy tenantsv1.DeletionPolicy
+		owner          *lynqv1.LynqNode
+		conflictPolicy lynqv1.ConflictPolicy
+		patchStrategy  lynqv1.PatchStrategy
+		deletionPolicy lynqv1.DeletionPolicy
 		wantChanged    bool
 		wantErr        bool
 		validateResult func(t *testing.T, client *fake.ClientBuilder)
@@ -108,16 +108,16 @@ func TestApplyResource_WithOwnerReference(t *testing.T) {
 					},
 				},
 			},
-			owner: &tenantsv1.Tenant{
+			owner: &lynqv1.LynqNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-tenant",
 					Namespace: "default",
 					UID:       types.UID("test-uid"),
 				},
 			},
-			conflictPolicy: tenantsv1.ConflictPolicyStuck,
-			patchStrategy:  tenantsv1.PatchStrategyMerge, // Use merge for fake client
-			deletionPolicy: tenantsv1.DeletionPolicyDelete,
+			conflictPolicy: lynqv1.ConflictPolicyStuck,
+			patchStrategy:  lynqv1.PatchStrategyMerge, // Use merge for fake client
+			deletionPolicy: lynqv1.DeletionPolicyDelete,
 			wantChanged:    true,
 			wantErr:        false,
 			skipValidation: true, // fake client doesn't handle patches correctly
@@ -146,16 +146,16 @@ func TestApplyResource_WithOwnerReference(t *testing.T) {
 					},
 				},
 			},
-			owner: &tenantsv1.Tenant{
+			owner: &lynqv1.LynqNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-tenant",
 					Namespace: "default",
 					UID:       types.UID("test-uid"),
 				},
 			},
-			conflictPolicy: tenantsv1.ConflictPolicyStuck,
-			patchStrategy:  tenantsv1.PatchStrategyMerge,
-			deletionPolicy: tenantsv1.DeletionPolicyRetain,
+			conflictPolicy: lynqv1.ConflictPolicyStuck,
+			patchStrategy:  lynqv1.PatchStrategyMerge,
+			deletionPolicy: lynqv1.DeletionPolicyRetain,
 			wantChanged:    true,
 			wantErr:        false,
 			skipValidation: true, // fake client doesn't handle patches correctly
@@ -190,16 +190,16 @@ func TestApplyResource_WithOwnerReference(t *testing.T) {
 					},
 				},
 			},
-			owner: &tenantsv1.Tenant{
+			owner: &lynqv1.LynqNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-tenant",
 					Namespace: "default", // Owner is in default namespace
 					UID:       types.UID("test-uid"),
 				},
 			},
-			conflictPolicy: tenantsv1.ConflictPolicyStuck,
-			patchStrategy:  tenantsv1.PatchStrategyMerge,
-			deletionPolicy: tenantsv1.DeletionPolicyDelete,
+			conflictPolicy: lynqv1.ConflictPolicyStuck,
+			patchStrategy:  lynqv1.PatchStrategyMerge,
+			deletionPolicy: lynqv1.DeletionPolicyDelete,
 			wantChanged:    true,
 			wantErr:        false,
 			skipValidation: true, // fake client doesn't handle patches correctly
@@ -224,16 +224,16 @@ func TestApplyResource_WithOwnerReference(t *testing.T) {
 					},
 				},
 			},
-			owner: &tenantsv1.Tenant{
+			owner: &lynqv1.LynqNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-tenant",
 					Namespace: "default",
 					UID:       types.UID("test-uid"),
 				},
 			},
-			conflictPolicy: tenantsv1.ConflictPolicyStuck,
-			patchStrategy:  tenantsv1.PatchStrategyMerge,
-			deletionPolicy: tenantsv1.DeletionPolicyDelete,
+			conflictPolicy: lynqv1.ConflictPolicyStuck,
+			patchStrategy:  lynqv1.PatchStrategyMerge,
+			deletionPolicy: lynqv1.DeletionPolicyDelete,
 			wantChanged:    true,
 			wantErr:        false,
 			skipValidation: true, // fake client doesn't handle patches correctly
@@ -265,16 +265,16 @@ func TestApplyResource_WithOwnerReference(t *testing.T) {
 					},
 				},
 			},
-			owner: &tenantsv1.Tenant{
+			owner: &lynqv1.LynqNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-tenant",
 					Namespace: "default",
 					UID:       types.UID("test-uid"),
 				},
 			},
-			conflictPolicy: tenantsv1.ConflictPolicyStuck,
-			patchStrategy:  tenantsv1.PatchStrategyApply,
-			deletionPolicy: tenantsv1.DeletionPolicyDelete,
+			conflictPolicy: lynqv1.ConflictPolicyStuck,
+			patchStrategy:  lynqv1.PatchStrategyApply,
+			deletionPolicy: lynqv1.DeletionPolicyDelete,
 			wantChanged:    false,
 			wantErr:        true, // fake client doesn't support SSA
 			skipValidation: true,
@@ -303,16 +303,16 @@ func TestApplyResource_WithOwnerReference(t *testing.T) {
 					},
 				},
 			},
-			owner: &tenantsv1.Tenant{
+			owner: &lynqv1.LynqNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-tenant",
 					Namespace: "default",
 					UID:       types.UID("test-uid"),
 				},
 			},
-			conflictPolicy: tenantsv1.ConflictPolicyStuck,
-			patchStrategy:  tenantsv1.PatchStrategyMerge,
-			deletionPolicy: tenantsv1.DeletionPolicyDelete,
+			conflictPolicy: lynqv1.ConflictPolicyStuck,
+			patchStrategy:  lynqv1.PatchStrategyMerge,
+			deletionPolicy: lynqv1.DeletionPolicyDelete,
 			wantChanged:    true,
 			wantErr:        false,
 			skipValidation: true, // fake client doesn't handle patches correctly
@@ -335,16 +335,16 @@ func TestApplyResource_WithOwnerReference(t *testing.T) {
 					},
 				},
 			},
-			owner: &tenantsv1.Tenant{
+			owner: &lynqv1.LynqNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-tenant",
 					Namespace: "default",
 					UID:       types.UID("test-uid"),
 				},
 			},
-			conflictPolicy: tenantsv1.ConflictPolicyStuck,
-			patchStrategy:  tenantsv1.PatchStrategyReplace,
-			deletionPolicy: tenantsv1.DeletionPolicyDelete,
+			conflictPolicy: lynqv1.ConflictPolicyStuck,
+			patchStrategy:  lynqv1.PatchStrategyReplace,
+			deletionPolicy: lynqv1.DeletionPolicyDelete,
 			wantChanged:    true,
 			wantErr:        false,
 			skipValidation: true, // fake client Create doesn't work as expected
@@ -377,16 +377,16 @@ func TestApplyResource_WithOwnerReference(t *testing.T) {
 					},
 				},
 			},
-			owner: &tenantsv1.Tenant{
+			owner: &lynqv1.LynqNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-tenant",
 					Namespace: "default",
 					UID:       types.UID("test-uid"),
 				},
 			},
-			conflictPolicy: tenantsv1.ConflictPolicyStuck,
-			patchStrategy:  tenantsv1.PatchStrategyReplace,
-			deletionPolicy: tenantsv1.DeletionPolicyDelete,
+			conflictPolicy: lynqv1.ConflictPolicyStuck,
+			patchStrategy:  lynqv1.PatchStrategyReplace,
+			deletionPolicy: lynqv1.DeletionPolicyDelete,
 			wantChanged:    true,
 			wantErr:        false,
 			skipValidation: true, // fake client doesn't preserve data in Update
@@ -406,16 +406,16 @@ func TestApplyResource_WithOwnerReference(t *testing.T) {
 					},
 				},
 			},
-			owner: &tenantsv1.Tenant{
+			owner: &lynqv1.LynqNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-tenant",
 					Namespace: "default",
 					UID:       types.UID("test-uid"),
 				},
 			},
-			conflictPolicy: tenantsv1.ConflictPolicyStuck,
-			patchStrategy:  tenantsv1.PatchStrategy("invalid"),
-			deletionPolicy: tenantsv1.DeletionPolicyDelete,
+			conflictPolicy: lynqv1.ConflictPolicyStuck,
+			patchStrategy:  lynqv1.PatchStrategy("invalid"),
+			deletionPolicy: lynqv1.DeletionPolicyDelete,
 			wantChanged:    false,
 			wantErr:        true,
 			skipValidation: true,
@@ -454,16 +454,16 @@ func TestApplyResource_WithOwnerReference(t *testing.T) {
 					},
 				},
 			},
-			owner: &tenantsv1.Tenant{
+			owner: &lynqv1.LynqNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-tenant",
 					Namespace: "default",
 					UID:       types.UID("test-uid"),
 				},
 			},
-			conflictPolicy: tenantsv1.ConflictPolicyStuck,
-			patchStrategy:  tenantsv1.PatchStrategyApply,
-			deletionPolicy: tenantsv1.DeletionPolicyDelete,
+			conflictPolicy: lynqv1.ConflictPolicyStuck,
+			patchStrategy:  lynqv1.PatchStrategyApply,
+			deletionPolicy: lynqv1.DeletionPolicyDelete,
 			wantChanged:    false,
 			wantErr:        true, // fake client doesn't support SSA
 			skipValidation: true,
@@ -501,7 +501,7 @@ func TestDeleteResource(t *testing.T) {
 		name           string
 		setupClient    func() *fake.ClientBuilder
 		obj            *unstructured.Unstructured
-		policy         tenantsv1.DeletionPolicy
+		policy         lynqv1.DeletionPolicy
 		orphanReason   string
 		wantErr        bool
 		validateResult func(t *testing.T, client *fake.ClientBuilder)
@@ -527,7 +527,7 @@ func TestDeleteResource(t *testing.T) {
 					},
 				},
 			},
-			policy:       tenantsv1.DeletionPolicyDelete,
+			policy:       lynqv1.DeletionPolicyDelete,
 			orphanReason: "",
 			wantErr:      false,
 			validateResult: func(t *testing.T, builder *fake.ClientBuilder) {
@@ -561,7 +561,7 @@ func TestDeleteResource(t *testing.T) {
 					},
 				},
 			},
-			policy:       tenantsv1.DeletionPolicyRetain,
+			policy:       lynqv1.DeletionPolicyRetain,
 			orphanReason: "TenantDeleted",
 			wantErr:      false,
 			validateResult: func(t *testing.T, builder *fake.ClientBuilder) {
@@ -588,7 +588,7 @@ func TestDeleteResource(t *testing.T) {
 					},
 				},
 			},
-			policy:       tenantsv1.DeletionPolicyDelete,
+			policy:       lynqv1.DeletionPolicyDelete,
 			orphanReason: "",
 			wantErr:      false,
 			validateResult: func(t *testing.T, builder *fake.ClientBuilder) {
@@ -872,7 +872,7 @@ func TestRemoveOrphanMarkersFromCluster(t *testing.T) {
 func TestRemoveOwnerReferencesAndLabels(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = corev1.AddToScheme(scheme)
-	_ = tenantsv1.AddToScheme(scheme)
+	_ = lynqv1.AddToScheme(scheme)
 
 	tests := []struct {
 		name           string
@@ -896,8 +896,8 @@ func TestRemoveOwnerReferencesAndLabels(t *testing.T) {
 						},
 						OwnerReferences: []metav1.OwnerReference{
 							{
-								APIVersion: "operator.kubernetes-tenants.org/v1",
-								Kind:       "Tenant",
+								APIVersion: "operator.lynq.sh/v1",
+								Kind:       "LynqNode",
 								Name:       "test-tenant",
 								UID:        types.UID("test-uid"),
 							},
@@ -1013,9 +1013,9 @@ func TestApplyResource_WithoutOwner(t *testing.T) {
 		ctx,
 		obj,
 		nil, // No owner
-		tenantsv1.ConflictPolicyStuck,
-		tenantsv1.PatchStrategyMerge,
-		tenantsv1.DeletionPolicyDelete,
+		lynqv1.ConflictPolicyStuck,
+		lynqv1.PatchStrategyMerge,
+		lynqv1.DeletionPolicyDelete,
 		nil, // No ignoreFields
 	)
 

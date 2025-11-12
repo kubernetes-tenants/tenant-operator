@@ -32,27 +32,27 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
-	"github.com/kubernetes-tenants/tenant-operator/internal/fieldfilter"
+	lynqv1 "github.com/k8s-lynq/lynq/api/v1"
+	"github.com/k8s-lynq/lynq/internal/fieldfilter"
 )
 
 const (
 	// FieldManager is the name used for Server-Side Apply
-	FieldManager = "tenant-operator"
+	FieldManager = "lynq-operator"
 
 	// Labels for cross-namespace resource tracking
-	LabelTenantName      = "kubernetes-tenants.org/tenant"
-	LabelTenantNamespace = "kubernetes-tenants.org/tenant-namespace"
+	LabelTenantName      = "lynq.sh/tenant"
+	LabelTenantNamespace = "lynq.sh/tenant-namespace"
 
 	// Label for orphaned resources (DeletionPolicy=Retain) - used for selectors
-	LabelOrphaned = "kubernetes-tenants.org/orphaned"
+	LabelOrphaned = "lynq.sh/orphaned"
 
 	// Annotations for orphaned resources - detailed information
-	AnnotationOrphanedAt     = "kubernetes-tenants.org/orphaned-at"
-	AnnotationOrphanedReason = "kubernetes-tenants.org/orphaned-reason"
+	AnnotationOrphanedAt     = "lynq.sh/orphaned-at"
+	AnnotationOrphanedReason = "lynq.sh/orphaned-reason"
 
 	// Annotation for storing DeletionPolicy on resources
-	AnnotationDeletionPolicy = "kubernetes-tenants.org/deletion-policy"
+	AnnotationDeletionPolicy = "lynq.sh/deletion-policy"
 
 	// OrphanedLabelValue is the value for orphaned label
 	OrphanedLabelValue = "true"
@@ -94,17 +94,17 @@ func NewApplier(c client.Client, scheme *runtime.Scheme) *Applier {
 func (a *Applier) ApplyResource(
 	ctx context.Context,
 	obj *unstructured.Unstructured,
-	owner *tenantsv1.Tenant,
-	conflictPolicy tenantsv1.ConflictPolicy,
-	patchStrategy tenantsv1.PatchStrategy,
-	deletionPolicy tenantsv1.DeletionPolicy,
+	owner *lynqv1.LynqNode,
+	conflictPolicy lynqv1.ConflictPolicy,
+	patchStrategy lynqv1.PatchStrategy,
+	deletionPolicy lynqv1.DeletionPolicy,
 	ignoreFields []string,
 ) (bool, error) {
 	// Set owner reference or tracking labels based on namespace and deletion policy
 	if owner != nil {
 		isCrossNamespace := obj.GetNamespace() != owner.Namespace
 		isNamespaceResource := obj.GetKind() == "Namespace"
-		isRetainPolicy := deletionPolicy == tenantsv1.DeletionPolicyRetain
+		isRetainPolicy := deletionPolicy == lynqv1.DeletionPolicyRetain
 
 		// Use label-based tracking for:
 		// 1. Cross-namespace resources (ownerReferences don't work across namespaces)
@@ -121,7 +121,7 @@ func (a *Applier) ApplyResource(
 			obj.SetLabels(labels)
 		} else {
 			// For same-namespace resources with Delete policy, use traditional ownerReference
-			// This enables automatic garbage collection when Tenant is deleted
+			// This enables automatic garbage collection when LynqNode is deleted
 			if err := controllerutil.SetControllerReference(owner, obj, a.scheme); err != nil {
 				return false, fmt.Errorf("failed to set owner reference: %w", err)
 			}
@@ -180,15 +180,15 @@ func (a *Applier) ApplyResource(
 
 	// Apply resource based on patch strategy
 	switch patchStrategy {
-	case tenantsv1.PatchStrategyApply, "":
+	case lynqv1.PatchStrategyApply, "":
 		// Server-Side Apply (default)
-		force := conflictPolicy == tenantsv1.ConflictPolicyForce
+		force := conflictPolicy == lynqv1.ConflictPolicyForce
 
 		if err := a.client.Patch(ctx, obj, client.Apply, &client.PatchOptions{
 			FieldManager: FieldManager,
 			Force:        &force,
 		}); err != nil {
-			if errors.IsConflict(err) && conflictPolicy == tenantsv1.ConflictPolicyStuck {
+			if errors.IsConflict(err) && conflictPolicy == lynqv1.ConflictPolicyStuck {
 				return false, &ConflictError{
 					ResourceName: obj.GetName(),
 					Namespace:    obj.GetNamespace(),
@@ -199,13 +199,13 @@ func (a *Applier) ApplyResource(
 			return false, fmt.Errorf("failed to apply resource: %w", err)
 		}
 
-	case tenantsv1.PatchStrategyMerge:
+	case lynqv1.PatchStrategyMerge:
 		// Strategic Merge Patch
 		if err := a.client.Patch(ctx, obj, client.Merge); err != nil {
 			return false, fmt.Errorf("failed to merge resource: %w", err)
 		}
 
-	case tenantsv1.PatchStrategyReplace:
+	case lynqv1.PatchStrategyReplace:
 		// Full replacement via Update
 		if !existsBeforeApply {
 			// Create if not exists
@@ -248,10 +248,10 @@ func (a *Applier) ApplyResource(
 func (a *Applier) DeleteResource(
 	ctx context.Context,
 	obj *unstructured.Unstructured,
-	policy tenantsv1.DeletionPolicy,
+	policy lynqv1.DeletionPolicy,
 	orphanReason string,
 ) error {
-	if policy == tenantsv1.DeletionPolicyRetain {
+	if policy == lynqv1.DeletionPolicyRetain {
 		// Remove owner references and tracking labels but keep the resource
 		// Add orphan labels to mark it as retained orphan
 		return a.removeOwnerReferencesAndLabels(ctx, obj, orphanReason)
@@ -449,7 +449,7 @@ func (a *Applier) createEventForResource(ctx context.Context, obj *unstructured.
 		Reason:  reason,
 		Message: message,
 		Source: corev1.EventSource{
-			Component: "tenant-operator",
+			Component: "lynq-operator",
 		},
 		FirstTimestamp: now,
 		LastTimestamp:  now,

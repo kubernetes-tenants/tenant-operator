@@ -19,7 +19,7 @@ package graph
 import (
 	"testing"
 
-	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
+	lynqv1 "github.com/k8s-lynq/lynq/api/v1"
 )
 
 func TestNewDependencyGraph(t *testing.T) {
@@ -38,20 +38,20 @@ func TestNewDependencyGraph(t *testing.T) {
 func TestDependencyGraph_AddResource(t *testing.T) {
 	tests := []struct {
 		name      string
-		resources []tenantsv1.TResource
+		resources []lynqv1.TResource
 		wantErr   bool
 		errMsg    string
 	}{
 		{
 			name: "add single resource",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: "resource1"},
 			},
 			wantErr: false,
 		},
 		{
 			name: "add multiple resources",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: "resource1"},
 				{ID: "resource2"},
 				{ID: "resource3"},
@@ -60,7 +60,7 @@ func TestDependencyGraph_AddResource(t *testing.T) {
 		},
 		{
 			name: "add resource with empty ID",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: ""},
 			},
 			wantErr: true,
@@ -68,7 +68,7 @@ func TestDependencyGraph_AddResource(t *testing.T) {
 		},
 		{
 			name: "add duplicate resource ID",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: "resource1"},
 				{ID: "resource1"},
 			},
@@ -114,13 +114,13 @@ func TestDependencyGraph_AddResource(t *testing.T) {
 func TestDependencyGraph_Validate(t *testing.T) {
 	tests := []struct {
 		name      string
-		resources []tenantsv1.TResource
+		resources []lynqv1.TResource
 		wantErr   bool
 		errMsg    string
 	}{
 		{
 			name: "valid graph with no dependencies",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: "resource1"},
 				{ID: "resource2"},
 			},
@@ -128,7 +128,7 @@ func TestDependencyGraph_Validate(t *testing.T) {
 		},
 		{
 			name: "valid graph with linear dependencies",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: "resource1"},
 				{ID: "resource2", DependIds: []string{"resource1"}},
 				{ID: "resource3", DependIds: []string{"resource2"}},
@@ -137,7 +137,7 @@ func TestDependencyGraph_Validate(t *testing.T) {
 		},
 		{
 			name: "missing dependency",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: "resource1"},
 				{ID: "resource2", DependIds: []string{"missing"}},
 			},
@@ -146,7 +146,7 @@ func TestDependencyGraph_Validate(t *testing.T) {
 		},
 		{
 			name: "circular dependency - direct",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: "resource1", DependIds: []string{"resource2"}},
 				{ID: "resource2", DependIds: []string{"resource1"}},
 			},
@@ -155,7 +155,7 @@ func TestDependencyGraph_Validate(t *testing.T) {
 		},
 		{
 			name: "circular dependency - indirect",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: "resource1", DependIds: []string{"resource2"}},
 				{ID: "resource2", DependIds: []string{"resource3"}},
 				{ID: "resource3", DependIds: []string{"resource1"}},
@@ -189,13 +189,13 @@ func TestDependencyGraph_Validate(t *testing.T) {
 func TestDependencyGraph_TopologicalSort(t *testing.T) {
 	tests := []struct {
 		name         string
-		resources    []tenantsv1.TResource
+		resources    []lynqv1.TResource
 		wantErr      bool
 		validateFunc func(*testing.T, []*Node)
 	}{
 		{
 			name: "simple linear order",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: "resource1"},
 				{ID: "resource2", DependIds: []string{"resource1"}},
 				{ID: "resource3", DependIds: []string{"resource2"}},
@@ -222,7 +222,7 @@ func TestDependencyGraph_TopologicalSort(t *testing.T) {
 		},
 		{
 			name: "parallel branches",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: "root"},
 				{ID: "branch1", DependIds: []string{"root"}},
 				{ID: "branch2", DependIds: []string{"root"}},
@@ -256,7 +256,7 @@ func TestDependencyGraph_TopologicalSort(t *testing.T) {
 		},
 		{
 			name: "no dependencies",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: "resource1"},
 				{ID: "resource2"},
 				{ID: "resource3"},
@@ -300,7 +300,7 @@ func TestDependencyGraph_TopologicalSort(t *testing.T) {
 
 func TestDependencyGraph_GetResourcesByLevel(t *testing.T) {
 	graph := NewDependencyGraph()
-	resources := []tenantsv1.TResource{
+	resources := []lynqv1.TResource{
 		{ID: "level0-a"},
 		{ID: "level0-b"},
 		{ID: "level1-a", DependIds: []string{"level0-a"}},
@@ -346,12 +346,12 @@ func TestDependencyGraph_GetResourcesByLevel(t *testing.T) {
 func TestBuildGraph(t *testing.T) {
 	tests := []struct {
 		name      string
-		resources []tenantsv1.TResource
+		resources []lynqv1.TResource
 		wantErr   bool
 	}{
 		{
 			name: "valid graph",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: "resource1"},
 				{ID: "resource2", DependIds: []string{"resource1"}},
 			},
@@ -359,12 +359,12 @@ func TestBuildGraph(t *testing.T) {
 		},
 		{
 			name:      "empty resources",
-			resources: []tenantsv1.TResource{},
+			resources: []lynqv1.TResource{},
 			wantErr:   false,
 		},
 		{
 			name: "invalid - duplicate ID",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: "resource1"},
 				{ID: "resource1"},
 			},
@@ -372,7 +372,7 @@ func TestBuildGraph(t *testing.T) {
 		},
 		{
 			name: "invalid - circular dependency",
-			resources: []tenantsv1.TResource{
+			resources: []lynqv1.TResource{
 				{ID: "resource1", DependIds: []string{"resource2"}},
 				{ID: "resource2", DependIds: []string{"resource1"}},
 			},

@@ -8,12 +8,12 @@ Deploy complex applications spanning multiple services (web, API, workers, cache
 
 ```mermaid
 graph TB
-    Registry["TenantRegistry<br/>production-tenants"]
+    Registry["LynqHub<br/>production-tenants"]
 
-    WebTemplate["TenantTemplate<br/>web-tier"]
-    ApiTemplate["TenantTemplate<br/>api-tier"]
-    WorkerTemplate["TenantTemplate<br/>worker-tier"]
-    DataTemplate["TenantTemplate<br/>data-tier"]
+    WebTemplate["LynqForm<br/>web-tier"]
+    ApiTemplate["LynqForm<br/>api-tier"]
+    WorkerTemplate["LynqForm<br/>worker-tier"]
+    DataTemplate["LynqForm<br/>data-tier"]
 
     WebTenant["Tenant<br/>acme-web-tier"]
     ApiTenant["Tenant<br/>acme-api-tier"]
@@ -68,14 +68,14 @@ CREATE TABLE tenants (
 );
 ```
 
-## TenantRegistry
+## LynqHub
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: multi-tier-tenants
-  namespace: tenant-operator-system
+  name: multi-tier-nodes
+  namespace: lynq-system
 spec:
   source:
     type: mysql
@@ -107,13 +107,13 @@ spec:
 ## Template 1: Data Tier
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: data-tier
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: multi-tier-tenants
+  registryId: multi-tier-nodes
 
   # Create tenant namespace
   manifests:
@@ -262,13 +262,13 @@ The `randAlphaNum` function generates a random password. In production, consider
 ## Template 2: API Tier
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: api-tier
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: multi-tier-tenants
+  registryId: multi-tier-nodes
 
   deployments:
     - id: api
@@ -347,13 +347,13 @@ spec:
 ## Template 3: Web Tier
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: web-tier
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: multi-tier-tenants
+  registryId: multi-tier-nodes
 
   deployments:
     - id: web
@@ -423,13 +423,13 @@ spec:
 ## Template 4: Worker Tier
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: worker-tier
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: multi-tier-tenants
+  registryId: multi-tier-nodes
 
   deployments:
     - id: worker
@@ -480,7 +480,7 @@ spec:
 
 ```bash
 # Check all tiers for a tenant
-kubectl get tenants -n tenant-operator-system | grep acme-corp
+kubectl get lynqnodes -n lynq-system | grep acme-corp
 
 # Expected output:
 # acme-corp-data-tier     True    5/5     0       10m

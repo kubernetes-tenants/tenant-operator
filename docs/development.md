@@ -1,6 +1,6 @@
 # Development Guide
 
-Guide for developing and contributing to Tenant Operator.
+Guide for developing and contributing to Lynq.
 
 [[toc]]
 
@@ -23,8 +23,8 @@ Start with the [Quick Start guide](quickstart.md) to get familiar with the syste
 ### Clone Repository
 
 ```bash
-git clone https://github.com/kubernetes-tenants/tenant-operator.git
-cd tenant-operator
+git clone https://github.com/k8s-lynq/lynq.git
+cd lynq
 ```
 
 ### Install Dependencies
@@ -75,7 +75,7 @@ LOG_LEVEL=debug make run
 
 ```bash
 # Create kind cluster
-kind create cluster --name tenant-operator-dev
+kind create cluster --name lynq-dev
 
 # Install CRDs
 make install
@@ -100,14 +100,14 @@ make build
 
 ```bash
 # Build image
-make docker-build IMG=myregistry/tenant-operator:dev
+make docker-build IMG=myregistry/lynq:dev
 
 # Push image
-make docker-push IMG=myregistry/tenant-operator:dev
+make docker-push IMG=myregistry/lynq:dev
 
 # Build multi-platform
 docker buildx build --platform linux/amd64,linux/arm64 \
-  -t myregistry/tenant-operator:dev \
+  -t myregistry/lynq:dev \
   --push .
 ```
 
@@ -185,16 +185,16 @@ make manifests
 ## Project Structure
 
 ```
-tenant-operator/
+lynq/
 ├── api/v1/                    # CRD types
 │   ├── tenant_types.go
-│   ├── tenantregistry_types.go
-│   ├── tenanttemplate_types.go
+│   ├── lynqhub_types.go
+│   ├── lynqform_types.go
 │   └── common_types.go
 ├── internal/controller/       # Controllers
 │   ├── tenant_controller.go
-│   ├── tenantregistry_controller.go
-│   └── tenanttemplate_controller.go
+│   ├── lynqhub_controller.go
+│   └── lynqform_controller.go
 ├── internal/apply/            # SSA apply engine
 ├── internal/database/         # Database connectors
 ├── internal/graph/            # Dependency graph
@@ -269,7 +269,7 @@ if err = (&controller.MyResourceReconciler{
 
 ## Adding a New Datasource
 
-Tenant Operator uses a pluggable adapter pattern for datasources, making it easy to add support for new databases or data sources.
+Lynq uses a pluggable adapter pattern for datasources, making it easy to add support for new databases or data sources.
 
 ### Architecture
 
@@ -307,7 +307,7 @@ func (a *YourAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]T
     // 1. Build query using config.Table, config.ValueMappings, config.ExtraMappings
     // 2. Execute query
     // 3. Map results to []TenantRow
-    // 4. Filter active tenants
+    // 4. Filter active nodes
     return tenants, nil
 }
 
@@ -330,11 +330,11 @@ func NewDatasource(sourceType SourceType, config Config) (Datasource, error) {
 }
 ```
 
-**3. Add API Types** (`api/v1/tenantregistry_types.go`):
+**3. Add API Types** (`api/v1/lynqhub_types.go`):
 ```go
 const SourceTypeYours SourceType = "yourdatasource"
 
-type TenantRegistrySourceSpec struct {
+type LynqHubSourceSpec struct {
     // +kubebuilder:validation:Enum=mysql;postgresql;yourdatasource
     Type SourceType `json:"type"`
 
@@ -368,8 +368,8 @@ The full guide includes:
 | `internal/datasource/interface.go` | Interface definition + factory |
 | `internal/datasource/mysql.go` | Reference implementation |
 | `internal/datasource/your_adapter.go` | Your implementation |
-| `api/v1/tenantregistry_types.go` | API types |
-| `internal/controller/tenantregistry_controller.go` | Controller integration |
+| `api/v1/lynqhub_types.go` | API types |
+| `internal/controller/lynqhub_controller.go` | Controller integration |
 
 ### Example: Study MySQL Adapter
 
@@ -390,7 +390,7 @@ cat internal/datasource/mysql.go
 - Connection pooling configuration
 - Query building with column mappings
 - Result scanning and type handling
-- Filtering logic (active tenants only)
+- Filtering logic (active nodes only)
 - Error handling patterns
 
 ### Development Workflow
@@ -406,7 +406,7 @@ touch internal/datasource/postgres.go
 vim internal/datasource/interface.go
 
 # 4. Add API types
-vim api/v1/tenantregistry_types.go
+vim api/v1/lynqhub_types.go
 
 # 5. Generate manifests
 make manifests
@@ -568,6 +568,6 @@ make generate manifests
 
 ## See Also
 
-- [Contributing Guide](https://github.com/kubernetes-tenants/tenant-operator/blob/main/CONTRIBUTING.md)
+- [Contributing Guide](https://github.com/k8s-lynq/lynq/blob/main/CONTRIBUTING.md)
 - [API Reference](api.md)
 - [Architecture Overview](index.md)

@@ -19,7 +19,7 @@ package fieldfilter_test
 import (
 	"testing"
 
-	"github.com/kubernetes-tenants/tenant-operator/internal/fieldfilter"
+	"github.com/k8s-lynq/lynq/internal/fieldfilter"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"

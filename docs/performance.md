@@ -1,12 +1,12 @@
 # Performance Tuning Guide
 
-Practical optimization strategies for scaling Tenant Operator to thousands of tenants.
+Practical optimization strategies for scaling Lynq to thousands of nodes.
 
 [[toc]]
 
 ## Understanding Performance
 
-Tenant Operator uses three reconciliation layers:
+Lynq uses three reconciliation layers:
 
 1. **Event-Driven (Immediate)**: Reacts to resource changes instantly
 2. **Periodic (30 seconds)**: Fast status updates and drift detection
@@ -24,8 +24,8 @@ This architecture ensures:
 Adjust how frequently the operator checks your database:
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
   name: my-registry
 spec:
@@ -36,7 +36,7 @@ spec:
 **Recommendations:**
 - **High-frequency changes**: `30s` - Faster tenant provisioning, higher DB load
 - **Normal usage**: `1m` (default) - Balanced performance
-- **Stable tenants**: `5m` - Lower DB load, slower updates
+- **Stable nodes**: `5m` - Lower DB load, slower updates
 
 ### 2. Resource Wait Timeouts
 
@@ -147,18 +147,18 @@ Adjust operator resource limits based on tenant count:
 # values.yaml for Helm
 resources:
   limits:
-    cpu: 2000m      # For 1000+ tenants
-    memory: 2Gi     # For 1000+ tenants
+    cpu: 2000m      # For 1000+ nodes
+    memory: 2Gi     # For 1000+ nodes
   requests:
     cpu: 500m       # Minimum for stable operation
     memory: 512Mi   # Minimum for stable operation
 ```
 
 **Guidelines:**
-- **< 100 tenants**: Default limits (500m CPU, 512Mi RAM)
-- **100-500 tenants**: 1 CPU, 1Gi RAM
-- **500-1000 tenants**: 2 CPU, 2Gi RAM
-- **1000+ tenants**: Consider horizontal scaling (coming in v1.3)
+- **< 100 nodes**: Default limits (500m CPU, 512Mi RAM)
+- **100-500 nodes**: 1 CPU, 1Gi RAM
+- **500-1000 nodes**: 2 CPU, 2Gi RAM
+- **1000+ nodes**: Consider horizontal scaling (coming in v1.3)
 
 ### Database Optimization
 
@@ -181,15 +181,15 @@ Monitor these Prometheus metrics:
 ```promql
 # Reconciliation duration (target: < 5s P95)
 histogram_quantile(0.95,
-  sum(rate(tenant_reconcile_duration_seconds_bucket[5m])) by (le)
+  sum(rate(lynqnode_reconcile_duration_seconds_bucket[5m])) by (le)
 )
 
 # Tenant readiness rate (target: > 95%)
-sum(tenant_resources_ready) / sum(tenant_resources_desired)
+sum(lynqnode_resources_ready) / sum(lynqnode_resources_desired)
 
 # High error rate alert (target: < 5%)
-sum(rate(tenant_reconcile_duration_seconds_count{result="error"}[5m]))
-/ sum(rate(tenant_reconcile_duration_seconds_count[5m]))
+sum(rate(lynqnode_reconcile_duration_seconds_count{result="error"}[5m]))
+/ sum(rate(lynqnode_reconcile_duration_seconds_count[5m]))
 ```
 
 See [Monitoring Guide](monitoring.md) for complete metrics reference.
@@ -206,10 +206,10 @@ See [Monitoring Guide](monitoring.md) for complete metrics reference.
 **Solution:**
 ```bash
 # Check reconciliation times
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager | grep "Reconciliation completed"
+kubectl logs -n lynq-system -l control-plane=controller-manager | grep "Reconciliation completed"
 
 # Reduce sync interval if database is slow
-kubectl patch tenantregistry my-registry --type=merge -p '{"spec":{"source":{"syncInterval":"2m"}}}'
+kubectl patch lynqhub my-registry --type=merge -p '{"spec":{"source":{"syncInterval":"2m"}}}'
 ```
 
 ### Symptom: High CPU Usage
@@ -222,10 +222,10 @@ kubectl patch tenantregistry my-registry --type=merge -p '{"spec":{"source":{"sy
 **Solution:**
 ```bash
 # Check CPU usage
-kubectl top pods -n tenant-operator-system
+kubectl top pods -n lynq-system
 
 # Increase resource limits
-kubectl edit deployment -n tenant-operator-system tenant-operator-controller-manager
+kubectl edit deployment -n lynq-system lynq-controller-manager
 ```
 
 ### Symptom: Memory Growth
@@ -238,10 +238,10 @@ kubectl edit deployment -n tenant-operator-system tenant-operator-controller-man
 **Solution:**
 ```bash
 # Restart operator to clear cache
-kubectl rollout restart deployment -n tenant-operator-system tenant-operator-controller-manager
+kubectl rollout restart deployment -n lynq-system lynq-controller-manager
 
 # Monitor memory over time
-kubectl top pods -n tenant-operator-system --watch
+kubectl top pods -n lynq-system --watch
 ```
 
 ## Best Practices Summary

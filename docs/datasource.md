@@ -1,12 +1,12 @@
 # DataSource Configuration Guide
 
-Complete guide for configuring datasources with Tenant Operator.
+Complete guide for configuring datasources with Lynq.
 
 [[toc]]
 
 ## Overview
 
-Tenant Operator reads tenant data from external datasources and automatically provisions Kubernetes resources. This guide covers database setup, column mappings, and data transformation techniques.
+Lynq reads tenant data from external datasources and automatically provisions Kubernetes resources. This guide covers database setup, column mappings, and data transformation techniques.
 
 ## Supported Datasources
 
@@ -17,14 +17,14 @@ Tenant Operator reads tenant data from external datasources and automatically pr
 | Custom | 💡 Contribute | - | [Contribution Guide](contributing-datasource.md) |
 
 ::: tip Want to Add a Datasource?
-Tenant Operator uses a pluggable adapter pattern. Contributing a new datasource is straightforward!
+Lynq uses a pluggable adapter pattern. Contributing a new datasource is straightforward!
 **See**: [Contributing a New Datasource](contributing-datasource.md)
 :::
 
 ```mermaid
 flowchart LR
     DB[(MySQL Datasource)]
-    Sync[TenantRegistry<br/>Controller]
+    Sync[LynqHub<br/>Controller]
     API[Kubernetes API Server]
     Tenants[Tenant CRs]
     Resources["Tenant Resources<br/>(Deployments, Services, ...)"]
@@ -48,8 +48,8 @@ Examples focus on MySQL (currently supported). PostgreSQL support is planned for
 ### Basic Configuration
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
   name: my-registry
 spec:
@@ -96,7 +96,7 @@ valueMappings:
 
 - **Type**: String
 - **Required**: Yes
-- **Purpose**: Unique identifier for each tenant
+- **Purpose**: Unique identifier for each node
 - **Examples**: `"tenant-123"`, `"acme-corp"`, `"customer-456"`
 - **Used in**: Resource naming, labels, template variables
 
@@ -231,7 +231,7 @@ flowchart LR
         Raw["tenants_raw"]
     end
     View["MySQL VIEW<br/>(SELECT ... CASE ...)"]
-    Operator["TenantRegistry Sync"]
+    Operator["LynqHub Sync"]
     Templates["Tenant Templates"]
 
     Raw -- "normalize columns" --> View
@@ -297,7 +297,7 @@ WHERE enabled = 1;
 
 ### Use Case 3: Filter and Transform
 
-**Problem:** You want to exclude certain tenants or apply business logic
+**Problem:** You want to exclude certain nodes or apply business logic
 
 ```sql
 CREATE VIEW active_paying_tenants AS
@@ -435,12 +435,12 @@ syncInterval: 30s   # For development/testing
 syncInterval: 1m    # Recommended for production
 
 # Low-frequency (fewer API calls, slower sync)
-syncInterval: 5m    # For large deployments (1000+ tenants)
+syncInterval: 5m    # For large deployments (1000+ nodes)
 ```
 
 ## Troubleshooting
 
-### Problem: Tenants Not Being Created
+### Problem: Nodes Not Being Created
 
 **Check 1: Verify `activate` column values**
 ```sql
@@ -464,7 +464,7 @@ FROM tenant_configs;
 
 **Check 3: Check operator logs**
 ```bash
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager | grep -i "query\|tenant"
+kubectl logs -n lynq-system -l control-plane=controller-manager | grep -i "query\|tenant"
 ```
 
 ### Problem: View Not Updating
@@ -550,19 +550,19 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: mysql-credentials
-  namespace: tenant-operator-system
+  namespace: lynq-system
 type: Opaque
 stringData:
   password: secure_password_here
 ```
 
-### TenantRegistry
+### LynqHub
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: production-tenants
+  name: production-nodes
 spec:
   source:
     type: mysql
@@ -604,7 +604,7 @@ tenant-3       https://gamma.myapp.com         0          free               ap-
 
 Want to add support for PostgreSQL, MongoDB, REST APIs, or other datasources?
 
-Tenant Operator uses a **pluggable adapter pattern** that makes it easy to add new datasources. You only need to:
+Lynq uses a **pluggable adapter pattern** that makes it easy to add new datasources. You only need to:
 
 1. **Implement 2 methods**: `QueryTenants()` and `Close()`
 2. **Register your adapter**: Add it to the factory function
@@ -699,12 +699,12 @@ case SourceTypeYours:
 
 Need help? We're here!
 
-- 💬 [GitHub Discussions](https://github.com/kubernetes-tenants/tenant-operator/discussions) - Ask questions
+- 💬 [GitHub Discussions](https://github.com/k8s-lynq/lynq/discussions) - Ask questions
 - 📖 [Full Guide](contributing-datasource.md) - Detailed instructions
-- 🐛 [Issues](https://github.com/kubernetes-tenants/tenant-operator/issues) - Report problems
+- 🐛 [Issues](https://github.com/k8s-lynq/lynq/issues) - Report problems
 - 📧 [Email](mailto:rationlunas@gmail.com) - Direct contact
 
-Start contributing today and make Tenant Operator work with your favorite datasource! 🚀
+Start contributing today and make Lynq work with your favorite datasource! 🚀
 
 ## See Also
 

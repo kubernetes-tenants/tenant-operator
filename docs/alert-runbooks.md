@@ -1,12 +1,12 @@
 # Alert Runbooks
 
-Comprehensive troubleshooting guide for Tenant Operator alerts. Each alert includes diagnosis steps and resolution procedures.
+Comprehensive troubleshooting guide for Lynq alerts. Each alert includes diagnosis steps and resolution procedures.
 
 [[toc]]
 
 ## Overview
 
-This page provides detailed runbooks for all Tenant Operator alerts, organized by severity:
+This page provides detailed runbooks for all Lynq alerts, organized by severity:
 
 - **Critical Alerts**: Require immediate action - production impact
 - **Warning Alerts**: Require investigation - potential issues
@@ -20,11 +20,11 @@ Use the table of contents (right sidebar) to jump directly to a specific alert.
 
 ## Critical Alerts
 
-### TenantDegraded
+### LynqNodeDegraded
 
-**Alert Name:** `TenantDegraded`
+**Alert Name:** `LynqNodeDegraded`
 **Severity:** Critical
-**Threshold:** `tenant_degraded_status > 0` for 5+ minutes
+**Threshold:** `lynqnode_degraded_status > 0` for 5+ minutes
 
 #### Description
 
@@ -49,36 +49,36 @@ Tenant CR has entered a degraded state, indicating the operator cannot successfu
 
 ```bash
 # Check tenant status
-kubectl get tenant <tenant-name> -n <namespace> -o yaml
+kubectl get lynqnode <lynqnode-name> -n <namespace> -o yaml
 
 # Review events
-kubectl describe tenant <tenant-name> -n <namespace>
+kubectl describe lynqnode <lynqnode-name> -n <namespace>
 
 # Check operator logs
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager --tail=100 | grep <tenant-name>
+kubectl logs node-name>
 
 # Validate template variables
-kubectl get tenant <tenant-name> -n <namespace> -o jsonpath='{.metadata.annotations}'
+kubectl get lynqnode <lynqnode-name> -n <namespace> -o jsonpath='{.metadata.annotations}'
 ```
 
 #### Resolution
 
 **For Template Errors:**
 ```bash
-# Check TenantRegistry extraValueMappings
-kubectl get tenantregistry <registry-name> -o yaml
+# Check LynqHub extraValueMappings
+kubectl get lynqhub <registry-name> -o yaml
 
-# Verify TenantTemplate syntax
-kubectl get tenanttemplate <template-name> -o yaml
+# Verify LynqForm syntax
+kubectl get lynqform <template-name> -o yaml
 ```
 
 **For Dependency Cycles:**
 ```bash
 # Review dependIds configuration
-kubectl get tenant <tenant-name> -o jsonpath='{.spec.*.dependIds}'
+kubectl get lynqnode <lynqnode-name> -o jsonpath='{.spec.*.dependIds}'
 
 # Remove circular dependencies in template
-kubectl edit tenanttemplate <template-name>
+kubectl edit lynqform <template-name>
 ```
 
 **For Resource Conflicts:**
@@ -90,16 +90,16 @@ kubectl get <resource-type> <resource-name> -o yaml | grep -A 10 metadata
 kubectl delete <resource-type> <resource-name>
 
 # Option 2: Change ConflictPolicy to Force
-kubectl edit tenanttemplate <template-name>
+kubectl edit lynqform <template-name>
 ```
 
 ---
 
-### TenantResourcesFailed
+### LynqNodeResourcesFailed
 
-**Alert Name:** `TenantResourcesFailed`
+**Alert Name:** `LynqNodeResourcesFailed`
 **Severity:** Critical
-**Threshold:** `tenant_resources_failed > 0` for 5+ minutes
+**Threshold:** `lynqnode_resources_failed > 0` for 5+ minutes
 
 #### Description
 
@@ -115,13 +115,13 @@ Tenant has one or more resources that failed to apply or became unhealthy, indic
 
 ```bash
 # Check failed resources count
-kubectl get tenant <tenant-name> -o jsonpath='{.status.failedResources}'
+kubectl get lynqnode <lynqnode-name> -o jsonpath='{.status.failedResources}'
 
 # List applied resources
-kubectl get tenant <tenant-name> -o jsonpath='{.status.appliedResources}'
+kubectl get lynqnode <lynqnode-name> -o jsonpath='{.status.appliedResources}'
 
 # Check events for failures
-kubectl get events --field-selector involvedObject.kind=Tenant,involvedObject.name=<tenant-name>
+kubectl get events --field-selector involvedObject.kind=LynqNode,involvedObject.name=<lynqnode-name>
 ```
 
 #### Resolution
@@ -129,16 +129,16 @@ kubectl get events --field-selector involvedObject.kind=Tenant,involvedObject.na
 **For Apply Failures:**
 ```bash
 # Check RBAC permissions
-kubectl auth can-i create <resource-type> --as=system:serviceaccount:tenant-operator-system:tenant-operator
+kubectl auth can-i create <resource-type> --as=system:serviceaccount:lynq-system:lynq
 
 # Review resource spec in template
-kubectl get tenanttemplate <template-name> -o yaml
+kubectl get lynqform <template-name> -o yaml
 ```
 
 **For Readiness Timeouts:**
 ```bash
 # Increase timeout
-kubectl edit tenanttemplate <template-name>
+kubectl edit lynqform <template-name>
 # Set: timeoutSeconds: 600
 
 # Or disable readiness wait
@@ -147,11 +147,11 @@ kubectl edit tenanttemplate <template-name>
 
 ---
 
-### TenantNotReady
+### LynqNodeNotReady
 
-**Alert Name:** `TenantNotReady`
+**Alert Name:** `LynqNodeNotReady`
 **Severity:** Critical
-**Threshold:** `tenant_condition_status{type="Ready"} == 0` for 15+ minutes
+**Threshold:** `lynqnode_condition_status{type="Ready"} == 0` for 15+ minutes
 
 #### Description
 
@@ -167,13 +167,13 @@ Tenant has not reached Ready state for an extended period, indicating persistent
 
 ```bash
 # Check Ready condition
-kubectl get tenant <tenant-name> -o jsonpath='{.status.conditions[?(@.type=="Ready")]}'
+kubectl get lynqnode <lynqnode-name> -o jsonpath='{.status.conditions[?(@.type=="Ready")]}'
 
 # Check resource readiness
-kubectl get tenant <tenant-name> -o jsonpath='{.status.readyResources}/{.status.desiredResources}'
+kubectl get lynqnode <lynqnode-name> -o jsonpath='{.status.readyResources}/{.status.desiredResources}'
 
 # Identify slow resources
-kubectl get all -l kubernetes-tenants.org/tenant=<tenant-name>
+kubectl get all -l lynq.sh/lynqnode=<lynqnode-name>
 ```
 
 #### Resolution
@@ -186,16 +186,16 @@ kubectl describe <resource-type> <resource-name>
 kubectl get pod <pod-name> -o yaml | grep -A 10 readinessProbe
 
 # Check dependencies
-kubectl get tenant <tenant-name> -o jsonpath='{.spec.*.dependIds}'
+kubectl get lynqnode <lynqnode-name> -o jsonpath='{.spec.*.dependIds}'
 ```
 
 ---
 
-### TenantStatusUnknown
+### LynqNodeStatusUnknown
 
-**Alert Name:** `TenantStatusUnknown`
+**Alert Name:** `LynqNodeStatusUnknown`
 **Severity:** Critical
-**Threshold:** `tenant_condition_status{type="Ready"} == 2` for 10+ minutes
+**Threshold:** `lynqnode_condition_status{type="Ready"} == 2` for 10+ minutes
 
 #### Description
 
@@ -211,10 +211,10 @@ Tenant status is Unknown, indicating potential controller or API server communic
 
 ```bash
 # Check controller pods
-kubectl get pods -n tenant-operator-system
+kubectl get pods -n lynq-system
 
 # Check controller logs
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager --tail=100
+kubectl logs -n lynq-system -l control-plane=controller-manager --tail=100
 
 # Check API server connectivity
 kubectl get --raw /healthz
@@ -224,45 +224,45 @@ kubectl get --raw /healthz
 
 ```bash
 # Restart controller if unhealthy
-kubectl rollout restart deployment -n tenant-operator-system tenant-operator-controller-manager
+kubectl rollout restart deployment -n lynq-system lynq-controller-manager
 
 # Check for resource pressure
-kubectl top pods -n tenant-operator-system
+kubectl top pods -n lynq-system
 
 # Review recent changes
-kubectl rollout history deployment -n tenant-operator-system tenant-operator-controller-manager
+kubectl rollout history deployment -n lynq-system lynq-controller-manager
 ```
 
 ---
 
-### RegistryManyTenantsFailure
+### RegistryManyNodesFailure
 
-**Alert Name:** `RegistryManyTenantsFailure`
+**Alert Name:** `RegistryManyNodesFailure`
 **Severity:** Critical
 **Threshold:** `registry_failed > 5` or `registry_failed / registry_desired > 0.5` for 5+ minutes
 
 #### Description
 
-Registry has widespread tenant failures (>5 tenants or >50% failure rate), indicating systemic issue affecting multiple tenants.
+Registry has widespread tenant failures (>5 lynqnodes or >50% failure rate), indicating systemic issue affecting multiple lynqnodes.
 
 #### Symptoms
 
-- High number of failed tenants in registry
-- Multiple tenants showing similar errors
-- Pattern of failures across all tenants
+- High number of failed lynqnodes in registry
+- Multiple lynqnodes showing similar errors
+- Pattern of failures across all lynqnodes
 
 #### Diagnosis
 
 ```bash
 # Check registry status
-kubectl get tenantregistry <registry-name> -o yaml
+kubectl get lynqhub <registry-name> -o yaml
 
-# List failed tenants
-kubectl get tenants -l operator.kubernetes-tenants.org/registry=<registry-name> \
+# List failed lynqnodes
+kubectl get lynqnodes -l operator.lynq.sh/registry=<registry-name> \
   --field-selector status.phase=Failed
 
 # Check database connectivity
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager | grep "database\|mysql"
+kubectl logs -n lynq-system -l control-plane=controller-manager | grep "database\|mysql"
 ```
 
 #### Resolution
@@ -277,30 +277,30 @@ kubectl run mysql-test --rm -it --image=mysql:8 -- \
   mysql -h <db-host> -u <db-user> -p<db-password> -e "SELECT 1"
 
 # Review registry sync interval
-kubectl get tenantregistry <registry-name> -o jsonpath='{.spec.source.syncInterval}'
+kubectl get lynqhub <registry-name> -o jsonpath='{.spec.source.syncInterval}'
 ```
 
 **For Template Issues:**
 ```bash
 # Check template validity
-kubectl get tenanttemplate -l operator.kubernetes-tenants.org/registry=<registry-name>
+kubectl get lynqform -l operator.lynq.sh/registry=<registry-name>
 
 # Review template syntax
-kubectl get tenanttemplate <template-name> -o yaml
+kubectl get lynqform <template-name> -o yaml
 
 # Validate template rendering
-kubectl describe tenant <any-failed-tenant>
+kubectl describe lynqnode <any-failed-node>
 ```
 
 ---
 
 ## Warning Alerts
 
-### TenantResourcesMismatch
+### LynqNodeResourcesMismatch
 
-**Alert Name:** `TenantResourcesMismatch`
+**Alert Name:** `LynqNodeResourcesMismatch`
 **Severity:** Warning
-**Threshold:** `tenant_resources_ready != tenant_resources_desired` (no failures) for 15+ minutes
+**Threshold:** `lynqnode_resources_ready != lynqnode_resources_desired` (no failures) for 15+ minutes
 
 #### Description
 
@@ -310,10 +310,10 @@ Tenant's ready resource count doesn't match desired count, but no failures are d
 
 ```bash
 # Check resource counts
-kubectl get tenant <tenant-name> -o jsonpath='Ready: {.status.readyResources}, Desired: {.status.desiredResources}, Failed: {.status.failedResources}'
+kubectl get lynqnode <lynqnode-name> -o jsonpath='Ready: {.status.readyResources}, Desired: {.status.desiredResources}, Failed: {.status.failedResources}'
 
 # Check if resources are progressing
-kubectl get all -l kubernetes-tenants.org/tenant=<tenant-name>
+kubectl get all -l lynq.sh/lynqnode=<lynqnode-name>
 ```
 
 #### Resolution
@@ -323,19 +323,19 @@ kubectl get all -l kubernetes-tenants.org/tenant=<tenant-name>
 kubectl get events --field-selector involvedObject.name=<resource-name>
 
 # Verify dependencies are satisfied
-kubectl get tenant <tenant-name> -o jsonpath='{.spec.*.dependIds}'
+kubectl get lynqnode <lynqnode-name> -o jsonpath='{.spec.*.dependIds}'
 
 # Force reconciliation
-kubectl annotate tenant <tenant-name> operator.kubernetes-tenants.org/reconcile="$(date +%s)" --overwrite
+kubectl annotate lynqnode <lynqnode-name> operator.lynq.sh/reconcile="$(date +%s)" --overwrite
 ```
 
 ---
 
-### TenantResourcesConflicted
+### LynqNodeResourcesConflicted
 
-**Alert Name:** `TenantResourcesConflicted`
+**Alert Name:** `LynqNodeResourcesConflicted`
 **Severity:** Warning
-**Threshold:** `tenant_resources_conflicted > 0` for 10+ minutes
+**Threshold:** `lynqnode_resources_conflicted > 0` for 10+ minutes
 
 #### Description
 
@@ -345,13 +345,13 @@ Tenant has resources in conflict state, usually indicating ownership conflicts w
 
 ```bash
 # Check conflicted resources
-kubectl get tenant <tenant-name> -o jsonpath='{.status.conflictedResources}'
+kubectl get lynqnode <lynqnode-name> -o jsonpath='{.status.conflictedResources}'
 
 # Check conflict count
-kubectl get tenant <tenant-name> -o jsonpath='{.status.resourcesConflicted}'
+kubectl get lynqnode <lynqnode-name> -o jsonpath='{.status.resourcesConflicted}'
 
 # Review conflict events
-kubectl describe tenant <tenant-name> | grep Conflict
+kubectl describe lynqnode <lynqnode-name> | grep Conflict
 ```
 
 #### Resolution
@@ -364,21 +364,21 @@ kubectl get events --field-selector reason=ResourceConflict
 kubectl delete <resource-type> <resource-name>
 
 # Option 2: Use unique naming
-kubectl edit tenanttemplate <template-name>
+kubectl edit lynqform <template-name>
 # Update nameTemplate: "{{ .uid }}-{{ .planId }}-app"
 
 # Option 3: Change to Force policy
-kubectl edit tenanttemplate <template-name>
+kubectl edit lynqform <template-name>
 # Set: conflictPolicy: Force
 ```
 
 ---
 
-### TenantHighConflictRate
+### LynqNodeHighConflictRate
 
-**Alert Name:** `TenantHighConflictRate`
+**Alert Name:** `LynqNodeHighConflictRate`
 **Severity:** Warning
-**Threshold:** `rate(tenant_conflicts_total[5m]) > 0.1` for 10+ minutes
+**Threshold:** `rate(lynqnode_conflicts_total[5m]) > 0.1` for 10+ minutes
 
 #### Description
 
@@ -388,56 +388,56 @@ High rate of conflicts detected, indicating recurring ownership or naming issues
 
 ```bash
 # Check conflict rate
-kubectl get --raw /metrics | grep tenant_conflicts_total
+kubectl get --raw /metrics | grep lynqnode_conflicts_total
 
 # Identify conflict patterns
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager | grep -i conflict
+kubectl logs -n lynq-system -l control-plane=controller-manager | grep -i conflict
 ```
 
 #### Resolution
 
 ```bash
 # Review naming templates
-kubectl get tenanttemplate <template-name> -o yaml | grep nameTemplate
+kubectl get lynqform <template-name> -o yaml | grep nameTemplate
 
 # Ensure unique names per tenant
 # Use: nameTemplate: "{{ .uid }}-{{ sha1sum .host | trunc 8 }}-app"
 
 # Consider Force policy if appropriate
-kubectl patch tenanttemplate <template-name> --type=merge -p '{"spec":{"deployments":[{"conflictPolicy":"Force"}]}}'
+kubectl patch lynqform <template-name> --type=merge -p '{"spec":{"deployments":[{"conflictPolicy":"Force"}]}}'
 ```
 
 ---
 
-### RegistryTenantsFailure
+### RegistryNodesFailure
 
-**Alert Name:** `RegistryTenantsFailure`
+**Alert Name:** `RegistryNodesFailure`
 **Severity:** Warning
 **Threshold:** `0 < registry_failed <= 5` for 10+ minutes
 
 #### Description
 
-Registry has some failed tenants (1-5), indicating isolated provisioning issues.
+Registry has some failed lynqnodes (1-5), indicating isolated provisioning issues.
 
 #### Diagnosis
 
 ```bash
-# List failed tenants
-kubectl get tenants -l operator.kubernetes-tenants.org/registry=<registry-name> \
+# List failed lynqnodes
+kubectl get lynqnodes -l operator.lynq.sh/registry=<registry-name> \
   | grep -v "True"
 
 # Check specific tenant
-kubectl describe tenant <failed-tenant-name>
+kubectl describe lynqnode <failed-lynqnode-name>
 ```
 
 #### Resolution
 
 ```bash
 # Investigate individual tenant failures
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager | grep <failed-tenant-name>
+kubectl logs node-name>
 
 # Check tenant-specific data
-kubectl get tenant <failed-tenant-name> -o yaml
+kubectl get lynqnode <failed-lynqnode-namel
 
 # Verify database row
 # (Connect to database and check tenant_id row)
@@ -459,33 +459,33 @@ Registry's ready tenant count doesn't match desired count, but no failures detec
 
 ```bash
 # Check registry status
-kubectl get tenantregistry <registry-name> -o jsonpath='Desired: {.status.desired}, Ready: {.status.ready}, Failed: {.status.failed}'
+kubectl get lynqhub <registry-name> -o jsonpath='Desired: {.status.desired}, Ready: {.status.ready}, Failed: {.status.failed}'
 
-# List all tenants
-kubectl get tenants -l operator.kubernetes-tenants.org/registry=<registry-name>
+# List all lynqnodes
+kubectl get lynqnodes -l operator.lynq.sh/registry=<registry-name>
 
 # Check sync interval
-kubectl get tenantregistry <registry-name> -o jsonpath='{.spec.source.syncInterval}'
+kubectl get lynqhub <registry-name> -o jsonpath='{.spec.source.syncInterval}'
 ```
 
 #### Resolution
 
 ```bash
 # Force registry sync
-kubectl annotate tenantregistry <registry-name> operator.kubernetes-tenants.org/sync="$(date +%s)" --overwrite
+kubectl annotate lynqhub <registry-name> operator.lynq.sh/sync="$(date +%s)" --overwrite
 
 # Check database for new rows
-# Verify activate=true for expected tenants
+# Verify activate=true for expected lynqnodes
 
 # Review registry controller logs
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager | grep "registry.*<registry-name>"
+kubectl logs -n lynq-system -l control-plane=controller-manager | grep "registry.*<registry-name>"
 ```
 
 ---
 
-### TenantReconciliationErrors
+### LynqNodeReconciliationErrors
 
-**Alert Name:** `TenantReconciliationErrors`
+**Alert Name:** `LynqNodeReconciliationErrors`
 **Severity:** Warning
 **Threshold:** Error rate `> 10%` for 10+ minutes
 
@@ -497,10 +497,10 @@ High error rate in tenant reconciliations, indicating controller issues, API pro
 
 ```bash
 # Check error rate
-kubectl get --raw /metrics | grep 'tenant_reconcile_duration_seconds_count{result="error"}'
+kubectl get --raw /metrics | grep 'lynqnode_reconcile_duration_seconds_count{result="error"}'
 
 # Review controller logs for errors
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager --tail=200 | grep -i error
+kubectl logs -n lynq-system -l control-plane=controller-manager --tail=200 | grep -i error
 
 # Check API server health
 kubectl get --raw /healthz
@@ -511,20 +511,20 @@ kubectl get --raw /readyz
 
 ```bash
 # Check controller resource usage
-kubectl top pods -n tenant-operator-system
+kubectl top pods -n lynq-system
 
 # Increase controller resources if needed
-kubectl edit deployment -n tenant-operator-system tenant-operator-controller-manager
+kubectl edit deployment -n lynq-system lynq-controller-manager
 
 # Review concurrent reconciliation settings
-kubectl get deployment -n tenant-operator-system tenant-operator-controller-manager -o yaml | grep concurrent
+kubectl get deployment -n lynq-system lynq-controller-manager -o yaml | grep concurrent
 ```
 
 ---
 
-### TenantReconciliationSlow
+### LynqNodeReconciliationSlow
 
-**Alert Name:** `TenantReconciliationSlow`
+**Alert Name:** `LynqNodeReconciliationSlow`
 **Severity:** Warning
 **Threshold:** P95 duration `> 30s` for 15+ minutes
 
@@ -536,13 +536,13 @@ Slow reconciliation detected (P95 > 30s), indicating performance issues, resourc
 
 ```bash
 # Check reconciliation duration
-kubectl get --raw /metrics | grep tenant_reconcile_duration_seconds
+kubectl get --raw /metrics | grep lynqnode_reconcile_duration_seconds
 
-# Identify slow tenants
-kubectl get tenants --sort-by='.status.lastReconcileTime'
+# Identify slow lynqnodes
+kubectl get lynqnodes --sort-by='.status.lastReconcileTime'
 
 # Check for large templates
-kubectl get tenanttemplates -o json | jq '.items[] | {name: .metadata.name, resources: (.spec | [.deployments, .services, .configMaps] | flatten | length)}'
+kubectl get lynqforms -o json | jq '.items[] | {name: .metadata.name, resources: (.spec | [.deployments, .services, .configMaps] | flatten | length)}'
 ```
 
 #### Resolution
@@ -554,8 +554,8 @@ kubectl get tenanttemplates -o json | jq '.items[] | {name: .metadata.name, reso
 # - Avoid unnecessary waitForReady
 
 # Increase concurrency
-kubectl patch deployment -n tenant-operator-system tenant-operator-controller-manager \
-  --type=json -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--tenant-concurrency=20"}]'
+kubectl patch deployment -n lynq-system lynq-controller-manager \
+  --type=json -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--node-concurrency=20"}]'
 
 # Consider sharding by namespace
 # Deploy multiple operators with namespace filters
@@ -580,23 +580,23 @@ High failure rate for resource applies, indicating template issues or RBAC permi
 kubectl get --raw /metrics | grep apply_attempts_total
 
 # Identify failing resource types
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager | grep "Failed to apply"
+kubectl logs -n lynq-system -l control-plane=controller-manager | grep "Failed to apply"
 
 # Check RBAC for resource types
-kubectl auth can-i create deployment --as=system:serviceaccount:tenant-operator-system:tenant-operator
+kubectl auth can-i create deployment --as=system:serviceaccount:lynq-system:lynq
 ```
 
 #### Resolution
 
 ```bash
 # Verify RBAC permissions
-kubectl describe clusterrole tenant-operator-role
+kubectl describe clusterrole lynq-role
 
 # Add missing permissions
-kubectl edit clusterrole tenant-operator-role
+kubectl edit clusterrole lynq-role
 
 # Validate resource templates
-kubectl get tenanttemplate <template-name> -o yaml
+kubectl get lynqform <template-name> -o yaml
 
 # Check for API deprecations
 kubectl api-resources | grep <resource-kind>
@@ -606,11 +606,11 @@ kubectl api-resources | grep <resource-kind>
 
 ## Info Alerts
 
-### TenantNewConflictsDetected
+### LynqNodeNewConflictsDetected
 
-**Alert Name:** `TenantNewConflictsDetected`
+**Alert Name:** `LynqNodeNewConflictsDetected`
 **Severity:** Info
-**Threshold:** `increase(tenant_conflicts_total[5m]) > 0` for 2+ minutes
+**Threshold:** `increase(lynqnode_conflicts_total[5m]) > 0` for 2+ minutes
 
 #### Description
 
@@ -623,12 +623,12 @@ New conflicts detected in the last 5 minutes. Informational alert for conflict a
 kubectl get events --sort-by='.lastTimestamp' | grep Conflict | head -20
 
 # View conflict details
-kubectl describe tenant <tenant-name> | grep -A 5 Conflict
+kubectl describe lynqnode <lynqnode-name> | grep -A 5 Conflict
 ```
 
 #### Resolution
 
-If conflicts persist, escalate to TenantResourcesConflicted or TenantHighConflictRate resolution procedures.
+If conflicts persist, escalate to LynqNodeResourcesConflicted or LynqNodeHighConflictRate resolution procedures.
 
 ---
 
@@ -638,34 +638,34 @@ If conflicts persist, escalate to TenantResourcesConflicted or TenantHighConflic
 
 ```bash
 # Overall operator health
-kubectl get pods -n tenant-operator-system
-kubectl top pods -n tenant-operator-system
+kubectl get pods -n lynq-system
+kubectl top pods -n lynq-system
 
 # All tenant statuses
-kubectl get tenants -A
+kubectl get lynqnodes -A
 
 # Recent events
 kubectl get events -A --sort-by='.lastTimestamp' | tail -50
 
 # Operator logs (last 1 hour)
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager --since=1h
+kubectl logs -n lynq-system -l control-plane=controller-manager --since=1h
 ```
 
 ### Common Fixes
 
 1. **Force Reconciliation:**
    ```bash
-   kubectl annotate tenant <name> operator.kubernetes-tenants.org/reconcile="$(date +%s)" --overwrite
+   kubectl annotate lynqnode <name> operator.lynq.sh/reconcile="$(date +%s)" --overwrite
    ```
 
 2. **Restart Controller:**
    ```bash
-   kubectl rollout restart deployment -n tenant-operator-system tenant-operator-controller-manager
+   kubectl rollout restart deployment -n lynq-system lynq-controller-manager
    ```
 
 3. **Validate Configuration:**
    ```bash
-   kubectl get tenantregistry,tenanttemplate -A -o wide
+   kubectl get lynqhub,lynqform -A -o wide
    ```
 
 ### When to Escalate
@@ -680,4 +680,4 @@ kubectl logs -n tenant-operator-system -l control-plane=controller-manager --sin
 - [Monitoring & Observability Guide](monitoring.md)
 - [Troubleshooting Guide](troubleshooting.md)
 - [Performance Tuning](performance.md)
-- [Prometheus Alerts Configuration](https://github.com/kubernetes-tenants/tenant-operator/blob/main/config/prometheus/alerts.yaml)
+- [Prometheus Alerts Configuration](https://github.com/k8s-lynq/lynq/blob/main/config/prometheus/alerts.yaml)

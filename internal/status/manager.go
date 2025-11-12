@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
-	"github.com/kubernetes-tenants/tenant-operator/internal/metrics"
+	lynqv1 "github.com/k8s-lynq/lynq/api/v1"
+	"github.com/k8s-lynq/lynq/internal/metrics"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -262,11 +262,11 @@ func (m *Manager) applyUpdate(ctx context.Context, update *StatusUpdate) error {
 	// Update Kubernetes status
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// Get latest version
-		tenant := &tenantsv1.Tenant{}
+		tenant := &lynqv1.LynqNode{}
 		if err := m.client.Get(ctx, update.Key, tenant); err != nil {
 			if errors.IsNotFound(err) {
-				// Tenant was deleted, skip update
-				logger.V(1).Info("Tenant not found, skipping status update",
+				// LynqNode was deleted, skip update
+				logger.V(1).Info("LynqNode not found, skipping status update",
 					"tenant", update.Key.Name,
 					"namespace", update.Key.Namespace)
 				return nil
@@ -332,7 +332,7 @@ func (m *Manager) applyUpdate(ctx context.Context, update *StatusUpdate) error {
 
 // updateCondition updates or appends a condition to the status
 // Returns true if the condition was changed
-func (m *Manager) updateCondition(status *tenantsv1.TenantStatus, newCond metav1.Condition) bool {
+func (m *Manager) updateCondition(status *lynqv1.LynqNodeStatus, newCond metav1.Condition) bool {
 	// Find existing condition
 	for i := range status.Conditions {
 		if status.Conditions[i].Type == newCond.Type {

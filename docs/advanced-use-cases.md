@@ -2,7 +2,7 @@
 
 ## Overview
 
-Tenant Operator's flexible architecture enables powerful multi-tenant patterns beyond basic resource provisioning. This guide helps you understand which pattern fits your requirements.
+Lynq's flexible architecture enables powerful multi-tenant patterns beyond basic resource provisioning. This guide helps you understand which pattern fits your requirements.
 
 ## Available Patterns
 
@@ -138,7 +138,7 @@ Begin with a single pattern that addresses your most critical need, then add mor
 For complex filtering logic, create database views rather than trying to implement logic in templates.
 
 ```sql
--- Example: Filter tenants by plan and feature
+-- Example: Filter nodes by plan and feature
 CREATE OR REPLACE VIEW enterprise_with_ai AS
 SELECT * FROM tenants
 WHERE plan_type = 'enterprise'
@@ -191,18 +191,18 @@ SELECT * FROM tenants WHERE feature_enabled = TRUE;
 ```
 
 ```yaml
-# Separate TenantRegistry and Template
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+# Separate LynqHub and Template
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: feature-enabled-tenants
+  name: feature-enabled-nodes
 spec:
   source:
     mysql:
       table: tenants_with_feature  # Use the view
 ```
 
-### ❌ Don't: Store complex logic in TenantRegistry
+### ❌ Don't: Store complex logic in LynqHub
 The registry should only read and map data, not transform it.
 
 ### ✅ Do: Use database views for complex queries
@@ -210,7 +210,7 @@ Move JOIN operations and complex filtering to database views.
 
 ## Getting Help
 
-- **Documentation Issues**: [Report on GitHub](https://github.com/kubernetes-tenants/tenant-operator/issues)
+- **Documentation Issues**: [Report on GitHub](https://github.com/k8s-lynq/lynq/issues)
 - **Architecture Questions**: Review [Architecture Guide](/architecture)
 - **Template Help**: See [Templates Guide](/templates)
 - **Policy Questions**: Check [Policies Documentation](/policies)
@@ -221,12 +221,12 @@ Move JOIN operations and complex filtering to database views.
 2. Study the full guide for that pattern
 3. Adapt the example to your requirements
 4. Start with a single tenant for testing
-5. Gradually roll out to more tenants
+5. Gradually roll out to more nodes
 
 ## Contributing
 
 Have a use case not covered here? We'd love to hear about it!
 
-- **Open an Issue**: [GitHub Issues](https://github.com/kubernetes-tenants/tenant-operator/issues)
+- **Open an Issue**: [GitHub Issues](https://github.com/k8s-lynq/lynq/issues)
 - **Share Your Story**: Contribute a use case guide
 - **Join Discussions**: Share your experience with the community

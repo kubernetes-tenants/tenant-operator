@@ -16,10 +16,10 @@ This pattern is useful when:
 graph TB
     DB[(Database<br/>deployment_color:<br/>blue/green)]
 
-    TO[Tenant Operator]
+    TO[Lynq]
 
-    BlueTemplate[TenantTemplate<br/>blue-env]
-    GreenTemplate[TenantTemplate<br/>green-env]
+    BlueTemplate[LynqForm<br/>blue-env]
+    GreenTemplate[LynqForm<br/>green-env]
 
     BlueDeployment[Deployment<br/>acme-blue]
     GreenDeployment[Deployment<br/>acme-green]
@@ -76,14 +76,14 @@ CREATE TABLE tenants (
 -- 7. Blue environment now becomes next deployment target
 ```
 
-## TenantRegistry
+## LynqHub
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: blue-green-tenants
-  namespace: tenant-operator-system
+  name: blue-green-nodes
+  namespace: lynq-system
 spec:
   source:
     type: mysql
@@ -110,16 +110,16 @@ spec:
     deploymentStatus: deployment_status
 ```
 
-## TenantTemplate
+## LynqForm
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: blue-green-app
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: blue-green-tenants
+  registryId: blue-green-nodes
 
   deployments:
     # Blue Deployment
@@ -296,7 +296,7 @@ SET green_version = 'v2.0.0',
 WHERE tenant_id = 'acme-corp';
 ```
 
-Tenant Operator automatically updates green deployment with new version.
+Lynq automatically updates green deployment with new version.
 
 ### Step 2: Test Inactive Environment
 
@@ -320,7 +320,7 @@ SET active_color = 'green',
 WHERE tenant_id = 'acme-corp';
 ```
 
-Tenant Operator updates Service selector from `color: blue` to `color: green`. Traffic instantly switches.
+Lynq updates Service selector from `color: blue` to `color: green`. Traffic instantly switches.
 
 ### Step 4: Rollback (if needed)
 
@@ -345,17 +345,17 @@ WHERE tenant_id = 'acme-corp';
 
 ```promql
 # Track active deployment color per tenant
-tenant_deployment_color{tenant="acme-corp"} == 1  # 1=blue, 2=green
+lynqnode_deployment_color{lynqnode="acme-corp"} == 1  # 1=blue, 2=green
 
 # Monitor deployment status
-tenant_deployment_status{status="deploying"}
+lynqnode_deployment_status{status="deploying"}
 
 # Alert on prolonged deployment
 ALERT DeploymentStuck
   FOR 30m
-  WHERE tenant_deployment_status{status="deploying"} == 1
+  WHERE lynqnode_deployment_status{status="deploying"} == 1
   ANNOTATIONS {
-    summary = "Deployment stuck for tenant {{ $labels.tenant }}"
+    summary = "Deployment stuck for tenant {{ $labels.lynqnode }}"
   }
 ```
 

@@ -57,13 +57,13 @@ CREATE TABLE tenants (
 Pass feature flags as environment variables and let the application enable/disable features:
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: base-app
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: production-tenants
+  registryId: production-nodes
 
   deployments:
     - id: main-app
@@ -119,7 +119,7 @@ spec:
 
 **Benefits:**
 - Simple and efficient
-- All tenants get same deployment
+- All nodes get same deployment
 - Features enabled/disabled at application level
 - No infrastructure changes needed
 
@@ -132,27 +132,27 @@ For expensive features (like AI assistants with GPU), use database views and sep
 ### Database Views
 
 ```sql
--- Base view for all active tenants
+-- Base view for all active nodes
 CREATE OR REPLACE VIEW tenants_active AS
 SELECT * FROM tenants WHERE is_active = TRUE;
 
--- View for tenants with AI assistant enabled
+-- View for nodes with AI assistant enabled
 CREATE OR REPLACE VIEW tenants_with_ai AS
 SELECT * FROM tenants WHERE is_active = TRUE AND feature_ai_assistant = TRUE;
 
--- View for tenants with webhook workers
+-- View for nodes with webhook workers
 CREATE OR REPLACE VIEW tenants_with_webhooks AS
 SELECT * FROM tenants WHERE is_active = TRUE AND feature_webhooks = TRUE;
 ```
 
-### TenantRegistry for AI Assistant
+### LynqHub for AI Assistant
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: tenants-with-ai
-  namespace: tenant-operator-system
+  name: nodes-with-ai
+  namespace: lynq-system
 spec:
   source:
     type: mysql
@@ -165,7 +165,7 @@ spec:
       passwordRef:
         name: mysql-credentials
         key: password
-      table: tenants_with_ai  # View that filters AI-enabled tenants
+      table: tenants_with_ai  # View that filters AI-enabled nodes
 
   valueMappings:
     uid: tenant_id
@@ -176,16 +176,16 @@ spec:
     featureConfig: feature_config
 ```
 
-### TenantTemplate for AI Assistant
+### LynqForm for AI Assistant
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: ai-assistant
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: tenants-with-ai  # References filtered registry
+  registryId: nodes-with-ai  # References filtered registry
 
   deployments:
     - id: ai-assistant
@@ -240,7 +240,7 @@ spec:
 ```
 
 **Benefits:**
-- Resource efficiency: Only tenants with enabled features consume resources
+- Resource efficiency: Only nodes with enabled features consume resources
 - Cost optimization: GPU/expensive resources only allocated when needed
 - Automatic cleanup: Disabling feature in DB automatically removes infrastructure
 - Independent scaling: Feature-specific resources scaled separately
@@ -259,7 +259,7 @@ SET feature_sso = TRUE,
 WHERE tenant_id = 'acme-corp';
 ```
 
-Tenant Operator:
+Lynq:
 1. Updates main-app Deployment with new environment variables
 2. Kubernetes rolls out the updated pods automatically
 3. Application detects `FEATURE_SSO=true` and enables SSO
@@ -275,7 +275,7 @@ WHERE tenant_id = 'acme-corp';
 ```
 
 Since the database view `tenants_with_ai` filters on `feature_ai_assistant = TRUE`:
-1. Registry `tenants-with-ai` syncs and detects new tenant
+1. Registry nodes-with-ai syncs and detects new node
 2. Creates Tenant CR `acme-corp-ai-assistant`
 3. Deploys AI assistant Deployment + Service with GPU
 4. Marks Tenant as Ready once all resources are up
@@ -298,7 +298,7 @@ SET feature_webhooks = TRUE
 WHERE RAND() < 0.1 AND plan_type = 'pro';
 ```
 
-This triggers creation of webhook worker deployments only for those 10% of tenants.
+This triggers creation of webhook worker deployments only for those 10% of nodes.
 
 ## Automatic Cleanup on Feature Disable
 
@@ -319,8 +319,8 @@ UPDATE tenants SET feature_ai_assistant = FALSE WHERE tenant_id = 'acme-corp';
 ```
 
 - Tenant `acme-corp` no longer appears in `tenants_with_ai` view
-- Registry `tenants-with-ai` syncs and detects tenant removal
-- Tenant Operator deletes Tenant CR `acme-corp-ai-assistant`
+- Registry nodes-with-ai syncs and detects node removal
+- Lynq deletes Tenant CR `acme-corp-ai-assistant`
 - AI assistant Deployment + Service automatically garbage collected
 - GPU resources freed
 

@@ -255,7 +255,7 @@ Automatically.
 
 <div class="hero-actions">
 <a href="/quickstart" class="hero-action brand">Get Started</a>
-<a href="https://github.com/kubernetes-tenants/tenant-operator" class="hero-action alt" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+<a href="https://github.com/k8s-lynq/lynq" class="hero-action alt" target="_blank" rel="noopener noreferrer">View on GitHub</a>
 </div>
 
 <div class="hero-diagram">
@@ -264,7 +264,7 @@ Automatically.
 </div>
 </div>
 
-## Why Tenant Operator?
+## Why Lynq?
 
 <ComparisonSection />
 
@@ -320,7 +320,7 @@ Get Started in 5 Minutes →
 <HowItWorksDiagram />
 
 ::: tip 💡 Interactive
-Click **TenantRegistry** and **TenantTemplate** to see the YAML, or click database rows to toggle tenants
+Click **LynqHub** and **LynqForm** to see the YAML, or click database rows to toggle nodes
 :::
 
 
@@ -329,7 +329,7 @@ Click **TenantRegistry** and **TenantTemplate** to see the YAML, or click databa
     <div style="font-size: 2.5rem; margin-bottom: 0.75rem">1️⃣</div>
     <h3 style="margin: 0.5rem 0 0.75rem">Connect Your Data</h3>
     <p style="margin: 0; color: var(--vp-c-text-2); font-size: 0.95rem; line-height: 1.6">
-      Point to your MySQL database where tenant information lives. The operator reads active tenants automatically.
+      Point to your MySQL database where tenant information lives. The operator reads active nodes automatically.
     </p>
   </div>
 
@@ -337,7 +337,7 @@ Click **TenantRegistry** and **TenantTemplate** to see the YAML, or click databa
     <div style="font-size: 2.5rem; margin-bottom: 0.75rem">2️⃣</div>
     <h3 style="margin: 0.5rem 0 0.75rem">Define Your Template</h3>
     <p style="margin: 0; color: var(--vp-c-text-2); font-size: 0.95rem; line-height: 1.6">
-      Write one template describing what each tenant needs: deployments, services, ingresses, and any custom resources.
+      Write one template describing what each node needs: deployments, services, ingresses, and any custom resources.
     </p>
   </div>
 
@@ -475,7 +475,7 @@ Follow the [Quick Start Guide](/quickstart) to see this in action with a working
   <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px">
     <h3 style="margin: 0 0 0.75rem">📦 GitHub Repository</h3>
     <p style="margin: 0 0 0.5rem">
-      <a href="https://github.com/kubernetes-tenants/tenant-operator" target="_blank" rel="noopener noreferrer">kubernetes-tenants/tenant-operator</a>
+      <a href="https://github.com/k8s-lynq/lynq" target="_blank" rel="noopener noreferrer">k8s-lynq/lynq</a>
     </p>
     <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2)">
       Source code, releases, and project roadmap
@@ -485,7 +485,7 @@ Follow the [Quick Start Guide](/quickstart) to see this in action with a working
   <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px">
     <h3 style="margin: 0 0 0.75rem">🐛 Issue Tracker</h3>
     <p style="margin: 0 0 0.5rem">
-      <a href="https://github.com/kubernetes-tenants/tenant-operator/issues" target="_blank" rel="noopener noreferrer">Report Issues</a>
+      <a href="https://github.com/k8s-lynq/lynq/issues" target="_blank" rel="noopener noreferrer">Report Issues</a>
     </p>
     <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2)">
       Bug reports, feature requests, and discussions

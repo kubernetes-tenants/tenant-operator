@@ -2,52 +2,52 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: {{ include "tenant-operator.validatingWebhookName" . }}
+  name: {{ include "lynq-operator.validatingWebhookName" . }}
   labels:
-    {{- include "tenant-operator.labels" . | nindent 4 }}
+    {{- include "lynq-operator.labels" . | nindent 4 }}
   {{- if .Values.certManager.enabled }}
   annotations:
-    cert-manager.io/inject-ca-from: {{ include "tenant-operator.namespace" . }}/{{ include "tenant-operator.webhookCertificateName" . }}
+    cert-manager.io/inject-ca-from: {{ include "lynq-operator.namespace" . }}/{{ include "lynq-operator.webhookCertificateName" . }}
   {{- end }}
 webhooks:
-- name: vtenantregistry.kb.io
+- name: vlynqhub.kb.io
   admissionReviewVersions:
   - v1
   clientConfig:
     service:
-      name: {{ include "tenant-operator.webhookServiceName" . }}
-      namespace: {{ include "tenant-operator.namespace" . }}
-      path: /validate-operator-kubernetes-tenants-org-v1-tenantregistry
+      name: {{ include "lynq-operator.webhookServiceName" . }}
+      namespace: {{ include "lynq-operator.namespace" . }}
+      path: /validate-operator-lynq-sh-v1-lynqhub
   failurePolicy: Fail
   rules:
   - apiGroups:
-    - operator.kubernetes-tenants.org
+    - operator.lynq.sh
     apiVersions:
     - v1
     operations:
     - CREATE
     - UPDATE
     resources:
-    - tenantregistries
+    - lynqhubs
   sideEffects: None
-- name: vtenanttemplate.kb.io
+- name: vlynqform.kb.io
   admissionReviewVersions:
   - v1
   clientConfig:
     service:
-      name: {{ include "tenant-operator.webhookServiceName" . }}
-      namespace: {{ include "tenant-operator.namespace" . }}
-      path: /validate-operator-kubernetes-tenants-org-v1-tenanttemplate
+      name: {{ include "lynq-operator.webhookServiceName" . }}
+      namespace: {{ include "lynq-operator.namespace" . }}
+      path: /validate-operator-lynq-sh-v1-lynqform
   failurePolicy: Fail
   rules:
   - apiGroups:
-    - operator.kubernetes-tenants.org
+    - operator.lynq.sh
     apiVersions:
     - v1
     operations:
     - CREATE
     - UPDATE
     resources:
-    - tenanttemplates
+    - lynqforms
   sideEffects: None
 {{- end }}

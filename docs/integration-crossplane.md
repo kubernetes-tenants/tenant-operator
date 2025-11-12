@@ -1,12 +1,12 @@
 # Crossplane Integration Guide
 
-This guide shows how to integrate Tenant Operator with Crossplane for provisioning cloud resources (AWS, GCP, Azure) per tenant using a Kubernetes-native approach.
+This guide shows how to integrate Lynq with Crossplane for provisioning cloud resources (AWS, GCP, Azure) per tenant using a Kubernetes-native approach.
 
 [[toc]]
 
 ## Overview
 
-**Crossplane** is a CNCF project that extends Kubernetes to provision and manage cloud infrastructure as Kubernetes Custom Resources. When integrated with Tenant Operator, each tenant can automatically provision **declarative cloud resources** using the Kubernetes API.
+**Crossplane** is a CNCF project that extends Kubernetes to provision and manage cloud infrastructure as Kubernetes Custom Resources. When integrated with Lynq, each node can automatically provision **declarative cloud resources** using the Kubernetes API.
 
 ## How It Works
 
@@ -14,8 +14,8 @@ This guide shows how to integrate Tenant Operator with Crossplane for provisioni
 
 ```mermaid
 flowchart LR
-    subgraph TO["Tenant Operator"]
-        Template["TenantTemplate<br/>(defines what to create)"]
+    subgraph TO["Lynq"]
+        Template["LynqForm<br/>(defines what to create)"]
         Tenant["Tenant CR<br/>(per tenant)"]
     end
 
@@ -42,21 +42,21 @@ flowchart LR
 ```
 
 **Key Points:**
-- **Tenant Operator** manages Tenant CRs (one per tenant)
+- **Lynq** manages Tenant CRs (one per tenant)
 - **Tenant CR** creates both Crossplane Managed Resources AND native K8s resources
 - **Crossplane** watches Managed Resources and provisions actual cloud infrastructure
-- **Two operators work independently**: Tenant Operator orchestrates, Crossplane provisions
+- **Two operators work independently**: Lynq orchestrates, Crossplane provisions
 
 ### Example Flow
 
 ```mermaid
 sequenceDiagram
     participant T as Tenant CR
-    participant TO as Tenant Operator
+    participant TO as Lynq
     participant XP as Crossplane
     participant AWS as AWS
 
-    Note over T: tenant-alpha created
+    Note over T: node-alpha created
 
     TO->>XP: Create Database CR
     TO->>XP: Create Role CR
@@ -107,7 +107,7 @@ sequenceDiagram
 
 ::: info Requirements
 - Kubernetes cluster v1.20+
-- Tenant Operator installed
+- Lynq installed
 - Crossplane v1.14+ installed
 - AWS/GCP/Azure account with credentials
 :::
@@ -258,11 +258,11 @@ spec:
   sslMode: require
 ```
 
-### Step 2: TenantTemplate with Full Infrastructure
+### Step 2: LynqForm with Full Infrastructure
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: production-app
   namespace: default
@@ -460,7 +460,7 @@ spec:
     # Production Recommendations:
     # 1. Application should fallback to direct S3 URLs if CDN is unavailable
     # 2. Implement CDN health checks and auto-reload when ready
-    # 3. Or use waitForReady=true if you prefer fully-ready tenants (longer wait)
+    # 3. Or use waitForReady=true if you prefer fully-ready nodes (longer wait)
     # 4. Monitor CloudFront status: kubectl describe distribution {{ .uid }}-cdn
     waitForReady: false
     timeoutSeconds: 1800  # Max wait time if changed to waitForReady=true
@@ -662,40 +662,40 @@ When a tenant is created, the following resources are automatically provisioned:
 **Full Infrastructure Ready**: ~20-35 minutes (including CloudFront)
 
 ::: tip Fast Tenant Onboarding
-With `waitForReady=false` on CloudFront, tenants become operational in ~5 minutes instead of 30+ minutes. The CDN deploys asynchronously in the background and automatically becomes available when ready.
+With `waitForReady=false` on CloudFront, nodes become operational in ~5 minutes instead of 30+ minutes. The CDN deploys asynchronously in the background and automatically becomes available when ready.
 :::
 
 ### Verify Deployment
 
 ```bash
 # 1. Check Tenant status (should be Ready in ~5 minutes)
-kubectl get tenant tenant-alpha -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+kubectl get lynqnode node-alpha -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
 
 # 2. Check all Crossplane resources
-kubectl get database,role,grant,bucket,cloudfront -l tenant-operator.kubernetes-tenants.org/tenant-id=tenant-alpha
+kubectl get database,role,grant,bucket,cloudfront -l lynq.lynq.sh/node-id=node-alpha
 
 # 3. Check CloudFront distribution status (takes 15-30 min)
-kubectl get distribution tenant-alpha-cdn -o jsonpath='{.status.atProvider.status}'
+kubectl get distribution node-alpha-cdn -o jsonpath='{.status.atProvider.status}'
 # Expected: "InProgress" -> "Deployed" (when ready)
 
 # 4. Monitor CloudFront deployment progress
-kubectl describe distribution tenant-alpha-cdn | grep -A 5 "Status:"
+kubectl describe distribution node-alpha-cdn | grep -A 5 "Status:"
 
 # 5. Get CDN URL (available once CloudFront is deployed)
-kubectl get secret tenant-alpha-cdn-outputs -o jsonpath='{.data.domain_name}' | base64 -d 2>/dev/null || echo "CDN not ready yet"
+kubectl get secret node-alpha-cdn-outputs -o jsonpath='{.data.domain_name}' | base64 -d 2>/dev/null || echo "CDN not ready yet"
 
 # 6. Check deployments (should be running immediately)
-kubectl get deployment -l app=tenant-alpha-backend
-kubectl get deployment -l app=tenant-alpha-frontend
+kubectl get deployment -l app=node-alpha-backend
+kubectl get deployment -l app=node-alpha-frontend
 
 # 7. Check database credentials
-kubectl get secret tenant-alpha-db-creds
+kubectl get secret node-alpha-db-creds
 
 # 8. Test application (works immediately with S3 fallback)
-curl https://$(kubectl get ingress tenant-alpha-ingress -o jsonpath='{.spec.rules[0].host}')
+curl https://$(kubectl get ingress node-alpha-ingress -o jsonpath='{.spec.rules[0].host}')
 
 # 9. Watch CloudFront status until ready (optional)
-kubectl get distribution tenant-alpha-cdn -w
+kubectl get distribution node-alpha-cdn -w
 ```
 
 ::: info CloudFront Deployment Timeline
@@ -747,7 +747,7 @@ manifests:
 
 ### Example 2: Dedicated RDS Instance (Premium Tenants)
 
-For high-value tenants requiring full database isolation:
+For high-value nodes requiring full database isolation:
 
 ```yaml
 manifests:
@@ -898,7 +898,7 @@ spec:
   forProvider:
     tags:
       tenant-id: "{{ .uid }}"
-      managed-by: "tenant-operator"
+      managed-by: "lynq"
       environment: "production"
 ```
 
@@ -928,17 +928,17 @@ With `waitForReady=false`, this should NOT block tenant provisioning. If it does
 
 1. Verify CloudFront resource has `waitForReady: false`:
    ```bash
-   kubectl get tenant tenant-alpha -o yaml | grep -A 10 cloudfront-distribution
+   kubectl get lynqnode node-alpha -o yaml | grep -A 10 cloudfront-distribution
    ```
 
 2. Check CloudFront status (should be "InProgress"):
    ```bash
-   kubectl get distribution tenant-alpha-cdn -o jsonpath='{.status.atProvider.status}'
+   kubectl get distribution node-alpha-cdn -o jsonpath='{.status.atProvider.status}'
    ```
 
 3. Monitor deployment progress:
    ```bash
-   kubectl describe distribution tenant-alpha-cdn | grep -A 10 "Status"
+   kubectl describe distribution node-alpha-cdn | grep -A 10 "Status"
    ```
 
 4. Check AWS CloudFront console if stuck for >45 minutes
@@ -955,17 +955,17 @@ CloudFront takes 15-30 minutes. Your application should work immediately using S
 
 1. Verify database created:
    ```bash
-   kubectl get database tenant-alpha-db
+   kubectl get database node-alpha-db
    ```
 
 2. Check credentials secret:
    ```bash
-   kubectl get secret tenant-alpha-db-creds -o yaml
+   kubectl get secret node-alpha-db-creds -o yaml
    ```
 
 3. Test connection from backend pod:
    ```bash
-   kubectl exec -it deploy/tenant-alpha-backend -- \
+   kubectl exec -it deploy/node-alpha-backend -- \
      psql -h $DB_HOST -U $DB_USER -d $DB_NAME
    ```
 
@@ -983,7 +983,7 @@ CloudFront takes 15-30 minutes. Your application should work immediately using S
 
 3. Test S3 access:
    ```bash
-   aws s3 ls s3://tenant-alpha-assets-xyz
+   aws s3 ls s3://node-alpha-assets-xyz
    ```
 
 ### Crossplane Provider Not Healthy
@@ -1034,4 +1034,4 @@ kubectl delete pod -n crossplane-system -l pkg.crossplane.io/provider=provider-a
 - [Upbound Provider Marketplace](https://marketplace.upbound.io/)
 - [Terraform Operator Integration](integration-terraform-operator.md)
 - [ExternalDNS Integration](integration-external-dns.md)
-- [Tenant Operator Templates Guide](templates.md)
+- [Lynq Templates Guide](templates.md)

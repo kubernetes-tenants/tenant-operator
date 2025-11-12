@@ -77,7 +77,7 @@
           "refId": "A"
         }
       ],
-      "title": "Total Desired Tenants",
+      "title": "Total Desired Nodes",
       "type": "stat"
     },
     {
@@ -136,7 +136,7 @@
           "refId": "A"
         }
       ],
-      "title": "Total Ready Tenants",
+      "title": "Total Ready Nodes",
       "type": "stat"
     },
     {
@@ -199,7 +199,7 @@
           "refId": "A"
         }
       ],
-      "title": "Total Failed Tenants",
+      "title": "Total Failed Nodes",
       "type": "stat"
     },
     {
@@ -262,7 +262,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(tenant_resources_conflicted)",
+          "expr": "sum(lynqnode_resources_conflicted)",
           "refId": "A"
         }
       ],
@@ -355,7 +355,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.50, rate(tenant_reconcile_duration_seconds_bucket[5m]))",
+          "expr": "histogram_quantile(0.50, rate(lynqnode_reconcile_duration_seconds_bucket[5m]))",
           "legendFormat": "P50",
           "refId": "A"
         },
@@ -364,7 +364,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m]))",
+          "expr": "histogram_quantile(0.95, rate(lynqnode_reconcile_duration_seconds_bucket[5m]))",
           "legendFormat": "P95",
           "refId": "B"
         },
@@ -373,7 +373,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, rate(tenant_reconcile_duration_seconds_bucket[5m]))",
+          "expr": "histogram_quantile(0.99, rate(lynqnode_reconcile_duration_seconds_bucket[5m]))",
           "legendFormat": "P99",
           "refId": "C"
         }
@@ -463,7 +463,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(tenant_reconcile_duration_seconds_count{result=\"success\"}[5m])",
+          "expr": "rate(lynqnode_reconcile_duration_seconds_count{result=\"success\"}[5m])",
           "legendFormat": "Success",
           "refId": "A"
         },
@@ -472,7 +472,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(tenant_reconcile_duration_seconds_count{result=\"error\"}[5m])",
+          "expr": "rate(lynqnode_reconcile_duration_seconds_count{result=\"error\"}[5m])",
           "legendFormat": "Error",
           "refId": "B"
         }
@@ -539,7 +539,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(rate(tenant_reconcile_duration_seconds_count{result=\"error\"}[5m]) / rate(tenant_reconcile_duration_seconds_count[5m])) or vector(0)",
+          "expr": "(rate(lynqnode_reconcile_duration_seconds_count{result=\"error\"}[5m]) / rate(lynqnode_reconcile_duration_seconds_count[5m])) or vector(0)",
           "refId": "A"
         }
       ],
@@ -640,14 +640,14 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "tenant_condition_status{type=\"Ready\"}",
+          "expr": "lynqnode_condition_status{type=\"Ready\"}",
           "format": "table",
           "instant": true,
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Tenant Ready Status",
+      "title": "LynqNode Ready Status",
       "transformations": [
         {
           "id": "organize",
@@ -667,7 +667,7 @@
             "indexByName": {},
             "renameByName": {
               "Value": "Status",
-              "tenant": "Tenant",
+              "lynqnode": "LynqNode",
               "namespace": "Namespace"
             }
           }
@@ -760,14 +760,14 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max(tenant_degraded_status) by (tenant, namespace, reason) > 0",
+          "expr": "max(lynqnode_degraded_status) by (tenant, namespace, reason) > 0",
           "format": "table",
           "instant": true,
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Degraded Tenants",
+      "title": "Degraded Nodes",
       "transformations": [
         {
           "id": "organize",
@@ -786,7 +786,7 @@
             "indexByName": {},
             "renameByName": {
               "Value": "Degraded",
-              "tenant": "Tenant",
+              "lynqnode": "LynqNode",
               "namespace": "Namespace",
               "reason": "Reason"
             }
@@ -877,8 +877,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "tenant_resources_desired",
-          "legendFormat": "{{tenant}} - Desired",
+          "expr": "lynqnode_resources_desired",
+          "legendFormat": "{{lynqnode}} - Desired",
           "refId": "A"
         },
         {
@@ -886,8 +886,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "tenant_resources_ready",
-          "legendFormat": "{{tenant}} - Ready",
+          "expr": "lynqnode_resources_ready",
+          "legendFormat": "{{lynqnode}} - Ready",
           "refId": "B"
         },
         {
@@ -895,12 +895,12 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "tenant_resources_failed",
-          "legendFormat": "{{tenant}} - Failed",
+          "expr": "lynqnode_resources_failed",
+          "legendFormat": "{{lynqnode}} - Failed",
           "refId": "C"
         }
       ],
-      "title": "Resource Counts by Tenant",
+      "title": "Resource Counts by Node",
       "type": "timeseries"
     },
     {
@@ -985,12 +985,12 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "tenant_resources_conflicted",
-          "legendFormat": "{{tenant}} ({{namespace}})",
+          "expr": "lynqnode_resources_conflicted",
+          "legendFormat": "{{lynqnode}} ({{namespace}})",
           "refId": "A"
         }
       ],
-      "title": "Conflicted Resources by Tenant",
+      "title": "Conflicted Resources by Node",
       "type": "timeseries"
     },
     {
@@ -1316,12 +1316,12 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(tenant_conflicts_total[5m])",
-          "legendFormat": "{{tenant}} - {{resource_kind}} ({{conflict_policy}})",
+          "expr": "rate(lynqnode_conflicts_total[5m])",
+          "legendFormat": "{{lynqnode}} - {{resource_kind}} ({{conflict_policy}})",
           "refId": "A"
         }
       ],
-      "title": "Conflicts Rate by Tenant",
+      "title": "Conflicts Rate by Node",
       "type": "timeseries"
     },
     {
@@ -1407,7 +1407,7 @@
             "uid": "${datasource}"
           },
           "expr": "workqueue_depth{name=\"tenant\"}",
-          "legendFormat": "Tenant Queue",
+          "legendFormat": "LynqNode Queue",
           "refId": "A"
         },
         {
@@ -1435,7 +1435,7 @@
   ],
   "refresh": "30s",
   "schemaVersion": 39,
-  "tags": ["tenant-operator", "kubernetes"],
+  "tags": ["lynq-operator", "kubernetes"],
   "templating": {
     "list": [
       {
@@ -1464,8 +1464,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Tenant Operator",
-  "uid": "tenant-operator",
+  "title": "Lynq Operator",
+  "uid": "lynq-operator",
   "version": 2,
   "weekStart": ""
 }

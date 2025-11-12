@@ -1,12 +1,12 @@
 # ExternalDNS Integration Guide
 
-This guide shows how to integrate Tenant Operator with ExternalDNS for automatic DNS record management.
+This guide shows how to integrate Lynq with ExternalDNS for automatic DNS record management.
 
 [[toc]]
 
 ## Overview
 
-**ExternalDNS** synchronizes exposed Kubernetes Services and Ingresses with DNS providers like AWS Route53, Google Cloud DNS, Cloudflare, and more. When integrated with Tenant Operator, each tenant's DNS records are automatically created and deleted as tenants are provisioned.
+**ExternalDNS** synchronizes exposed Kubernetes Services and Ingresses with DNS providers like AWS Route53, Google Cloud DNS, Cloudflare, and more. When integrated with Lynq, each node's DNS records are automatically created and deleted as nodes are provisioned.
 
 ```mermaid
 flowchart LR
@@ -30,14 +30,14 @@ flowchart LR
 
 - **Multi-tenant SaaS**: Automatic subdomain creation per tenant (e.g., `tenant-a.example.com`, `tenant-b.example.com`)
 - **Dynamic environments**: DNS records follow tenant lifecycle (created/deleted with tenant)
-- **Multiple domains**: Different tenants on different domains or subdomains
+- **Multiple domains**: Different nodes on different domains or subdomains
 - **SSL/TLS automation**: Combined with cert-manager for automatic certificate provisioning
 
 ## Prerequisites
 
 ::: info Requirements
 - Kubernetes cluster v1.11+
-- Tenant Operator installed and reconciling
+- Lynq installed and reconciling
 - DNS provider account (AWS Route53, Cloudflare, etc.)
 - DNS zone created in your provider
 :::
@@ -87,15 +87,15 @@ kubectl get pods -n kube-system -l app.kubernetes.io/name=external-dns
 kubectl logs -n kube-system -l app.kubernetes.io/name=external-dns
 ```
 
-## Integration with Tenant Operator
+## Integration with Lynq
 
 ### Basic Example: Ingress with Automatic DNS
 
-**TenantTemplate with ExternalDNS annotations:**
+**LynqForm with ExternalDNS annotations:**
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: web-app-with-dns
   namespace: default
@@ -165,7 +165,7 @@ spec:
 ```
 
 **What happens:**
-1. Tenant Operator creates Ingress for each tenant (e.g., `acme-corp-ingress`)
+1. Lynq creates Ingress for each node (e.g., `acme-corp-ingress`)
 2. ExternalDNS detects Ingress with `external-dns.alpha.kubernetes.io/hostname` annotation
 3. ExternalDNS creates DNS A/AAAA record pointing to Ingress LoadBalancer IP
 4. When tenant is deleted, DNS record is automatically removed
@@ -201,7 +201,7 @@ services:
 
 ### Workflow
 
-1. **Tenant Created**: TenantRegistry creates Tenant CR from database
+1. **Tenant Created**: LynqHub creates Tenant CR from database
 2. **Resources Applied**: Tenant controller creates Ingress/Service with ExternalDNS annotations
 3. **IP Assignment**: Kubernetes assigns LoadBalancer IP or Ingress IP
 4. **DNS Sync**: ExternalDNS detects annotated resource and creates DNS record
@@ -212,7 +212,7 @@ services:
 
 ```mermaid
 sequenceDiagram
-    participant TO as Tenant Operator
+    participant TO as Lynq
     participant K8s as Kubernetes API
     participant ED as ExternalDNS
     participant DNS as DNS Provider
@@ -268,8 +268,8 @@ annotations:
 Support different domains per tenant using template variables:
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: multi-domain-template
 spec:
@@ -328,12 +328,12 @@ gamma-co     https://custom.domain.net      1
 
 2. **Verify Ingress has IP:**
    ```bash
-   kubectl get ingress <tenant-ingress> -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+   kubectl get ingress <lynqnode-ingress> -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
    ```
 
 3. **Check annotation syntax:**
    ```bash
-   kubectl get ingress <tenant-ingress> -o yaml | grep external-dns
+   kubectl get ingress <lynqnode-ingress> -o yaml | grep external-dns
    ```
 
 4. **Verify domain filter:**
@@ -386,10 +386,10 @@ gamma-co     https://custom.domain.net      1
 Use dedicated DNS zones for tenant subdomains:
 
 ```bash
-# Production tenants
+# Production nodes
 --domain-filter=example.com
 
-# Staging tenants
+# Staging nodes
 --domain-filter=staging.example.com
 ```
 
@@ -452,6 +452,6 @@ ingresses:
 
 - [ExternalDNS Documentation](https://github.com/kubernetes-sigs/external-dns)
 - [ExternalDNS Provider List](https://github.com/kubernetes-sigs/external-dns#status-of-providers)
-- [Tenant Operator Templates Guide](templates.md)
+- [Lynq Templates Guide](templates.md)
 - [cert-manager Integration](https://cert-manager.io/docs/)
 - [Integration with Terraform Operator](integration-terraform-operator.md)

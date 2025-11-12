@@ -1,6 +1,6 @@
 # Monitoring & Observability Guide
 
-Comprehensive guide for monitoring Tenant Operator with Prometheus, Grafana, and Kubernetes events.
+Comprehensive guide for monitoring Lynq with Prometheus, Grafana, and Kubernetes events.
 
 [[toc]]
 
@@ -9,15 +9,15 @@ Comprehensive guide for monitoring Tenant Operator with Prometheus, Grafana, and
 ### Accessing Metrics
 
 ::: info Endpoint
-Tenant Operator exposes Prometheus metrics at `:8443/metrics` over HTTPS.
+Lynq exposes Prometheus metrics at `:8443/metrics` over HTTPS.
 :::
 
 **Port-forward for local testing:**
 
 ```bash
 # Port-forward to metrics endpoint
-kubectl port-forward -n tenant-operator-system \
-  deployment/tenant-operator-controller-manager 8443:8443
+kubectl port-forward -n lynq-system \
+  deployment/lynq-controller-manager 8443:8443
 
 # Access metrics (requires valid TLS client or use --insecure)
 curl -k https://localhost:8443/metrics
@@ -27,10 +27,10 @@ curl -k https://localhost:8443/metrics
 
 ```bash
 # Check if metrics port is exposed
-kubectl get svc -n tenant-operator-system tenant-operator-controller-manager-metrics-service
+kubectl get svc -n lynq-system lynq-controller-manager-metrics-service
 
 # Check if ServiceMonitor is deployed (requires prometheus-operator)
-kubectl get servicemonitor -n tenant-operator-system
+kubectl get servicemonitor -n lynq-system
 ```
 
 ### Enabling ServiceMonitor
@@ -49,23 +49,23 @@ kubectl apply -k config/default
 ```
 
 ::: tip Verify scrape job
-After redeploying, confirm that a `ServiceMonitor` named `tenant-operator-controller-manager` appears and that Prometheus discovers the target.
+After redeploying, confirm that a `ServiceMonitor` named `lynq-controller-manager` appears and that Prometheus discovers the target.
 :::
 
 ## Metrics Overview
 
-Tenant Operator exposes 12 custom Prometheus metrics organized into four categories:
+Lynq exposes 12 custom Prometheus metrics organized into four categories:
 
 ### Metrics Summary
 
 | Metric | Type | Description | Key Labels |
 |--------|------|-------------|------------|
 | **Controller Metrics** |
-| `tenant_reconcile_duration_seconds` | Histogram | Tenant reconciliation duration | `result` |
+| `lynqnode_reconcile_duration_seconds` | Histogram | Tenant reconciliation duration | `result` |
 | **Resource Metrics** |
-| `tenant_resources_desired` | Gauge | Desired resource count per tenant | `tenant`, `namespace` |
-| `tenant_resources_ready` | Gauge | Ready resource count per tenant | `tenant`, `namespace` |
-| `tenant_resources_failed` | Gauge | Failed resource count per tenant | `tenant`, `namespace` |
+| `lynqnode_resources_desired` | Gauge | Desired resource count per tenant | `tenant`, `namespace` |
+| `lynqnode_resources_ready` | Gauge | Ready resource count per tenant | `tenant`, `namespace` |
+| `lynqnode_resources_failed` | Gauge | Failed resource count per tenant | `tenant`, `namespace` |
 | **Registry Metrics** |
 | `registry_desired` | Gauge | Desired tenant CRs for a registry | `registry`, `namespace` |
 | `registry_ready` | Gauge | Ready tenant CRs for a registry | `registry`, `namespace` |
@@ -73,10 +73,10 @@ Tenant Operator exposes 12 custom Prometheus metrics organized into four categor
 | **Apply Metrics** |
 | `apply_attempts_total` | Counter | Resource apply attempts | `kind`, `result`, `conflict_policy` |
 | **Status Metrics** |
-| `tenant_condition_status` | Gauge | Tenant condition status (0=False, 1=True, 2=Unknown) | `tenant`, `namespace`, `type` |
-| `tenant_conflicts_total` | Counter | Total resource conflicts | `tenant`, `namespace`, `resource_kind`, `conflict_policy` |
-| `tenant_resources_conflicted` | Gauge | Current resources in conflict state | `tenant`, `namespace` |
-| `tenant_degraded_status` | Gauge | Tenant degraded status (0=Not degraded, 1=Degraded) | `tenant`, `namespace`, `reason` |
+| `lynqnode_condition_status` | Gauge | Tenant condition status (0=False, 1=True, 2=Unknown) | `tenant`, `namespace`, `type` |
+| `lynqnode_conflicts_total` | Counter | Total resource conflicts | `tenant`, `namespace`, `resource_kind`, `conflict_policy` |
+| `lynqnode_resources_conflicted` | Gauge | Current resources in conflict state | `tenant`, `namespace` |
+| `lynqnode_degraded_status` | Gauge | Tenant degraded status (0=Not degraded, 1=Degraded) | `tenant`, `namespace`, `reason` |
 
 ::: tip Detailed Queries
 For comprehensive PromQL query examples, see [Prometheus Query Examples](prometheus-queries.md).
@@ -86,26 +86,26 @@ For comprehensive PromQL query examples, see [Prometheus Query Examples](prometh
 
 **Tenant Health:**
 ```promql
-# Ready tenants
-tenant_condition_status{type="Ready"} == 1
+# Ready nodes
+lynqnode_condition_status{type="Ready"} == 1
 
-# Degraded tenants
-tenant_degraded_status == 1
+# Degraded nodes
+lynqnode_degraded_status == 1
 
 # Resource readiness percentage
-(tenant_resources_ready / tenant_resources_desired) * 100
+(lynqnode_resources_ready / lynqnode_resources_desired) * 100
 ```
 
 **Performance:**
 ```promql
 # P95 reconciliation latency
-histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m]))
+histogram_quantile(0.95, rate(lynqnode_reconcile_duration_seconds_bucket[5m]))
 
 # Reconciliation rate
-rate(tenant_reconcile_duration_seconds_count[5m])
+rate(lynqnode_reconcile_duration_seconds_count[5m])
 
 # Error rate
-rate(tenant_reconcile_duration_seconds{result="error"}[5m])
+rate(lynqnode_reconcile_duration_seconds{result="error"}[5m])
 ```
 
 **Registry Health:**
@@ -113,17 +113,17 @@ rate(tenant_reconcile_duration_seconds{result="error"}[5m])
 # Registry health percentage
 (registry_ready / registry_desired) * 100
 
-# Total desired tenants
+# Total desired nodes
 sum(registry_desired)
 ```
 
 **Conflicts:**
 ```promql
 # Current conflicts
-sum(tenant_resources_conflicted)
+sum(lynqnode_resources_conflicted)
 
 # Conflict rate
-rate(tenant_conflicts_total[5m])
+rate(lynqnode_conflicts_total[5m])
 ```
 
 ::: tip Complete Query Reference
@@ -152,13 +152,13 @@ The 30-second requeue interval means you'll see:
 
 ```promql
 # Reconciliation frequency (should show ~2 per minute per tenant in v1.1.4+)
-rate(tenant_reconcile_duration_seconds_count[5m])
+rate(lynqnode_reconcile_duration_seconds_count[5m])
 
 # P50 latency (should remain low despite faster requeue)
-histogram_quantile(0.50, rate(tenant_reconcile_duration_seconds_bucket[5m]))
+histogram_quantile(0.50, rate(lynqnode_reconcile_duration_seconds_bucket[5m]))
 
 # P95 latency (watch for spikes > 30s)
-histogram_quantile(0.95, rate(tenant_reconcile_duration_seconds_bucket[5m]))
+histogram_quantile(0.95, rate(lynqnode_reconcile_duration_seconds_bucket[5m]))
 ```
 
 **Best Practices:**
@@ -173,13 +173,13 @@ Standard controller-runtime metrics:
 
 ```promql
 # Work queue depth
-workqueue_depth{name="tenant"}
+workqueue_depth{name="lynqnode"}
 
 # Work queue add rate
-rate(workqueue_adds_total{name="tenant"}[5m])
+rate(workqueue_adds_total{name="lynqnode"}[5m])
 
 # Work queue latency
-workqueue_queue_duration_seconds{name="tenant"}
+workqueue_queue_duration_seconds{name="lynqnode"}
 ```
 
 ## Metrics Collection
@@ -202,12 +202,12 @@ The ServiceMonitor configuration is available in `config/prometheus/monitor.yaml
 ```yaml
 # prometheus.yml
 scrape_configs:
-- job_name: 'tenant-operator'
+- job_name: 'lynq'
   kubernetes_sd_configs:
   - role: pod
     namespaces:
       names:
-      - tenant-operator-system
+      - lynq-system
   relabel_configs:
   - source_labels: [__meta_kubernetes_pod_label_control_plane]
     action: keep
@@ -278,19 +278,19 @@ All logs are structured JSON:
 
 ```bash
 # All logs
-kubectl logs -n tenant-operator-system deployment/tenant-operator-controller-manager
+kubectl logs -n lynq-system deployment/lynq-controller-manager
 
 # Follow logs
-kubectl logs -n tenant-operator-system deployment/tenant-operator-controller-manager -f
+kubectl logs -n lynq-system deployment/lynq-controller-manager -f
 
 # Errors only
-kubectl logs -n tenant-operator-system deployment/tenant-operator-controller-manager | grep '"level":"error"'
+kubectl logs -n lynq-system deployment/lynq-controller-manager | grep '"level":"error"'
 
 # Specific tenant
-kubectl logs -n tenant-operator-system deployment/tenant-operator-controller-manager | grep 'acme-prod'
+kubectl logs -n lynq-system deployment/lynq-controller-manager | grep 'acme-prod'
 
 # Reconciliation events
-kubectl logs -n tenant-operator-system deployment/tenant-operator-controller-manager | grep "Reconciliation completed"
+kubectl logs -n lynq-system deployment/lynq-controller-manager | grep "Reconciliation completed"
 ```
 
 ## Events
@@ -301,10 +301,10 @@ Kubernetes events are emitted for key operations.
 
 ```bash
 # All Tenant events
-kubectl get events --all-namespaces --field-selector involvedObject.kind=Tenant
+kubectl get events --all-namespaces --field-selector involvedObject.kind=LynqNode
 
 # Specific Tenant
-kubectl describe tenant <name>
+kubectl describe lynqnode <name>
 
 # Recent events
 kubectl get events --sort-by='.lastTimestamp'
@@ -316,8 +316,8 @@ kubectl get events --sort-by='.lastTimestamp'
 
 - `TemplateApplied`: Template successfully applied
 - `TemplateAppliedComplete`: All resources applied
-- `TenantDeleting`: Tenant deletion started
-- `TenantDeleted`: Tenant deletion completed
+- `LynqNodeDeleting`: Tenant deletion started
+- `LynqNodeDeleted`: Tenant deletion completed
 
 #### Warning Events
 
@@ -326,7 +326,7 @@ kubectl get events --sort-by='.lastTimestamp'
 - `ResourceConflict`: Ownership conflict detected
 - `ReadinessTimeout`: Resource not ready within timeout
 - `DependencyError`: Dependency cycle detected
-- `TenantDeletionFailed`: Tenant deletion failed
+- `LynqNodeDeletionFailed`: Tenant deletion failed
 
 ### Event Examples
 
@@ -339,7 +339,7 @@ ResourceConflict: Resource conflict detected for default/acme-app (Kind: Deploym
 Another controller or user may be managing this resource.
 
 # Deletion
-TenantDeleting: Deleting Tenant 'acme-prod-template' (template: prod-template, uid: acme) -
+LynqNodeDeleting: Deleting Tenant 'acme-prod-template' (template: prod-template, uid: acme) -
 no longer in active dataset. This could be due to: row deletion, activate=false, or template change.
 ```
 
@@ -361,8 +361,8 @@ A comprehensive Grafana dashboard is available at: `config/monitoring/grafana-da
 2. **Reconciliation Rate** - Success vs Error rate
 3. **Error Rate** - Gauge showing current error percentage
 4. **Total Desired Tenants** - Sum across all registries
-5. **Total Ready Tenants** - Healthy tenant count
-6. **Total Failed Tenants** - Failed tenant count
+5. **Total Ready Nodes** - Healthy tenant count
+6. **Total Failed Nodes** - Failed tenant count
 7. **Resource Counts by Tenant** - Stacked area chart per tenant
 8. **Registry Health** - Table showing health percentage per registry
 9. **Apply Rate by Kind** - Apply attempts by resource type
@@ -395,24 +395,24 @@ The alert configuration includes three severity levels:
 | **Info** | 1 alert | Informational - awareness only |
 
 **Critical Alerts:**
-- `TenantDegraded` - Tenant in degraded state
-- `TenantResourcesFailed` - Tenant has failed resources
-- `TenantNotReady` - Tenant not ready for extended period
-- `TenantStatusUnknown` - Tenant condition status unknown
-- `RegistryManyTenantsFailure` - Many tenants failing in a registry
+- `LynqNodeDegraded` - Tenant in degraded state
+- `LynqNodeResourcesFailed` - Tenant has failed resources
+- `LynqNodeNotReady` - Tenant not ready for extended period
+- `LynqNodeStatusUnknown` - Tenant condition status unknown
+- `RegistryManyNodesFailure` - Many nodes failing in a registry
 
 **Warning Alerts:**
-- `TenantResourcesMismatch` - Ready count doesn't match desired
-- `TenantResourcesConflicted` - Resources in conflict state
-- `TenantHighConflictRate` - High rate of conflicts
-- `RegistryTenantsFailure` - Some tenants failing
+- `LynqNodeResourcesMismatch` - Ready count doesn't match desired
+- `LynqNodeResourcesConflicted` - Resources in conflict state
+- `LynqNodeHighConflictRate` - High rate of conflicts
+- `RegistryNodesFailure` - Some nodes failing
 - `RegistrySyncIssues` - Registry sync problems
-- `TenantReconciliationErrors` - High error rate
-- `TenantReconciliationSlow` - Slow reconciliation performance
+- `LynqNodeReconciliationErrors` - High error rate
+- `LynqNodeReconciliationSlow` - Slow reconciliation performance
 - `HighApplyFailureRate` - High apply failure rate
 
 **Info Alerts:**
-- `TenantNewConflictsDetected` - New conflicts detected
+- `LynqNodeNewConflictsDetected` - New conflicts detected
 
 ::: tip Alert Configuration
 For complete alert definitions with thresholds and runbook links, see `config/prometheus/alerts.yaml`.
@@ -423,27 +423,27 @@ For complete alert definitions with thresholds and runbook links, see `config/pr
 **Critical:**
 ```yaml
 # Tenant has failed resources
-- alert: TenantResourcesFailed
-  expr: tenant_resources_failed > 0
+- alert: LynqNodeResourcesFailed
+  expr: lynqnode_resources_failed > 0
   for: 5m
   labels:
     severity: critical
   annotations:
     summary: "Tenant {{ $labels.tenant }} has {{ $value }} failed resource(s)"
-    runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-resources-failed"
+    runbook_url: "https://lynq.sh/runbooks/node-resources-failed"
 ```
 
 **Warning:**
 ```yaml
 # Resources in conflict
-- alert: TenantResourcesConflicted
-  expr: tenant_resources_conflicted > 0
+- alert: LynqNodeResourcesConflicted
+  expr: lynqnode_resources_conflicted > 0
   for: 10m
   labels:
     severity: warning
   annotations:
     summary: "Tenant {{ $labels.tenant }} has resources in conflict"
-    runbook_url: "https://docs.kubernetes-tenants.org/runbooks/tenant-conflicts"
+    runbook_url: "https://lynq.sh/runbooks/node-conflicts"
 ```
 
 ### Alert Routing (AlertManager)
@@ -482,7 +482,7 @@ receivers:
 - name: 'slack'
   slack_configs:
   - api_url: '<slack-webhook>'
-    channel: '#tenant-operator-alerts'
+    channel: '#lynq-alerts'
 ```
 
 ## Best Practices
@@ -535,26 +535,26 @@ Monitor events for:
 
 1. **Check if metrics port is configured:**
    ```bash
-   kubectl get deployment -n tenant-operator-system tenant-operator-controller-manager -o yaml | grep metrics-bind-address
+   kubectl get deployment -n lynq-system lynq-controller-manager -o yaml | grep metrics-bind-address
    ```
 
    Should see: `--metrics-bind-address=:8443`
 
 2. **Check if port is exposed:**
    ```bash
-   kubectl get deployment -n tenant-operator-system tenant-operator-controller-manager -o yaml | grep -A 5 "ports:"
+   kubectl get deployment -n lynq-system lynq-controller-manager -o yaml | grep -A 5 "ports:"
    ```
 
    Should see containerPort 8443.
 
 3. **Check if service exists:**
    ```bash
-   kubectl get svc -n tenant-operator-system tenant-operator-controller-manager-metrics-service
+   kubectl get svc -n lynq-system lynq-controller-manager-metrics-service
    ```
 
 4. **Check operator logs:**
    ```bash
-   kubectl logs -n tenant-operator-system deployment/tenant-operator-controller-manager | grep metrics
+   kubectl logs -n lynq-system deployment/lynq-controller-manager | grep metrics
    ```
 
 ### No Metrics Data
@@ -565,23 +565,23 @@ Monitor events for:
 
 1. **Verify metrics are registered:**
    ```bash
-   curl -k https://localhost:8443/metrics | grep tenant_
+   curl -k https://localhost:8443/metrics | grep lynqnode_
    ```
 
-   Should see: `tenant_reconcile_duration_seconds`, `tenant_resources_ready`, etc.
+   Should see: `lynqnode_reconcile_duration_seconds`, `lynqnode_resources_ready`, etc.
 
 2. **Trigger reconciliation:**
    ```bash
    # Apply a test resource
-   kubectl apply -f config/samples/operator_v1_tenantregistry.yaml
+   kubectl apply -f config/samples/operator_v1_lynqhub.yaml
 
    # Wait 30s and check metrics again
-   curl -k https://localhost:8443/metrics | grep tenant_reconcile_duration_seconds_count
+   curl -k https://localhost:8443/metrics | grep lynqnode_reconcile_duration_seconds_count
    ```
 
 3. **Check if controllers are running:**
    ```bash
-   kubectl logs -n tenant-operator-system deployment/tenant-operator-controller-manager | grep "Starting Controller"
+   kubectl logs -n lynq-system deployment/lynq-controller-manager | grep "Starting Controller"
    ```
 
 ### ServiceMonitor Not Working
@@ -597,12 +597,12 @@ Monitor events for:
 
 2. **Check if ServiceMonitor is created:**
    ```bash
-   kubectl get servicemonitor -n tenant-operator-system
+   kubectl get servicemonitor -n lynq-system
    ```
 
 3. **Check ServiceMonitor labels match Prometheus selector:**
    ```bash
-   kubectl get servicemonitor -n tenant-operator-system tenant-operator-controller-manager-metrics-monitor -o yaml
+   kubectl get servicemonitor -n lynq-system lynq-controller-manager-metrics-monitor -o yaml
    ```
 
 4. **Check Prometheus logs:**

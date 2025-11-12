@@ -1,19 +1,19 @@
 <div align="center">
 
-<img src="docs/public/logo.png" alt="Kubernetes Tenant Operator" width="400">
+<img src="docs/public/logo.png" alt="Kubernetes Lynq Operator" width="400">
 
-# Tenant Operator
+# Lynq Operator
 
 ### Kubernetes-Native Multi-Tenant Application Provisioning
 
 **Automate tenant lifecycle from database to production**
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/kubernetes-tenants/tenant-operator)](https://goreportcard.com/report/github.com/kubernetes-tenants/tenant-operator)
+[![Go Report Card](https://goreportcard.com/badge/github.com/k8s-lynq/lynq)](https://goreportcard.com/report/github.com/k8s-lynq/lynq)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/tenant-operator)](https://artifacthub.io/packages/search?repo=tenant-operator)
-[![Build Status](https://github.com/kubernetes-tenants/tenant-operator/actions/workflows/build-push.yml/badge.svg)](https://github.com/kubernetes-tenants/tenant-operator/actions/workflows/build-push.yml)
-[![Container Image](https://img.shields.io/badge/container-ghcr.io-blue)](https://github.com/kubernetes-tenants/tenant-operator/pkgs/container/tenant-operator)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/kubernetes-tenants/tenant-operator)](go.mod)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/lynq)](https://artifacthub.io/packages/search?repo=lynq)
+[![Build Status](https://github.com/k8s-lynq/lynq/actions/workflows/build-push.yml/badge.svg)](https://github.com/k8s-lynq/lynq/actions/workflows/build-push.yml)
+[![Container Image](https://img.shields.io/badge/container-ghcr.io-blue)](https://github.com/k8s-lynq/lynq/pkgs/container/lynq)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/k8s-lynq/lynq)](go.mod)
 
 [Overview](#-overview) • [Features](#-key-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing)
 
@@ -23,23 +23,23 @@
 
 ## 📖 Overview
 
-**Tenant Operator** is a Kubernetes operator that automates multi-tenant application provisioning from database records. It reads tenant data from external datasources (MySQL, PostgreSQL planned for v1.2) and dynamically creates, updates, and manages Kubernetes resources using declarative templates.
+**Lynq Operator** is a Kubernetes operator that automates multi-tenant application provisioning from database records. It reads tenant data from external datasources (MySQL, PostgreSQL planned for v1.2) and dynamically creates, updates, and manages Kubernetes resources using declarative templates.
 
 **One database row = One fully provisioned tenant stack**
 
-### Why Tenant Operator?
+### Why Lynq Operator?
 
 **Traditional multi-tenant approaches are limited:**
 - ❌ Helm: Manual per-tenant releases and values files
 - ❌ GitOps: Static manifests don't scale to thousands of tenants
 - ❌ Custom scripts: Fragile, hard to maintain, no drift correction
 
-**Tenant Operator provides:**
+**Lynq Operator provides:**
 - ✅ **Database-driven automation**: Your existing database becomes the source of truth
 - ✅ **Real-time sync**: Changes propagate automatically (30s status reflection)
 - ✅ **Production-grade**: SSA, webhooks, finalizers, metrics, and drift detection built-in
 
-📚 **[Complete Documentation](https://docs.kubernetes-tenants.org/)** • 🏗️ **[Architecture Details](https://docs.kubernetes-tenants.org/architecture)**
+📚 **[Complete Documentation](https://lynq.sh/)** • 🏗️ **[Architecture Details](https://lynq.sh/architecture)**
 
 ---
 
@@ -56,12 +56,12 @@
 
 **Advanced capabilities:** Multi-template support, cross-namespace provisioning, orphan cleanup, smart watch predicates, custom template functions (`sha1sum`, `fromJson`, `toHost`), and more.
 
-📖 **Full feature list:** [Documentation](https://docs.kubernetes-tenants.org/)
+📖 **Full feature list:** [Documentation](https://lynq.sh/)
 
 ### Integrations
 
-- [**ExternalDNS**](https://docs.kubernetes-tenants.org/integration-external-dns) - Automatic DNS records (Route53, Cloudflare, etc.)
-- [**Terraform Operator**](https://docs.kubernetes-tenants.org/integration-terraform-operator) - Cloud resource provisioning (S3, RDS, CDN)
+- [**ExternalDNS**](https://lynq.sh/integration-external-dns) - Automatic DNS records (Route53, Cloudflare, etc.)
+- [**Terraform Operator**](https://lynq.sh/integration-terraform-operator) - Cloud resource provisioning (S3, RDS, CDN)
 - **cert-manager** - Automatic TLS certificates
 - **Prometheus/Grafana** - Complete monitoring with dashboards
 
@@ -69,15 +69,15 @@
 
 ## 🏗️ Architecture
 
-Tenant Operator uses a three-controller design for database-to-Kubernetes synchronization:
+Lynq Operator uses a three-controller design for database-to-Kubernetes synchronization:
 
-1. **TenantRegistry Controller** - Syncs database → Creates Tenant CRs
-2. **TenantTemplate Controller** - Validates templates and linkage
-3. **Tenant Controller** - Renders templates → Applies resources via SSA
+1. **LynqHub Controller** - Syncs database → Creates LynqNode CRs
+2. **LynqForm Controller** - Validates templates and linkage
+3. **LynqNode Controller** - Renders templates → Applies resources via SSA
 
 **Multi-template support:** One registry can be referenced by multiple templates (prod, staging, etc.). Desired count = `referencingTemplates × activeRows`.
 
-📊 **Detailed architecture diagrams:** [Architecture Guide](https://docs.kubernetes-tenants.org/architecture)
+📊 **Detailed architecture diagrams:** [Architecture Guide](https://lynq.sh/architecture)
 
 ## Supported Kubernetes Versions
 
@@ -94,7 +94,7 @@ The operator targets GA/stable Kubernetes APIs and is decoupled from specific cl
 
 Get started in 5 minutes with a working example:
 
-🎯 **[Quick Start Guide with Minikube](https://docs.kubernetes-tenants.org/quickstart)** - Automated setup scripts included
+🎯 **[Quick Start Guide with Minikube](https://lynq.sh/quickstart)** - Automated setup scripts included
 
 ### Installation (Helm - Recommended)
 
@@ -102,24 +102,24 @@ Get started in 5 minutes with a working example:
 # 1. Install cert-manager (required for webhooks)
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
 
-# 2. Install Tenant Operator
-helm repo add tenant-operator https://kubernetes-tenants.github.io/tenant-operator
+# 2. Install Lynq Operator
+helm repo add lynq-operator https://k8s-lynq.github.io/lynq
 helm repo update
 
-helm install tenant-operator tenant-operator/tenant-operator \
-  --namespace tenant-operator-system \
+helm install lynq k8s-lynq/lynq \
+  --namespace lynq-system \
   --create-namespace
 ```
 
-📖 **More installation options:** [Installation Guide](https://docs.kubernetes-tenants.org/installation)
+📖 **More installation options:** [Installation Guide](https://lynq.sh/installation)
 
 ### Configuration Example
 
-**1. Connect to your database (TenantRegistry):**
+**1. Connect to your database (LynqHub):**
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
   name: my-saas-registry
 spec:
@@ -139,13 +139,13 @@ spec:
     activate: is_active  # Must be "1", "true", or "yes"
 ```
 
-📖 **Database setup guide:** [DataSource Configuration](https://docs.kubernetes-tenants.org/datasource)
+📖 **Database setup guide:** [DataSource Configuration](https://lynq.sh/datasource)
 
-**2. Define resource template (TenantTemplate):**
+**2. Define resource template (LynqForm):**
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: saas-app-template
 spec:
@@ -168,13 +168,13 @@ spec:
                   value: "{{ .uid }}"
 ```
 
-📖 **Template syntax and functions:** [Template Guide](https://docs.kubernetes-tenants.org/templates)
+📖 **Template syntax and functions:** [Template Guide](https://lynq.sh/templates)
 
 **3. Verify:**
 
 ```bash
-kubectl get tenants --watch
-kubectl get tenant <tenant-name> -o yaml
+kubectl get lynqnodes --watch
+kubectl get lynqnode <lynqnode-name> -o yaml
 ```
 
 **Result:** Each active database row automatically provisions a complete tenant stack!
@@ -183,17 +183,17 @@ kubectl get tenant <tenant-name> -o yaml
 
 ## 📚 Documentation
 
-Complete documentation is available at **[docs.kubernetes-tenants.org](https://docs.kubernetes-tenants.org/)**
+Complete documentation is available at **[lynq.sh](https://lynq.sh/)**
 
 ### Quick Links
 
 | Category | Pages |
 |----------|-------|
-| **Getting Started** | [Quick Start](https://docs.kubernetes-tenants.org/quickstart) • [Installation](https://docs.kubernetes-tenants.org/installation) |
-| **Core Concepts** | [Architecture](https://docs.kubernetes-tenants.org/architecture) • [API Reference](https://docs.kubernetes-tenants.org/api) • [Templates](https://docs.kubernetes-tenants.org/templates) • [Policies](https://docs.kubernetes-tenants.org/policies) • [Dependencies](https://docs.kubernetes-tenants.org/dependencies) |
-| **Operations** | [DataSource Setup](https://docs.kubernetes-tenants.org/datasource) • [Monitoring](https://docs.kubernetes-tenants.org/monitoring) • [Alert Runbooks](https://docs.kubernetes-tenants.org/alert-runbooks) • [Troubleshooting](https://docs.kubernetes-tenants.org/troubleshooting) • [Performance](https://docs.kubernetes-tenants.org/performance) |
-| **Integrations** | [ExternalDNS](https://docs.kubernetes-tenants.org/integration-external-dns) • [Terraform Operator](https://docs.kubernetes-tenants.org/integration-terraform-operator) • [Argo CD](https://docs.kubernetes-tenants.org/integration-argocd) |
-| **Advanced** | [Security](https://docs.kubernetes-tenants.org/security) • [Development](https://docs.kubernetes-tenants.org/development) • [Contributing](https://docs.kubernetes-tenants.org/contributing-datasource) |
+| **Getting Started** | [Quick Start](https://lynq.sh/quickstart) • [Installation](https://lynq.sh/installation) |
+| **Core Concepts** | [Architecture](https://lynq.sh/architecture) • [API Reference](https://lynq.sh/api) • [Templates](https://lynq.sh/templates) • [Policies](https://lynq.sh/policies) • [Dependencies](https://lynq.sh/dependencies) |
+| **Operations** | [DataSource Setup](https://lynq.sh/datasource) • [Monitoring](https://lynq.sh/monitoring) • [Alert Runbooks](https://lynq.sh/alert-runbooks) • [Troubleshooting](https://lynq.sh/troubleshooting) • [Performance](https://lynq.sh/performance) |
+| **Integrations** | [ExternalDNS](https://lynq.sh/integration-external-dns) • [Terraform Operator](https://lynq.sh/integration-terraform-operator) • [Argo CD](https://lynq.sh/integration-argocd) |
+| **Advanced** | [Security](https://lynq.sh/security) • [Development](https://lynq.sh/development) • [Contributing](https://lynq.sh/contributing-datasource) |
 
 ### Examples
 
@@ -217,7 +217,7 @@ value: "{{ (.config | fromJson).apiKey }}"      # Parse JSON
 value: "{{ .tenantUrl | toHost }}"              # Extract host
 ```
 
-📖 **More examples:** [Quick Start Guide](https://docs.kubernetes-tenants.org/quickstart)
+📖 **More examples:** [Quick Start Guide](https://lynq.sh/quickstart)
 
 ---
 
@@ -227,8 +227,8 @@ value: "{{ .tenantUrl | toHost }}"              # Extract host
 
 ```bash
 # Clone repository
-git clone https://github.com/kubernetes-tenants/tenant-operator.git
-cd tenant-operator
+git clone https://github.com/k8s-lynq/lynq.git
+cd lynq
 
 # Install dependencies
 go mod download
@@ -240,7 +240,7 @@ make test
 make build
 
 # Build and push container
-make docker-build docker-push IMG=<your-registry>/tenant-operator:tag
+make docker-build docker-push IMG=<your-registry>/lynq:tag
 ```
 
 ### Running Locally
@@ -290,7 +290,7 @@ We welcome contributions from anyone interested in multi-tenant Kubernetes autom
 
 ### 🌟 Want to Add a New Datasource?
 
-Tenant Operator uses a **pluggable adapter pattern** that makes it easy to add support for new datasources (PostgreSQL, MongoDB, REST APIs, etc.).
+Lynq Operator uses a **pluggable adapter pattern** that makes it easy to add support for new datasources (PostgreSQL, MongoDB, REST APIs, etc.).
 
 **Why contribute a datasource?**
 - ✅ Only 2 methods to implement
@@ -330,7 +330,7 @@ See [full roadmap](docs/roadmap.md) for details.
 
 | Component | Status | Description |
 |-----------|--------|-------------|
-| **Core Controllers** | ✅ Production | Registry, Template, and Tenant controllers with SSA |
+| **Core Controllers** | ✅ Production | Registry, Template, and LynqNode controllers with SSA |
 | **MySQL Datasource** | ✅ Production | Sync from MySQL with column mapping and VIEWs |
 | **Template Engine** | ✅ Production | Go templates with 200+ Sprig functions + custom functions |
 | **Webhooks** | ✅ Production | Validation and defaulting for all CRDs |
@@ -349,9 +349,9 @@ See [full roadmap](docs/roadmap.md) for details.
 <details>
 <summary><b>How is this different from Helm or GitOps?</b></summary>
 
-Tenant Operator is **database-driven** and designed for SaaS platforms where tenant data lives in databases, not git repositories. It automates provisioning from database rows with real-time sync, whereas Helm and GitOps require manual per-tenant configuration.
+Lynq Operator is **database-driven** and designed for SaaS platforms where tenant data lives in databases, not git repositories. It automates provisioning from database rows with real-time sync, whereas Helm and GitOps require manual per-tenant configuration.
 
-📖 [Architecture Guide](https://docs.kubernetes-tenants.org/architecture)
+📖 [Architecture Guide](https://lynq.sh/architecture)
 </details>
 
 <details>
@@ -359,7 +359,7 @@ Tenant Operator is **database-driven** and designed for SaaS platforms where ten
 
 Yes! You just need read-only access and column mappings. If your schema doesn't match, create a MySQL VIEW to transform the data.
 
-📖 [DataSource Configuration Guide](https://docs.kubernetes-tenants.org/datasource)
+📖 [DataSource Configuration Guide](https://lynq.sh/datasource)
 </details>
 
 <details>
@@ -369,17 +369,17 @@ Must be **exactly** one of: `"1"`, `"true"`, `"TRUE"`, `"True"`, `"yes"`, `"YES"
 
 All other values (including `"active"`, `"0"`, empty, NULL) are considered inactive. Use a VIEW to transform your data if needed.
 
-📖 [DataSource Guide - Activate Column](https://docs.kubernetes-tenants.org/datasource#activate-column-requirements)
+📖 [DataSource Guide - Activate Column](https://lynq.sh/datasource#activate-column-requirements)
 </details>
 
 <details>
-<summary><b>⚠️ What happens if I delete TenantRegistry or TenantTemplate?</b></summary>
+<summary><b>⚠️ What happens if I delete LynqHub or LynqForm?</b></summary>
 
-**Warning:** Causes cascade deletion of all Tenant CRs and their resources!
+**Warning:** Causes cascade deletion of all LynqNode CRs and their resources!
 
 **Protection:** Set `deletionPolicy: Retain` on resources BEFORE deleting, or update in-place instead of delete/recreate.
 
-📖 [Policies Guide - Protecting Tenants](https://docs.kubernetes-tenants.org/policies#protecting-tenants-from-cascade-deletion)
+📖 [Policies Guide - Protecting Tenants](https://lynq.sh/policies#protecting-tenants-from-cascade-deletion)
 </details>
 
 <details>
@@ -387,7 +387,7 @@ All other values (including `"active"`, `"0"`, empty, NULL) are considered inact
 
 Production deployments handle 1000+ tenants with concurrent reconciliation, SSA efficiency, resource caching, and optional sharding.
 
-📖 [Performance Guide](https://docs.kubernetes-tenants.org/performance)
+📖 [Performance Guide](https://lynq.sh/performance)
 </details>
 
 <details>
@@ -397,15 +397,15 @@ Production deployments handle 1000+ tenants with concurrent reconciliation, SSA 
 - **30 seconds**: Periodic status reflection
 - **Configurable**: Database sync interval (e.g., 1 minute)
 
-📖 [Architecture - Reconciliation Flow](https://docs.kubernetes-tenants.org/architecture#reconciliation-flow)
+📖 [Architecture - Reconciliation Flow](https://lynq.sh/architecture#reconciliation-flow)
 </details>
 
 <details>
 <summary><b>Can one registry support multiple environments?</b></summary>
 
-Yes! One registry can be referenced by multiple templates (prod, staging, dev). Each database row creates multiple Tenant CRs.
+Yes! One registry can be referenced by multiple templates (prod, staging, dev). Each database row creates multiple LynqNode CRs.
 
-📖 [Configuration Guide - Multi-Template](https://docs.kubernetes-tenants.org/configuration#multi-template-support)
+📖 [Configuration Guide - Multi-Template](https://lynq.sh/configuration#multi-template-support)
 </details>
 
 <details>
@@ -413,14 +413,14 @@ Yes! One registry can be referenced by multiple templates (prod, staging, dev). 
 
 Install **cert-manager** first - it automatically manages TLS certificates for webhook communication. See installation guide for details.
 
-📖 [Installation Guide](https://docs.kubernetes-tenants.org/installation)
+📖 [Installation Guide](https://lynq.sh/installation)
 </details>
 
 ---
 
 ## 📝 License
 
-Copyright 2025 Tenant Operator Authors
+Copyright 2025 Lynq Operator Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -450,8 +450,8 @@ Inspired by the cloud-native ecosystem and CNCF projects.
 
 ## 📬 Contact & Community
 
-- 🐛 **Issues**: [GitHub Issues](https://github.com/kubernetes-tenants/tenant-operator/issues) - Report bugs or request features
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/kubernetes-tenants/tenant-operator/discussions) - Ask questions or share ideas
+- 🐛 **Issues**: [GitHub Issues](https://github.com/k8s-lynq/lynq/issues) - Report bugs or request features
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/k8s-lynq/lynq/discussions) - Ask questions or share ideas
 - 📧 **Email**: rationlunas@gmail.com - Direct contact for partnership inquiries
 
 **We're looking for:**
@@ -464,15 +464,15 @@ Inspired by the cloud-native ecosystem and CNCF projects.
 ## Star History
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=kubernetes-tenants/tenant-operator&type=date&theme=dark&legend=top-left" />
-  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=kubernetes-tenants/tenant-operator&type=date&legend=top-left" />
-  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=kubernetes-tenants/tenant-operator&type=date&legend=top-left" />
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=k8s-lynq/lynq&type=date&theme=dark&legend=top-left" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=k8s-lynq/lynq&type=date&legend=top-left" />
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=k8s-lynq/lynq&type=date&legend=top-left" />
 </picture>
 
 ---
 
 <div align="center">
 
-**[⬆ Back to Top](#tenant-operator)**
+**[⬆ Back to Top](#lynq)**
 
 </div>

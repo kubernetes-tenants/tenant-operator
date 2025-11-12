@@ -1,12 +1,12 @@
 # Glossary
 
-Comprehensive reference of terms and concepts used in Tenant Operator.
+Comprehensive reference of terms and concepts used in Lynq.
 
 [[toc]]
 
 ## Core Concepts
 
-### Tenant Operator
+### Lynq
 
 A Kubernetes operator that automates multi-tenant application provisioning by synchronizing tenant data from external data sources (MySQL, PostgreSQL) and creating Kubernetes resources using template-based declarative configuration.
 
@@ -20,7 +20,7 @@ A Kubernetes design pattern that uses custom controllers to extend Kubernetes fu
 
 ## Custom Resource Definitions (CRDs)
 
-### TenantRegistry
+### LynqHub
 
 A Custom Resource that defines:
 - External data source connection (MySQL, PostgreSQL)
@@ -30,8 +30,8 @@ A Custom Resource that defines:
 
 **Example:**
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
   name: my-registry
 spec:
@@ -40,7 +40,7 @@ spec:
     syncInterval: 1m
 ```
 
-### TenantTemplate
+### LynqForm
 
 A Custom Resource that defines:
 - Resource blueprints for tenant provisioning
@@ -49,11 +49,11 @@ A Custom Resource that defines:
 - Dependency relationships between resources
 
 **Referenced by:** Tenant CRs
-**References:** TenantRegistry (via `registryId`)
+**References:** LynqHub (via `registryId`)
 
 ### Tenant
 
-A Custom Resource representing a single tenant instance. Automatically created by TenantRegistry controller based on active database rows.
+A Custom Resource representing a single tenant instance. Automatically created by LynqHub controller based on active database rows.
 
 **Key characteristics:**
 - Created/deleted automatically (users typically don't create manually)
@@ -169,8 +169,8 @@ Data available in template rendering context:
 - `.activate` - Activation status (truthy/falsy)
 
 **Metadata:**
-- `.registryId` - TenantRegistry name
-- `.templateRef` - TenantTemplate name
+- `.registryId` - LynqHub name
+- `.templateRef` - LynqForm name
 
 **Custom (from extraValueMappings):**
 - Any additional database columns (e.g., `.planId`, `.region`)
@@ -221,7 +221,7 @@ A Kubernetes API mechanism for declarative resource management. The operator use
 - Field-level ownership tracking
 - Automatic drift correction
 
-**Field Manager:** `tenant-operator`
+**Field Manager:** `lynq`
 
 **Reference:** [Kubernetes SSA Documentation](https://kubernetes.io/docs/reference/using-api/server-side-apply/)
 
@@ -229,13 +229,13 @@ A Kubernetes API mechanism for declarative resource management. The operator use
 
 The identifier used in Server-Side Apply to track which controller owns which fields.
 
-**Value:** `tenant-operator`
+**Value:** `lynq`
 
-All resources applied by Tenant Operator are marked with this field manager.
+All resources applied by Lynq are marked with this field manager.
 
 ### TResource
 
-The base structure for all resources in TenantTemplate. Contains:
+The base structure for all resources in LynqForm. Contains:
 - `id` - Unique identifier within template
 - `spec` - Kubernetes resource specification
 - `dependIds` - Dependency list (topological ordering)
@@ -257,7 +257,7 @@ The base structure for all resources in TenantTemplate. Contains:
 
 A Kubernetes metadata field that establishes parent-child relationships between resources.
 
-**In Tenant Operator:**
+**In Lynq:**
 - Resources with `deletionPolicy: Delete` (default) have `ownerReference` pointing to their Tenant CR
 - Enables automatic garbage collection by Kubernetes when Tenant is deleted
 - Resources with `deletionPolicy: Retain` use label-based tracking instead (NO ownerReference)
@@ -266,7 +266,7 @@ A Kubernetes metadata field that establishes parent-child relationships between 
 
 The process of detecting and correcting manual changes to operator-managed resources.
 
-**Tenant Operator uses dual-layer detection:**
+**Lynq uses dual-layer detection:**
 
 **Event-Driven (Immediate):**
 - Watches 11 resource types (Deployments, Services, ConfigMaps, etc.)
@@ -282,7 +282,7 @@ The process of detecting and correcting manual changes to operator-managed resou
 
 ## Policies
 
-Policies control resource lifecycle behavior in TenantTemplate.
+Policies control resource lifecycle behavior in LynqForm.
 
 ### CreationPolicy
 
@@ -439,11 +439,11 @@ The `status` field in Tenant CR tracks resource provisioning state:
 
 ### Registry Status
 
-The `status` field in TenantRegistry CR tracks tenant provisioning across all templates:
+The `status` field in LynqHub CR tracks tenant provisioning across all templates:
 
 **Fields:**
 - `desired` - Expected Tenant count: `referencingTemplates × activeRows`
-- `ready` - Count of Ready Tenants across all templates
+- `ready` - Count of Ready Nodes across all templates
 - `failed` - Count of failed Tenants across all templates
 - `lastSyncTime` - Timestamp of last database sync
 - `referencingTemplates` - List of templates using this registry
@@ -457,14 +457,14 @@ The `status` field in TenantRegistry CR tracks tenant provisioning across all te
 
 The control loop process where the operator compares desired state (from templates) with actual state (in cluster) and takes action to converge them.
 
-**Tenant Operator reconciliation layers:**
+**Lynq reconciliation layers:**
 
-**1. TenantRegistry Reconciliation:**
+**1. LynqHub Reconciliation:**
 - Query database at `syncInterval`
 - Calculate desired Tenant set
 - Create/update/delete Tenant CRs
 
-**2. TenantTemplate Reconciliation:**
+**2. LynqForm Reconciliation:**
 - Validate template-registry linkage
 - Ensure template consistency
 
@@ -485,7 +485,7 @@ The control loop process where the operator compares desired state (from templat
 
 The act of scheduling a resource for re-reconciliation after a delay.
 
-**Tenant Operator requeue patterns:**
+**Lynq requeue patterns:**
 - **Immediate:** Error conditions, conflicts
 - **30 seconds:** Normal reconciliation cycle (fast status reflection)
 - **syncInterval:** Database polling (e.g., 1 minute)
@@ -494,7 +494,7 @@ The act of scheduling a resource for re-reconciliation after a delay.
 
 ### Multi-Template
 
-The capability for one TenantRegistry to be referenced by multiple TenantTemplates.
+The capability for one LynqHub to be referenced by multiple LynqForms.
 
 **Use cases:**
 - Multi-environment deployments (prod, staging, dev)
@@ -515,9 +515,9 @@ The capability for one TenantRegistry to be referenced by multiple TenantTemplat
 
 ### Referencing Templates
 
-TenantTemplates that reference a specific TenantRegistry via `spec.registryId`.
+LynqForms that reference a specific LynqHub via `spec.registryId`.
 
-**Tracked in:** `TenantRegistry.status.referencingTemplates`
+**Tracked in:** `LynqHub.status.referencingTemplates`
 
 **Used for:** Calculating desired Tenant count:
 ```
@@ -529,7 +529,7 @@ desired = len(referencingTemplates) × activeRows
 Formula for determining expected number of Tenant CRs:
 
 ```
-TenantRegistry.status.desired = referencingTemplates × activeRows
+LynqHub.status.desired = referencingTemplates × activeRows
 ```
 
 **Example:**
@@ -562,7 +562,7 @@ Filtering logic that prevents unnecessary reconciliations by ignoring irrelevant
 Label-based mechanism for tracking namespace ownership without ownerReferences (not allowed on cluster-scoped resources).
 
 **Implementation:**
-- Namespaces labeled with: `tenant.operator.kubernetes-tenants.org/tenant: <tenant-name>`
+- Namespaces labeled with: `lynqnodes.operator.lynq.sh/node: <lynqnode-name>`
 - Watch predicate filters by label
 - Enables efficient namespace-specific reconciliation
 
@@ -571,9 +571,9 @@ Label-based mechanism for tracking namespace ownership without ownerReferences (
 The number of parallel reconciliation workers.
 
 **Configuration:**
-- `--tenant-concurrency=N` (default: 10) - Concurrent Tenant reconciliations
-- `--template-concurrency=N` (default: 5) - Concurrent Template reconciliations
-- `--registry-concurrency=N` (default: 3) - Concurrent Registry syncs
+- `--node-concurrency=N` (default: 10) - Concurrent Tenant reconciliations
+- `--form-concurrency=N` (default: 5) - Concurrent Template reconciliations
+- `--hub-concurrency=N` (default: 3) - Concurrent Registry syncs
 
 **Tradeoff:** Higher concurrency = faster processing, more resource usage.
 
@@ -583,8 +583,8 @@ The number of parallel reconciliation workers.
 
 An HTTP callback mechanism for intercepting Kubernetes API requests before they're persisted.
 
-**Tenant Operator webhooks:**
-- **ValidatingWebhook:** Reject invalid TenantRegistry/TenantTemplate CRs
+**Lynq webhooks:**
+- **ValidatingWebhook:** Reject invalid LynqHub/LynqForm CRs
 - **MutatingWebhook:** Set default values (policies, timeouts)
 
 **Requires:** TLS certificates (managed by cert-manager)
@@ -605,19 +605,19 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 - Automatic renewal before expiration
 - CA bundle injection into webhook configurations
 
-**Required:** Tenant Operator cannot run without cert-manager.
+**Required:** Lynq cannot run without cert-manager.
 
 ### Validation Rules
 
 Checks performed by ValidatingWebhook:
 
-**TenantRegistry:**
+**LynqHub:**
 - `valueMappings` must include required keys: `uid`, `hostOrUrl`, `activate`
 - `syncInterval` must be valid duration (e.g., `1m`, not `1 minute`)
 - Database connection details must be valid
 
-**TenantTemplate:**
-- `spec.registryId` must reference existing TenantRegistry
+**LynqForm:**
+- `spec.registryId` must reference existing LynqHub
 - `TResource.id` must be unique within template
 - `dependIds` must not form cycles
 - Templates must be valid Go template syntax
@@ -629,7 +629,7 @@ Checks performed by ValidatingWebhook:
 
 A Kubernetes mechanism that prevents resource deletion until cleanup tasks complete.
 
-**Tenant Operator finalizer:** `tenant.operator.kubernetes-tenants.org/finalizer`
+**Lynq finalizer:** `lynqnode.operator.lynq.sh/finalizer`
 
 **Added to:** Tenant CRs
 
@@ -639,7 +639,7 @@ A Kubernetes mechanism that prevents resource deletion until cleanup tasks compl
 
 The automatic deletion of child resources when parent resource is deleted.
 
-**In Tenant Operator:**
+**In Lynq:**
 
 **Normal flow:**
 ```
@@ -648,12 +648,12 @@ Tenant CR deleted → Finalizer runs → Resources deleted (per deletionPolicy) 
 
 **Warning:**
 ```
-TenantRegistry deleted → All Tenant CRs deleted (ownerReference) → All tenant resources deleted
+LynqHub deleted → All Tenant CRs deleted (ownerReference) → All tenant resources deleted
 ```
 
 **Protection:** Set `deletionPolicy: Retain` on critical resources BEFORE deleting Registry/Template.
 
-See [Policies Guide - Cascade Deletion](policies.md#️-important-protecting-tenants-from-cascade-deletion) for details.
+See [Policies Guide - Cascade Deletion](policies.md#️-important-protecting-nodes-from-cascade-deletion) for details.
 
 ## Kubernetes Concepts
 
@@ -661,18 +661,18 @@ See [Policies Guide - Cascade Deletion](policies.md#️-important-protecting-ten
 
 A Kubernetes extension mechanism that allows defining custom resource types.
 
-**Tenant Operator CRDs:**
-- `tenantregistries.operator.kubernetes-tenants.org`
-- `tenanttemplates.operator.kubernetes-tenants.org`
-- `tenants.operator.kubernetes-tenants.org`
+**Lynq CRDs:**
+- `lynqhubs.operator.lynq.sh`
+- `lynqforms.operator.lynq.sh`
+- `lynqnodes.operator.lynq.sh`
 
 ### Controller
 
 A control loop that watches Kubernetes resources and takes actions to move current state toward desired state.
 
-**Tenant Operator controllers:**
-1. TenantRegistry Controller
-2. TenantTemplate Controller
+**Lynq controllers:**
+1. LynqHub Controller
+2. LynqForm Controller
 3. Tenant Controller
 
 ### Reconciliation Loop
@@ -699,13 +699,13 @@ The distributed key-value store used by Kubernetes to persist cluster state. The
 
 A tool for running a single-node Kubernetes cluster locally for development and testing.
 
-**Tenant Operator Minikube setup:**
+**Lynq Minikube setup:**
 - See [Quick Start](quickstart.md) for automated scripts
 - See [Local Development](local-development-minikube.md) for development workflow
 
 ### Server-Side Apply (SSA) Engine
 
-The internal component in Tenant Operator that applies Kubernetes resources using Server-Side Apply.
+The internal component in Lynq that applies Kubernetes resources using Server-Side Apply.
 
 **Features:**
 - Conflict detection and resolution
@@ -738,8 +738,8 @@ The internal component that renders Go templates with tenant data.
 Time-series metrics exposed by the operator for monitoring.
 
 **Key metrics:**
-- `tenant_reconcile_duration_seconds{result}` - Reconciliation duration
-- `tenant_resources_ready{tenant}` - Ready resource count per tenant
+- `lynqnode_reconcile_duration_seconds{result}` - Reconciliation duration
+- `lynqnode_resources_ready{tenant}` - Ready resource count per tenant
 - `registry_desired` - Expected Tenant count
 - `registry_ready` - Ready Tenant count
 - `registry_failed` - Failed Tenant count

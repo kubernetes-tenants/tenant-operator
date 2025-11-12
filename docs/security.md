@@ -1,6 +1,6 @@
 # Security Guide
 
-Security best practices for Tenant Operator.
+Security best practices for Lynq.
 
 [[toc]]
 
@@ -21,7 +21,7 @@ stringData:
   password: your-secure-password
 ```
 
-Reference in TenantRegistry:
+Reference in LynqHub:
 
 ```yaml
 spec:
@@ -54,7 +54,7 @@ kubectl create secret generic mysql-credentials \
 The operator requires:
 
 **CRD Management:**
-- `tenantregistries`, `tenanttemplates`, `tenants`: All verbs
+- `lynqhubs`, `lynqforms`, `lynqnodes`: All verbs
 
 **Resource Management:**
 - Managed resources (Deployments, Services, etc.): All verbs in target namespaces
@@ -73,7 +73,7 @@ Scope RBAC to specific namespaces when possible:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role  # Not ClusterRole
 metadata:
-  name: tenant-operator-role
+  name: lynq-role
   namespace: production  # Specific namespace
 rules:
 - apiGroups: ["apps"]
@@ -83,7 +83,7 @@ rules:
 
 ### Service Account
 
-Default service account: `tenant-operator-controller-manager`
+Default service account: `lynq-controller-manager`
 
 Custom service account:
 
@@ -92,7 +92,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: custom-sa
-  namespace: tenant-operator-system
+  namespace: lynq-system
 ---
 apiVersion: v1
 kind: Pod
@@ -144,8 +144,8 @@ kind: Policy
 rules:
 - level: RequestResponse
   resources:
-  - group: "operator.kubernetes-tenants.org"
-    resources: ["tenantregistries", "tenanttemplates", "tenants"]
+  - group: "operator.lynq.sh"
+    resources: ["lynqhubs", "lynqforms", "lynqnodes"]
 ```
 
 ### Track Changes
@@ -186,10 +186,10 @@ Scan operator images:
 
 ```bash
 # Using Trivy
-trivy image ghcr.io/kubernetes-tenants/tenant-operator:latest
+trivy image ghcr.io/k8s-lynq/lynq:latest
 
 # Using Snyk
-snyk container test ghcr.io/kubernetes-tenants/tenant-operator:latest
+snyk container test ghcr.io/k8s-lynq/lynq:latest
 ```
 
 ### Dependency Updates

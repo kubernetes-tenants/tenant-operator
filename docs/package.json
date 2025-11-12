@@ -1,7 +1,7 @@
 {
-  "name": "tenant-operator-docs",
+  "name": "lynq-docs",
   "version": "1.0.0",
-  "description": "Tenant Operator Documentation",
+  "description": "Lynq Documentation",
   "type": "module",
   "scripts": {
     "docs:dev": "vitepress dev",

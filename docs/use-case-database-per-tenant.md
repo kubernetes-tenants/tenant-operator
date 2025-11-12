@@ -2,7 +2,7 @@
 
 ## Overview
 
-Provision isolated cloud databases (RDS, Cloud SQL) automatically for each tenant using Crossplane.
+Provision isolated cloud databases (RDS, Cloud SQL) automatically for each node using Crossplane.
 
 This pattern provides:
 - **True Data Isolation**: Each tenant gets a dedicated database instance
@@ -74,14 +74,14 @@ CREATE TABLE tenants (
 );
 ```
 
-## TenantRegistry
+## LynqHub
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
   name: database-per-tenant
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
   source:
     type: mysql
@@ -108,14 +108,14 @@ spec:
     planType: plan_type
 ```
 
-## TenantTemplate with Crossplane Resources
+## LynqForm with Crossplane Resources
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: database-provisioning
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
   registryId: database-per-tenant
 
@@ -170,7 +170,7 @@ spec:
               - key: plan-type
                 value: "{{ .planType }}"
               - key: managed-by
-                value: tenant-operator
+                value: lynq
           writeConnectionSecretToRef:
             name: "{{ .uid }}-db-conn"
             namespace: "tenant-{{ .uid }}"
@@ -267,7 +267,7 @@ kubectl get rdsinstance -l tenant-id=acme-corp
 kubectl get secret acme-corp-db-conn -n tenant-acme-corp -o yaml
 
 # Verify application can connect
-kubectl logs -n tenant-acme-corp deployment/acme-corp-app
+kubectl logs node-acme-corp deployment/acme-corp-app
 ```
 
 ## Cost Optimization
@@ -281,7 +281,7 @@ db.t3.small   # Pro plan: $30/month
 db.m5.large   # Enterprise plan: $150/month
 ```
 
-Use database views to filter tenants by plan:
+Use database views to filter nodes by plan:
 
 ```sql
 CREATE VIEW enterprise_tenants AS

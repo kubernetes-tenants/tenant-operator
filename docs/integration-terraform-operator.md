@@ -1,12 +1,12 @@
 # Terraform Operator Integration Guide
 
-This guide shows how to integrate Tenant Operator with Terraform Operator for provisioning external cloud resources (AWS, GCP, Azure) per tenant.
+This guide shows how to integrate Lynq with Terraform Operator for provisioning external cloud resources (AWS, GCP, Azure) per tenant.
 
 [[toc]]
 
 ## Overview
 
-**Terraform Operator** allows you to manage Terraform resources as Kubernetes Custom Resources. When integrated with Tenant Operator, each tenant can automatically provision **any infrastructure resource** that Terraform supports - from cloud services to on-premises systems.
+**Terraform Operator** allows you to manage Terraform resources as Kubernetes Custom Resources. When integrated with Lynq, each node can automatically provision **any infrastructure resource** that Terraform supports - from cloud services to on-premises systems.
 
 ```mermaid
 flowchart LR
@@ -79,7 +79,7 @@ flowchart LR
 
 ::: info Requirements
 - Kubernetes cluster v1.16+
-- Tenant Operator installed
+- Lynq installed
 - Cloud provider account (AWS, GCP, or Azure)
 - Terraform ≥ 1.0
 - Cloud provider credentials (stored as Secrets)
@@ -173,13 +173,13 @@ kubectl create secret generic azure-credentials \
 
 ## Basic Example: S3 Bucket per Tenant
 
-Here's a complete example showing how to provision an S3 bucket for each tenant:
+Here's a complete example showing how to provision an S3 bucket for each node:
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
-  name: tenant-with-s3
+  name: node-with-s3
   namespace: default
 spec:
   registryId: my-registry
@@ -193,7 +193,7 @@ spec:
       kind: Terraform
       metadata:
         annotations:
-          tenant-operator.kubernetes-tenants.org/tenant-id: "{{ .uid }}"
+          lynq.lynq.sh/node-id: "{{ .uid }}"
       spec:
         interval: 5m
         retryInterval: 30s
@@ -225,7 +225,7 @@ spec:
               bucket = "tenant-${var.tenant_id}-bucket"
               tags = {
                 TenantId = var.tenant_id
-                ManagedBy = "tenant-operator"
+                ManagedBy = "lynq"
               }
             }
 
@@ -286,7 +286,7 @@ spec:
 ```
 
 **What happens:**
-1. Tenant Operator creates Terraform CR for each active tenant
+1. Lynq creates Terraform CR for each active tenant
 2. Tofu controller runs `terraform apply` to provision S3 bucket
 3. Outputs (bucket name, ARN) written to Secret
 4. Application Deployment references outputs via Secret
@@ -300,7 +300,7 @@ Additional examples including RDS databases, CloudFront CDN, Kafka topics, Rabbi
 
 ### Workflow
 
-1. **Tenant Created**: TenantRegistry creates Tenant CR from database
+1. **Tenant Created**: LynqHub creates Tenant CR from database
 2. **Terraform Applied**: Tenant controller creates Terraform CR
 3. **tf-controller Processes**: Runs terraform init/plan/apply
 4. **Resources Provisioned**: Cloud resources created (S3, RDS, etc.)
@@ -385,13 +385,13 @@ deployments:
 kubectl get terraform -n default
 
 # Check specific tenant's Terraform
-kubectl get terraform -n default -l tenant-operator.kubernetes-tenants.org/tenant-id=tenant-alpha
+kubectl get terraform -n default -l lynq.lynq.sh/node-id=node-alpha
 
 # View Terraform plan
-kubectl describe terraform tenant-alpha-infrastructure
+kubectl describe terraform node-alpha-infrastructure
 
 # View Terraform outputs
-kubectl get secret tenant-alpha-infrastructure -o yaml
+kubectl get secret node-alpha-infrastructure -o yaml
 ```
 
 ## Troubleshooting
@@ -409,12 +409,12 @@ kubectl get secret tenant-alpha-infrastructure -o yaml
 
 2. **Check Terraform CR status:**
    ```bash
-   kubectl describe terraform tenant-alpha-infrastructure
+   kubectl describe terraform node-alpha-infrastructure
    ```
 
 3. **View Terraform plan output:**
    ```bash
-   kubectl get terraform tenant-alpha-infrastructure -o jsonpath='{.status.plan.pending}'
+   kubectl get terraform node-alpha-infrastructure -o jsonpath='{.status.plan.pending}'
    ```
 
 4. **Check credentials:**
@@ -449,12 +449,12 @@ terraform force-unlock <lock-id>
 
 2. **Check if Terraform apply completed:**
    ```bash
-   kubectl get terraform tenant-alpha-infra -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+   kubectl get terraform node-alpha-infra -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
    ```
 
 3. **Check secret exists:**
    ```bash
-   kubectl get secret tenant-alpha-outputs
+   kubectl get secret node-alpha-outputs
    ```
 
 ### Resource Already Exists
@@ -522,4 +522,4 @@ resource "aws_s3_bucket_lifecycle_configuration" "tenant_bucket_lifecycle" {
 - [Flux Documentation](https://fluxcd.io/docs/)
 - [Terraform Registry - All Providers](https://registry.terraform.io/browse/providers)
 - [ExternalDNS Integration](integration-external-dns.md)
-- [Tenant Operator Templates Guide](templates.md)
+- [Lynq Templates Guide](templates.md)

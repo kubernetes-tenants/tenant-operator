@@ -73,12 +73,12 @@
         </circle>
       </svg>
 
-      <!-- Stage 2: TenantRegistry -->
+      <!-- Stage 2: LynqHub -->
       <div class="stage-item registry-stage" :class="{ active: currentStage >= 2 }">
         <div class="k8s-cluster-label">Kubernetes Cluster</div>
         <div class="registry-box clickable" @click="openModal('registry')">
           <div class="resource-icon">📋</div>
-          <div class="resource-title">TenantRegistry</div>
+          <div class="resource-title">LynqHub</div>
           <div class="resource-subtitle">Syncs every 30 seconds</div>
           <div class="click-overlay">
             <span class="click-overlay-text">Click to view YAML</span>
@@ -86,11 +86,11 @@
         </div>
       </div>
 
-      <!-- TenantTemplate (separate position) -->
+      <!-- LynqForm (separate position) -->
       <div class="stage-item template-stage" :class="{ active: currentStage >= 3 }">
         <div class="template-box clickable" @click="openModal('template')">
           <div class="resource-icon small">📄</div>
-          <div class="resource-title small">TenantTemplate</div>
+          <div class="resource-title small">LynqForm</div>
           <div class="click-overlay">
             <span class="click-overlay-text">Click to view YAML</span>
           </div>
@@ -113,9 +113,9 @@
         </circle>
       </svg>
 
-      <!-- Stage 3: Tenant CRs -->
+      <!-- Stage 3: LynqNode CRs -->
       <div class="stage-item tenants-stage" :class="{ active: currentStage >= 3 }">
-        <div class="stage-subtitle">Tenant CRs (Auto-created)</div>
+        <div class="stage-subtitle">LynqNode CRs (Auto-created)</div>
         <div class="tenant-crs">
           <div
             v-if="tenants.acme.active"
@@ -247,8 +247,8 @@ const showModal = ref(false);
 const modalContent = ref(null);
 
 const registryYaml = `# Connect to your tenant database
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
   name: production-tenants
 spec:
@@ -272,8 +272,8 @@ spec:
       deployImage: deploy_image`;
 
 const templateYaml = `# Define what to create per tenant
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: saas-stack
 spec:
@@ -328,11 +328,11 @@ spec:
 
 const openModal = (type) => {
   modalContent.value = type === 'registry' ? {
-    title: 'TenantRegistry',
+    title: 'LynqHub',
     subtitle: 'Connect to your tenant database',
     code: registryYaml
   } : {
-    title: 'TenantTemplate',
+    title: 'LynqForm',
     subtitle: 'Define what to create per tenant',
     code: templateYaml
   };

@@ -1,23 +1,23 @@
 # API Reference
 
-Complete API reference for Tenant Operator CRDs.
+Complete API reference for Lynq CRDs.
 
 [[toc]]
 
-## TenantRegistry
+## LynqHub
 
 Defines external data source and sync configuration.
 
 ::: info Resource metadata
-- **Kind:** `TenantRegistry`
-- **API Version:** `operator.kubernetes-tenants.org/v1`
+- **Kind:** `LynqHub`
+- **API Version:** `operator.lynq.sh/v1`
 :::
 
 ### Spec
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
   name: my-registry
 spec:
@@ -59,28 +59,28 @@ status:
   - type: Ready
     status: "True"
     reason: SyncSucceeded
-    message: "Successfully synced N tenants"
+    message: "Successfully synced N nodes"
     lastTransitionTime: timestamp
 ```
 
-## TenantTemplate
+## LynqForm
 
-Defines resource blueprint for tenants.
+Defines resource blueprint for nodes.
 
 ::: info Resource metadata
-- **Kind:** `TenantTemplate`
-- **API Version:** `operator.kubernetes-tenants.org/v1`
+- **Kind:** `LynqForm`
+- **API Version:** `operator.lynq.sh/v1`
 :::
 
 ### Spec
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: my-template
 spec:
-  registryId: string                 # TenantRegistry name (required)
+  registryId: string                 # LynqHub name (required)
 
   # Resource arrays
   serviceAccounts: []TResource
@@ -125,8 +125,8 @@ spec: object                         # Kubernetes resource spec (required)
 status:
   observedGeneration: int64
   validationErrors: []string         # Template validation errors
-  totalTenants: int32                # Total tenants using this template
-  readyTenants: int32                # Ready tenants
+  totalNodes: int32                # Total nodes using this template
+  readyNodes: int32                # Ready nodes
   conditions:
   - type: Valid
     status: "True"
@@ -139,7 +139,7 @@ Represents a single tenant instance.
 
 ::: info Resource metadata
 - **Kind:** `Tenant`
-- **API Version:** `operator.kubernetes-tenants.org/v1`
+- **API Version:** `operator.lynq.sh/v1`
 :::
 
 ::: warning Managed resource
@@ -149,25 +149,25 @@ Tenant objects are typically managed by the operator and rarely created manually
 ### Spec
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: Tenant
+apiVersion: operator.lynq.sh/v1
+kind: LynqNode
 metadata:
   name: acme-prod-template
   annotations:
     # Template variables (set by Registry controller)
-    kubernetes-tenants.org/uid: "acme-corp"
-    kubernetes-tenants.org/host: "acme.example.com"
-    kubernetes-tenants.org/hostOrUrl: "https://acme.example.com"
-    kubernetes-tenants.org/activate: "true"
+    lynq.sh/uid: "acme-corp"
+    lynq.sh/host: "acme.example.com"
+    lynq.sh/hostOrUrl: "https://acme.example.com"
+    lynq.sh/activate: "true"
     # Extra variables from extraValueMappings
-    kubernetes-tenants.org/planId: "enterprise"
+    lynq.sh/planId: "enterprise"
 spec:
   registryId: string                 # Registry name
   templateRef: string                # Template name
 
   # Rendered resources (already evaluated)
   deployments: []TResource
-  # ... (same structure as TenantTemplate)
+  # ... (same structure as LynqForm)
 ```
 
 ### Status
@@ -292,16 +292,16 @@ Examples: `30s`, `1m`, `2h`
 
 ```yaml
 # Template variables
-kubernetes-tenants.org/uid: string
-kubernetes-tenants.org/host: string
-kubernetes-tenants.org/hostOrUrl: string
-kubernetes-tenants.org/activate: string
+lynq.sh/uid: string
+lynq.sh/host: string
+lynq.sh/hostOrUrl: string
+lynq.sh/activate: string
 
 # Extra variables from extraValueMappings
-kubernetes-tenants.org/<key>: value
+lynq.sh/<key>: value
 
 # CreationPolicy tracking
-kubernetes-tenants.org/created-once: "true"
+lynq.sh/created-once: "true"
 ```
 
 ### Resource Tracking Labels
@@ -313,11 +313,11 @@ kubernetes-tenants.org/created-once: "true"
 
 ```yaml
 # Tracking labels (set at resource creation)
-kubernetes-tenants.org/tenant: tenant-name
-kubernetes-tenants.org/tenant-namespace: tenant-namespace
+lynq.sh/node: tenant-name
+lynq.sh/node-namespace: tenant-namespace
 
 # Orphan label (added when resource becomes orphaned - for selector queries)
-kubernetes-tenants.org/orphaned: "true"
+lynq.sh/orphaned: "true"
 ```
 
 **Orphan Markers:**
@@ -327,8 +327,8 @@ When resources are retained (not deleted) due to `DeletionPolicy=Retain`, the op
 - **Label** `orphaned: "true"` - For easy filtering with label selectors
 - **Annotation** `orphaned-at` - RFC3339 timestamp when the resource became orphaned
 - **Annotation** `orphaned-reason` - Reason for becoming orphaned:
-  - `RemovedFromTemplate`: Resource was removed from TenantTemplate
-  - `TenantDeleted`: Tenant CR was deleted
+  - `RemovedFromTemplate`: Resource was removed from LynqForm
+  - `LynqNodeDeleted`: Tenant CR was deleted
 
 **Why split label/annotation?**
 - **Label**: Simple value for selector queries (Kubernetes label values must be RFC 1123 compliant)
@@ -346,13 +346,13 @@ This enables safe template evolution: you can freely add/remove resources from t
 
 ```bash
 # Find all orphaned resources
-kubectl get all -A -l kubernetes-tenants.org/orphaned=true
+kubectl get all -A -l lynq.sh/orphaned=true
 
 # Find orphaned resources by reason (using annotation)
-kubectl get all -A -l kubernetes-tenants.org/orphaned=true -o jsonpath='{range .items[?(@.metadata.annotations.kubernetes-tenants\.org/orphaned-reason=="RemovedFromTemplate")]}{.kind}/{.metadata.name}{"\n"}{end}'
+kubectl get all -A -l lynq.sh/orphaned=true -o jsonpath='{range .items[?(@.metadata.annotations.k8s-lynq\.org/orphaned-reason=="RemovedFromTemplate")]}{.kind}/{.metadata.name}{"\n"}{end}'
 
 # Find orphaned resources from a specific tenant (label still available)
-kubectl get all -A -l kubernetes-tenants.org/orphaned=true,kubernetes-tenants.org/tenant=my-tenant
+kubectl get all -A -l lynq.sh/orphaned=true,lynq.sh/lynqnode=my-node
 ```
 
 ### Resource Annotations
@@ -364,7 +364,7 @@ The operator automatically adds a `deletion-policy` annotation to all created re
 ```yaml
 metadata:
   annotations:
-    kubernetes-tenants.org/deletion-policy: "Retain"  # or "Delete"
+    lynq.sh/deletion-policy: "Retain"  # or "Delete"
 ```
 
 **Purpose:**
@@ -381,7 +381,7 @@ metadata:
 
 ```bash
 # Find all Retain resources
-kubectl get all -A -o jsonpath='{range .items[?(@.metadata.annotations.kubernetes-tenants\.org/deletion-policy=="Retain")]}{.kind}/{.metadata.name}{"\n"}{end}'
+kubectl get all -A -o jsonpath='{range .items[?(@.metadata.annotations.k8s-lynq\.org/deletion-policy=="Retain")]}{.kind}/{.metadata.name}{"\n"}{end}'
 ```
 
 ## Examples
@@ -390,15 +390,15 @@ See [Templates Guide](templates.md) and [Quick Start Guide](quickstart.md) for c
 
 ## Validation Rules
 
-### TenantRegistry
+### LynqHub
 
 - `spec.valueMappings` must include: `uid`, `hostOrUrl`, `activate`
 - `spec.source.syncInterval` must match pattern: `^\d+(s|m|h)$`
 - `spec.source.mysql.host` required when `type=mysql`
 
-### TenantTemplate
+### LynqForm
 
-- `spec.registryId` must reference existing TenantRegistry
+- `spec.registryId` must reference existing LynqHub
 - Each `TResource.id` must be unique within template
 - `dependIds` must not form cycles
 - Templates must be valid Go templates

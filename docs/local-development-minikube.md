@@ -1,6 +1,6 @@
 # Local Development with Minikube
 
-Development workflow guide for contributing to and modifying Tenant Operator.
+Development workflow guide for contributing to and modifying Lynq.
 
 [[toc]]
 
@@ -10,10 +10,10 @@ If you only want to experience the operator, follow the [Quick Start guide](quic
 
 ## Overview
 
-This guide covers the **development workflow** for making code changes to Tenant Operator and testing them locally on Minikube.
+This guide covers the **development workflow** for making code changes to Lynq and testing them locally on Minikube.
 
 **Use this guide when you want to:**
-- ✅ Modify Tenant Operator source code
+- ✅ Modify Lynq source code
 - ✅ Add new features or fix bugs
 - ✅ Test code changes locally before committing
 - ✅ Debug the operator with breakpoints
@@ -25,9 +25,9 @@ This guide covers the **development workflow** for making code changes to Tenant
 
 ::: info Prerequisites
 Complete the [Quick Start guide](quickstart.md) first. You should have:
-- ✅ Minikube cluster running (`tenant-operator` profile)
+- ✅ Minikube cluster running (`lynq` profile)
 - ✅ **cert-manager installed** (automatically by setup script)
-- ✅ Tenant Operator deployed with webhooks enabled
+- ✅ Lynq deployed with webhooks enabled
 - ✅ MySQL test database (optional, for full testing)
 
 ::: warning cert-manager Required
@@ -46,7 +46,7 @@ Additional development tools:
 
 ```bash
 # 1. Make code changes
-vim internal/controller/tenant_controller.go
+vim internal/controller/lynqnode_controller.go
 
 # 2. Run unit tests
 make test
@@ -58,13 +58,13 @@ make lint
 ./scripts/deploy-to-minikube.sh
 
 # 5. View operator logs
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager -f
+kubectl logs -n lynq-system -l control-plane=controller-manager -f
 
 # 6. Test changes
 kubectl apply -f config/samples/
 
 # 7. Verify results
-kubectl get tenants
+kubectl get lynqnodes
 kubectl get all -n tenant-<uid>
 
 # 8. Repeat steps 1-7 as needed
@@ -98,7 +98,7 @@ This script:
 Use a custom tag for easier identification:
 
 ```bash
-IMG=tenant-operator:my-feature ./scripts/deploy-to-minikube.sh
+IMG=lynq:my-feature ./scripts/deploy-to-minikube.sh
 ```
 
 ### Manual Build (if needed)
@@ -108,10 +108,10 @@ IMG=tenant-operator:my-feature ./scripts/deploy-to-minikube.sh
 make build
 
 # Build Docker image
-make docker-build IMG=tenant-operator:dev
+make docker-build IMG=lynq:dev
 
 # Load into Minikube
-minikube -p tenant-operator image load tenant-operator:dev
+minikube -p lynq image load lynq:dev
 ```
 
 ## Running Operator Locally (Outside Cluster)
@@ -165,10 +165,10 @@ make run
 
 # Terminal 2: Apply resources
 kubectl apply -f config/samples/
-kubectl get tenants --watch
+kubectl get lynqnodes --watch
 
 # Terminal 3: View database changes
-kubectl exec -it deployment/mysql -n tenant-operator-test -- \
+kubectl exec -it deployment/mysql -n lynq-test -- \
   mysql -u tenant_reader -p tenants -e "SELECT * FROM tenant_configs;"
 ```
 
@@ -188,7 +188,7 @@ dlv debug ./cmd/main.go -- --zap-devel=true
 
 Then in delve:
 ```
-(dlv) break internal/controller/tenant_controller.go:123
+(dlv) break internal/controller/lynqnode_controller.go:123
 (dlv) continue
 ```
 
@@ -198,16 +198,16 @@ View operator logs with different verbosity:
 
 ```bash
 # Default logs
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager -f
+kubectl logs -n lynq-system -l control-plane=controller-manager -f
 
 # Filter for specific tenant
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager | grep acme-corp
+kubectl logs -n lynq-system -l control-plane=controller-manager | grep acme-corp
 
 # Follow logs for errors only
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager -f | grep -i error
+kubectl logs -n lynq-system -l control-plane=controller-manager -f | grep -i error
 
 # View logs from previous crash
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager --previous
+kubectl logs -n lynq-system -l control-plane=controller-manager --previous
 ```
 
 ### Debug Test Resources
@@ -216,19 +216,19 @@ View what the operator sees:
 
 ```bash
 # Check Tenant CR status
-kubectl get tenant acme-corp-test-template -o yaml
+kubectl get lynqnode acme-corp-test-template -o yaml
 
 # Check registry sync status
-kubectl get tenantregistry test-registry -o yaml | yq '.status'
+kubectl get lynqhub test-registry -o yaml | yq '.status'
 
 # Check template
-kubectl get tenanttemplate test-template -o yaml
+kubectl get lynqform test-template -o yaml
 
 # View events
-kubectl get events --sort-by='.lastTimestamp' -n tenant-operator-system
+kubectl get events --sort-by='.lastTimestamp' -n lynq-system
 
 # Describe resource for events
-kubectl describe tenant acme-corp-test-template
+kubectl describe lynqnode acme-corp-test-template
 ```
 
 ## Testing
@@ -268,28 +268,28 @@ Test complete workflow:
 ./scripts/deploy-mysql.sh
 
 # 3. Deploy test registry and template
-./scripts/deploy-tenantregistry.sh
-./scripts/deploy-tenanttemplate.sh
+./scripts/deploy-lynqhub.sh
+./scripts/deploy-lynqform.sh
 
-# 4. Verify tenants created
-kubectl get tenants
-kubectl get deployments,services -l kubernetes-tenants.org/tenant
+# 4. Verify nodes created
+kubectl get lynqnodes
+kubectl get deployments,services -l lynq.sh/node
 
 # 5. Test lifecycle: Add tenant
-kubectl exec -it deployment/mysql -n tenant-operator-test -- \
+kubectl exec -it deployment/mysql -n lynq-test -- \
   mysql -u root -p tenants -e \
   "INSERT INTO tenant_configs VALUES ('delta-co', 'https://delta.example.com', 1, 'enterprise');"
 
 # Wait 30s, then verify
-kubectl get tenant delta-co-test-template
+kubectl get lynqnode delta-co-test-template
 
 # 6. Test lifecycle: Deactivate tenant
-kubectl exec -it deployment/mysql -n tenant-operator-test -- \
+kubectl exec -it deployment/mysql -n lynq-test -- \
   mysql -u root -p tenants -e \
   "UPDATE tenant_configs SET is_active = 0 WHERE tenant_id = 'acme-corp';"
 
 # Wait 30s, then verify deletion
-kubectl get tenant acme-corp-test-template
+kubectl get lynqnode acme-corp-test-template
 # Should be NotFound
 ```
 
@@ -310,17 +310,17 @@ make run
 
 ```bash
 # In a dedicated terminal
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager -f
+kubectl logs -n lynq-system -l control-plane=controller-manager -f
 ```
 
 ### 3. Use Watch Commands
 
 ```bash
-# Watch tenants
-watch kubectl get tenants
+# Watch nodes
+watch kubectl get lynqnodes
 
 # Watch specific tenant
-watch kubectl get tenant acme-corp-test-template -o yaml
+watch kubectl get lynqnode acme-corp-test-template -o yaml
 ```
 
 ### 4. Quick MySQL Queries
@@ -328,7 +328,7 @@ watch kubectl get tenant acme-corp-test-template -o yaml
 Create aliases:
 
 ```bash
-alias mysql-test='kubectl exec -it deployment/mysql -n tenant-operator-test -- mysql -u tenant_reader -p$(kubectl get secret mysql-credentials -n tenant-operator-test -o jsonpath="{.data.password}" | base64 -d) tenants'
+alias mysql-test='kubectl exec -it deployment/mysql -n lynq-test -- mysql -u tenant_reader -p$(kubectl get secret mysql-credentials -n lynq-test -o jsonpath="{.data.password}" | base64 -d) tenants'
 
 # Then use:
 mysql-test -e "SELECT * FROM tenant_configs;"
@@ -338,12 +338,12 @@ mysql-test -e "SELECT * FROM tenant_configs;"
 
 ```bash
 # Add to ~/.zshrc or ~/.bashrc
-alias kto='kubectl config use-context tenant-operator'
-alias ktos='kubectl -n tenant-operator-system'
-alias ktot='kubectl -n tenant-operator-test'
+alias kto='kubectl config use-context lynq'
+alias ktos='kubectl -n lynq-system'
+alias ktot='kubectl -n lynq-test'
 
 # Usage:
-kto  # Switch to tenant-operator context
+kto  # Switch to lynq context
 ktos get pods  # Get pods in operator namespace
 ```
 
@@ -353,24 +353,24 @@ ktos get pods  # Get pods in operator namespace
 
 ```bash
 # 1. Modify template logic in tenant_controller.go
-vim internal/controller/tenant_controller.go
+vim internal/controller/lynqnode_controller.go
 
 # 2. Run locally for quick feedback
 make run
 
 # 3. In another terminal, apply test template
-kubectl apply -f config/samples/operator_v1_tenanttemplate.yaml
+kubectl apply -f config/samples/operator_v1_lynqform.yaml
 
 # 4. Watch logs and verify rendered resources
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager -f
-kubectl get tenant -o yaml | grep -A 10 "spec:"
+kubectl logs -n lynq-system -l control-plane=controller-manager -f
+kubectl get lynqnode -o yaml | grep -A 10 "spec:"
 ```
 
 ### Scenario 2: Testing Database Sync
 
 ```bash
 # 1. Modify registry controller
-vim internal/controller/tenantregistry_controller.go
+vim internal/controller/lynqhub_controller.go
 
 # 2. Deploy to test in-cluster
 ./scripts/deploy-to-minikube.sh
@@ -379,7 +379,7 @@ vim internal/controller/tenantregistry_controller.go
 mysql-test -e "UPDATE tenant_configs SET subscription_plan = 'premium' WHERE tenant_id = 'acme-corp';"
 
 # 4. Verify Tenant CR updated
-kubectl get tenant acme-corp-test-template -o yaml | grep planId
+kubectl get lynqnode acme-corp-test-template -o yaml | grep planId
 ```
 
 ### Scenario 3: Testing CRD Changes
@@ -405,15 +405,15 @@ kubectl apply -f config/samples/
 
 ```bash
 # 1. Modify webhook in api/v1/*_webhook.go
-vim api/v1/tenanttemplate_webhook.go
+vim api/v1/lynqform_webhook.go
 
 # 2. Must deploy to cluster (webhooks need TLS)
 ./scripts/deploy-to-minikube.sh
 
 # 3. Test invalid resource
 kubectl apply -f - <<EOF
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: invalid-template
 spec:
@@ -429,15 +429,15 @@ EOF
 
 ```bash
 # Delete test resources
-kubectl delete tenants --all
-kubectl delete tenanttemplate test-template
-kubectl delete tenantregistry test-registry
+kubectl delete lynqnodes --all
+kubectl delete lynqform test-template
+kubectl delete lynqhub test-registry
 
 # Delete MySQL
-kubectl delete deployment,service,pvc mysql -n tenant-operator-test
+kubectl delete deployment,service,pvc mysql -n lynq-test
 
 # Delete operator
-kubectl delete deployment tenant-operator-controller-manager -n tenant-operator-system
+kubectl delete deployment lynq-controller-manager -n lynq-system
 ```
 
 ### Full Cleanup
@@ -464,10 +464,10 @@ kubectl delete deployment tenant-operator-controller-manager -n tenant-operator-
 
 ```bash
 # Check pod status
-kubectl get pods -n tenant-operator-system
+kubectl get pods -n lynq-system
 
 # Check logs
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager
+kubectl logs -n lynq-system -l control-plane=controller-manager
 
 # Common issues:
 
@@ -477,14 +477,14 @@ kubectl get pods -n cert-manager
 kubectl describe pods -n cert-manager
 
 # 2. Webhook certificates not ready
-kubectl get certificate -n tenant-operator-system
+kubectl get certificate -n lynq-system
 # Should show "Ready=True"
 
 # 3. Image not loaded
-minikube -p tenant-operator image ls | grep tenant-operator
+minikube -p lynq image ls | grep lynq
 
 # 4. CRDs not installed
-kubectl get crd | grep tenant
+kubectl get crd | grep lynq
 ```
 
 ::: danger cert-manager is Critical
@@ -495,8 +495,8 @@ If the operator pod fails to start with webhook certificate errors, cert-manager
 kubectl get pods -n cert-manager
 
 # Check certificate status
-kubectl get certificate -n tenant-operator-system
-kubectl describe certificate -n tenant-operator-system
+kubectl get certificate -n lynq-system
+kubectl describe certificate -n lynq-system
 
 # If missing, install cert-manager:
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
@@ -511,7 +511,7 @@ kubectl wait --for=condition=Available --timeout=300s -n cert-manager deployment
 kubectl cluster-info
 
 # Check if CRDs are installed
-kubectl get crd | grep tenant
+kubectl get crd | grep lynq
 
 # Run tests with verbose output
 go test ./... -v -count=1
@@ -521,13 +521,13 @@ go test ./... -v -count=1
 
 ```bash
 # Force rebuild without cache
-docker build --no-cache -t tenant-operator:dev .
+docker build --no-cache -t lynq:dev .
 
 # Reload into Minikube
-minikube -p tenant-operator image load tenant-operator:dev
+minikube -p lynq image load lynq:dev
 
 # Restart operator pod
-kubectl rollout restart deployment -n tenant-operator-system tenant-operator-controller-manager
+kubectl rollout restart deployment -n lynq-system lynq-controller-manager
 ```
 
 ## Advanced Workflows
@@ -563,7 +563,7 @@ MINIKUBE_MEMORY=16384 \
 
 - [Quick Start](quickstart.md) - Initial setup guide
 - [Development Guide](development.md) - General development practices
-- [Contributing](https://github.com/kubernetes-tenants/tenant-operator/blob/main/CONTRIBUTING.md) - Contribution guidelines
+- [Contributing](https://github.com/k8s-lynq/lynq/blob/main/CONTRIBUTING.md) - Contribution guidelines
 - [Troubleshooting](troubleshooting.md) - Common issues
 
 ## Summary

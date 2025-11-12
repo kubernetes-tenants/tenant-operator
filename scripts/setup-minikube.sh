@@ -9,7 +9,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}=== Minikube Setup Script for Tenant Operator ===${NC}"
+echo -e "${BLUE}=== Minikube Setup Script for Lynq ===${NC}"
 echo ""
 
 # Default values
@@ -18,7 +18,7 @@ CPUS="${MINIKUBE_CPUS:-2}"
 MEMORY="${MINIKUBE_MEMORY:-2048}"
 DISK_SIZE="${MINIKUBE_DISK_SIZE:-5g}"
 K8S_VERSION="${MINIKUBE_K8S_VERSION:-v1.28.3}"
-PROFILE="${MINIKUBE_PROFILE:-tenant-operator}"
+PROFILE="${MINIKUBE_PROFILE:-lynq}"
 
 # Check if minikube is installed
 if ! command -v minikube &> /dev/null; then
@@ -61,7 +61,7 @@ echo "  MINIKUBE_CPUS=2"
 echo "  MINIKUBE_MEMORY=2048"
     echo "  MINIKUBE_DISK_SIZE=5g"
     echo "  MINIKUBE_K8S_VERSION=v1.28.3"
-    echo "  MINIKUBE_PROFILE=tenant-operator"
+    echo "  MINIKUBE_PROFILE=lynq"
     exit 0
 fi
 
@@ -130,8 +130,8 @@ echo -e "${GREEN}✓ cert-manager is ready${NC}"
 
 # Install CRDs
 echo ""
-echo -e "${YELLOW}Installing Tenant Operator CRDs...${NC}"
-if [ -f "config/crd/bases/tenants.kubernetes-tenants.org_tenantregistries.yaml" ]; then
+echo -e "${YELLOW}Installing Lynq CRDs...${NC}"
+if [ -f "config/crd/bases/operator.lynq.sh_lynqhubs.yaml" ]; then
     kubectl apply -f config/crd/bases/
     echo -e "${GREEN}✓ CRDs installed${NC}"
 else
@@ -141,13 +141,13 @@ fi
 # Create operator namespace
 echo ""
 echo -e "${YELLOW}Creating operator namespace...${NC}"
-kubectl create namespace tenant-operator-system --dry-run=client -o yaml | kubectl apply -f -
-echo -e "${GREEN}✓ Namespace 'tenant-operator-system' created${NC}"
+kubectl create namespace lynq-system --dry-run=client -o yaml | kubectl apply -f -
+echo -e "${GREEN}✓ Namespace 'lynq-system' created${NC}"
 
 # Create test namespace
 echo -e "${YELLOW}Creating test namespace...${NC}"
-kubectl create namespace tenant-operator-test --dry-run=client -o yaml | kubectl apply -f -
-echo -e "${GREEN}✓ Namespace 'tenant-operator-test' created${NC}"
+kubectl create namespace lynq-test --dry-run=client -o yaml | kubectl apply -f -
+echo -e "${GREEN}✓ Namespace 'lynq-test' created${NC}"
 
 # Display cluster info
 echo ""
@@ -165,7 +165,7 @@ echo "  Open dashboard:          minikube dashboard -p $PROFILE"
 echo "  Stop cluster:            minikube stop -p $PROFILE"
 echo "  Delete cluster:          ./scripts/cleanup-minikube.sh"
 echo "  Run operator locally:    make run"
-echo "  Build & deploy operator: make docker-build docker-push deploy IMG=<your-registry>/tenant-operator:tag"
+echo "  Build & deploy operator: make docker-build docker-push deploy IMG=<your-registry>/lynq:tag"
 echo ""
 echo -e "${BLUE}Get cluster IP for testing:${NC}"
 echo "  minikube ip -p $PROFILE"

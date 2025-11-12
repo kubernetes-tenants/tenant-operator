@@ -58,6 +58,6 @@ jobs:
           publish_dir: docs/.vitepress/dist
           # destination_dir: ${{ env.DOCS_VERSION }} # Legacy documentation structure
           commit_message: "docs: deploy ${{ env.DOCS_VERSION }}"
-          cname: docs.kubernetes-tenants.org
+          cname: lynq.sh
           keep_files: true  # Preserve Helm chart files (index.yaml, *.tgz, artifacthub-repo.yml)
           exclude_assets: '.github'  # Exclude .github directory from gh-pages

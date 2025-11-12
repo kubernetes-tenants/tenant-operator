@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTenantReconcileDuration(t *testing.T) {
+func TestLynqNodeReconcileDuration(t *testing.T) {
 	// Reset the metric before testing
 	TenantReconcileDuration.Reset()
 
@@ -49,7 +49,7 @@ func TestTenantReconcileDuration(t *testing.T) {
 	assert.Equal(t, 2, count, "Expected 2 metrics to be collected after error observation")
 }
 
-func TestTenantReconcileDuration_Timer(t *testing.T) {
+func TestLynqNodeReconcileDuration_Timer(t *testing.T) {
 	TenantReconcileDuration.Reset()
 
 	// Test using a timer
@@ -61,7 +61,7 @@ func TestTenantReconcileDuration_Timer(t *testing.T) {
 	assert.Equal(t, 1, count)
 }
 
-func TestTenantResourcesReady(t *testing.T) {
+func TestLynqNodeResourcesReady(t *testing.T) {
 	TenantResourcesReady.Reset()
 
 	// Set ready resources count
@@ -83,7 +83,7 @@ tenant_resources_ready{namespace="production",tenant="tenant2"} 10
 	assert.NoError(t, err)
 }
 
-func TestTenantResourcesDesired(t *testing.T) {
+func TestLynqNodeResourcesDesired(t *testing.T) {
 	TenantResourcesDesired.Reset()
 
 	// Set desired resources count
@@ -98,7 +98,7 @@ func TestTenantResourcesDesired(t *testing.T) {
 	assert.Empty(t, problems)
 }
 
-func TestTenantResourcesFailed(t *testing.T) {
+func TestLynqNodeResourcesFailed(t *testing.T) {
 	TenantResourcesFailed.Reset()
 
 	// Set failed resources count
@@ -194,7 +194,7 @@ apply_attempts_total{conflict_policy="Stuck",kind="Service",result="success"} 1
 	assert.NoError(t, err)
 }
 
-func TestTenantConditionStatus(t *testing.T) {
+func TestLynqNodeConditionStatus(t *testing.T) {
 	TenantConditionStatus.Reset()
 
 	// Set condition statuses (0=False, 1=True, 2=Unknown)
@@ -216,7 +216,7 @@ tenant_condition_status{namespace="default",tenant="tenant3",type="Degraded"} 2
 	assert.NoError(t, err)
 }
 
-func TestTenantConflictsTotal(t *testing.T) {
+func TestLynqNodeConflictsTotal(t *testing.T) {
 	TenantConflictsTotal.Reset()
 
 	// Increment conflict counters
@@ -237,7 +237,7 @@ tenant_conflicts_total{conflict_policy="Stuck",namespace="default",resource_kind
 	assert.NoError(t, err)
 }
 
-func TestTenantResourcesConflicted(t *testing.T) {
+func TestLynqNodeResourcesConflicted(t *testing.T) {
 	TenantResourcesConflicted.Reset()
 
 	// Set conflicted resources count
@@ -255,7 +255,7 @@ tenant_resources_conflicted{namespace="default",tenant="tenant1"} 3
 	assert.NoError(t, err)
 }
 
-func TestTenantDegradedStatus(t *testing.T) {
+func TestLynqNodeDegradedStatus(t *testing.T) {
 	TenantDegradedStatus.Reset()
 
 	// Set degraded status (1=degraded, 0=not degraded)
