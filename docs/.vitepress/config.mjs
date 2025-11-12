@@ -39,7 +39,14 @@ export default withMermaid(
             { text: "API Reference", link: "/api" },
             { text: "Configuration", link: "/configuration" },
             { text: "Datasources", link: "/datasource" },
-            { text: "Templates", link: "/templates" },
+            {
+              text: "Templates",
+              collapsed: false,
+              items: [
+                { text: "Overview", link: "/templates" },
+                { text: "🛠️ Builder", link: "/template-builder" },
+              ],
+            },
             {
               text: "Dependencies",
               collapsed: false,
