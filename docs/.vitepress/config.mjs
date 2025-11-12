@@ -179,6 +179,7 @@ export default withMermaid(
       ["link", { rel: "icon", type: "image/png", href: "/logo.png" }],
       ["link", { rel: "shortcut icon", href: "/logo.ico" }],
       ["link", { rel: "apple-touch-icon", href: "/logo.ico" }],
+      ["meta", { name: "google-site-verification", content: "g7LPr3Wcm6hCm-Lm8iP5KVl11KvPv6Chxpjh3oNKHPw" }],
     ],
   })
 );
