@@ -8,6 +8,19 @@ Resource ordering and dependency graphs in Tenant Operator.
 
 Tenant Operator uses a DAG (Directed Acyclic Graph) to order resource creation and ensure dependencies are satisfied before applying resources.
 
+## Dependency Visualizer
+
+The Tenant Operator includes an interactive dependency graph visualizer tool that helps you:
+
+- **Visualize Dependencies**: See the complete dependency graph of your TenantTemplate
+- **Detect Cycles**: Automatically identify circular dependencies that would cause failures
+- **Understand Execution Order**: View numbered badges showing the order resources will be applied
+- **Test Your Templates**: Paste your YAML and analyze dependencies before deployment
+
+::: tip Interactive Tool Available
+Visit the **[🔍 Dependency Visualizer](./dependency-visualizer.md)** page to analyze your TenantTemplate dependencies interactively. Load preset examples or paste your own YAML to visualize the dependency graph in real-time.
+:::
+
 ## Defining Dependencies
 
 Use the `dependIds` field to specify dependencies:
@@ -204,6 +217,7 @@ ReadinessTimeout: Resource db not ready within 300s
 
 ## See Also
 
+- [🔍 Dependency Visualizer](dependency-visualizer.md) - Interactive tool for analyzing dependencies
 - [Template Guide](templates.md)
 - [Policies Guide](policies.md)
 - [Troubleshooting Guide](troubleshooting.md)

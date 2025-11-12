@@ -40,7 +40,14 @@ export default withMermaid(
             { text: "Configuration", link: "/configuration" },
             { text: "Datasources", link: "/datasource" },
             { text: "Templates", link: "/templates" },
-            { text: "Dependencies", link: "/dependencies" },
+            {
+              text: "Dependencies",
+              collapsed: false,
+              items: [
+                { text: "Overview", link: "/dependencies" },
+                { text: "🔍 Visualizer", link: "/dependency-visualizer" },
+              ],
+            },
             {
               text: "Policies",
               collapsed: false,
