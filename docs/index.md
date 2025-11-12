@@ -357,15 +357,15 @@ Self-service infrastructure for teams without manual ticket workflows
 
 </div>
 
-<div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #42b883 0%, #35495e 100%); border-radius: 12px; margin: 2.5rem 0;">
-<div style="color: white;">
-<div style="font-size: clamp(1.25rem, 3vw, 1.75rem); font-weight: bold; margin-bottom: 0.75rem;">
+<div style="text-align: center; padding: 2.5rem 2rem; background: linear-gradient(135deg, rgba(66, 184, 131, 0.08) 0%, rgba(102, 126, 234, 0.08) 100%); border-radius: 16px; margin: 2.5rem 0; border: 1px solid rgba(102, 126, 234, 0.15); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 4px 24px rgba(102, 126, 234, 0.08);">
+<div>
+<div style="font-size: clamp(1.25rem, 3vw, 1.75rem); font-weight: 700; margin-bottom: 0.75rem; color: var(--vp-c-text-1);">
 Stop Managing Tenants Manually
 </div>
-<p style="font-size: clamp(0.9rem, 2vw, 1.05rem); opacity: 0.95; margin: 0 0 1.5rem; line-height: 1.5;">
+<p style="font-size: clamp(0.9rem, 2vw, 1.05rem); margin: 0 0 1.5rem; line-height: 1.6; color: var(--vp-c-text-2); max-width: 600px; margin-left: auto; margin-right: auto;">
 Let your database drive your infrastructure. Focus on your product, not kubectl commands.
 </p>
-<a href="/quickstart" style="display: inline-block; padding: 0.75rem 2rem; background: white; color: #42b883; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 1rem;">
+<a href="/quickstart" style="display: inline-block; padding: 0.75rem 2rem; background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%); color: var(--vp-c-brand); border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; border: 1.5px solid rgba(102, 126, 234, 0.25); box-shadow: 0 2px 12px rgba(102, 126, 234, 0.15);">
 Get Started in 5 Minutes →
 </a>
 </div>
@@ -461,12 +461,12 @@ Turn database rows into production-ready tenant infrastructure, automatically.
   </div>
 </div>
 
-<div style="text-align: center; padding: 2.5rem 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; margin: 3rem 0">
-  <div style="color: white;">
-    <div style="font-size: clamp(1.5rem, 4vw, 2.25rem); font-weight: bold; margin-bottom: 0.75rem; line-height: 1.2">
+<div style="text-align: center; padding: 3rem 2rem; background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); border-radius: 16px; margin: 3rem 0; border: 1px solid rgba(102, 126, 234, 0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 4px 24px rgba(102, 126, 234, 0.1);">
+  <div>
+    <div style="font-size: clamp(1.5rem, 4vw, 2.25rem); font-weight: 700; margin-bottom: 0.75rem; line-height: 1.2; color: var(--vp-c-text-1);">
       1 Database Row = 1 Complete Stack
     </div>
-    <p style="font-size: clamp(0.95rem, 2vw, 1.1rem); opacity: 0.95; margin: 0; line-height: 1.5">
+    <p style="font-size: clamp(0.95rem, 2vw, 1.1rem); margin: 0; line-height: 1.6; color: var(--vp-c-text-2); max-width: 700px; margin-left: auto; margin-right: auto;">
       Add a tenant to your database → Get Deployment + Service + Ingress + DNS + whatever you need
     </p>
   </div>
