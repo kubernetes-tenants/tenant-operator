@@ -79,7 +79,7 @@
         <div class="registry-box clickable" @click="openModal('registry')">
           <div class="resource-icon">📋</div>
           <div class="resource-title">TenantRegistry</div>
-          <div class="resource-subtitle">Syncs every n seconds</div>
+          <div class="resource-subtitle">Syncs every 30 seconds</div>
           <div class="click-overlay">
             <span class="click-overlay-text">Click to view YAML</span>
           </div>

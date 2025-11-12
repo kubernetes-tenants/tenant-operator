@@ -266,90 +266,34 @@ Automatically.
 
 ## Why Tenant Operator?
 
-<p style="font-size: 1.05rem; color: var(--vp-c-text-2); margin: 1.5rem 0">
-Managing hundreds or thousands of tenants in Kubernetes shouldn't require custom scripts, manual updates, or rebuilding Helm charts every time your data changes.
-</p>
+<ComparisonSection />
 
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; margin: 1.5rem 0;">
-<div>
+<div style="margin: 3rem 0; padding: 2.5rem 2rem; background: var(--vp-c-bg-soft); border-radius: 16px; border: 1px solid var(--vp-c-divider);">
 
-### ❌ Traditional Approaches Fall Short
+<h3 style="margin: 0 0 0.5rem; text-align: center; font-size: 1.75rem; color: var(--vp-c-text-1);">Perfect For</h3>
+<p style="text-align: center; color: var(--vp-c-text-2); margin: 0 0 2rem; font-size: 0.95rem;">Build multi-tenant infrastructure for any scale</p>
 
-<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px; margin-bottom: 0.75rem; margin-top: 1rem;">
-<strong style="display: block; margin-bottom: 0.5rem;">Helm Charts</strong>
-<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
-Static values files. Adding 10 new tenants? Manually create 10 new releases and track them separately.
-</p>
-</div>
-
-<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px; margin-bottom: 0.75rem;">
-<strong style="display: block; margin-bottom: 0.5rem;">GitOps Only</strong>
-<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
-New customer signs up? Commit YAML, wait for CI/CD, manually sync. Not dynamic enough for real-time provisioning.
-</p>
-</div>
-
-<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px;">
-<strong style="display: block; margin-bottom: 0.5rem;">Custom Scripts</strong>
-<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
-kubectl apply in bash loops. Works until you need drift detection, conflict handling, or dependency ordering.
-</p>
-</div>
-
-</div>
-<div>
-
-### ✅ Tenant Operator Solves This
-
-<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px; margin-bottom: 0.75rem; margin-top: 1rem; border-left: 3px solid var(--vp-c-brand);">
-<strong style="display: block; margin-bottom: 0.5rem;">Database-Driven Automation</strong>
-<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
-Your existing database is the source of truth. No YAML commits, no manual kubectl commands.
-</p>
-</div>
-
-<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px; margin-bottom: 0.75rem; border-left: 3px solid var(--vp-c-brand);">
-<strong style="display: block; margin-bottom: 0.5rem;">Real-Time Synchronization</strong>
-<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
-Add a tenant → resources created in 30 seconds. Deactivate a tenant → everything cleaned up automatically.
-</p>
-</div>
-
-<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px; border-left: 3px solid var(--vp-c-brand);">
-<strong style="display: block; margin-bottom: 0.5rem;">Production-Grade Control</strong>
-<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
-Built-in policies, drift detection, conflict resolution, dependency management, and comprehensive observability.
-</p>
-</div>
-
-</div>
-</div>
-
-<div style="margin: 2.5rem 0; padding: 2rem; background: var(--vp-c-bg-soft); border-radius: 12px; border: 1px solid var(--vp-c-divider);">
-
-<h3 style="margin: 0">Perfect For</h3>
-
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
-<div style="text-align: center;">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+<div style="text-align: center; padding: 1.5rem; background: var(--vp-c-bg); border-radius: 12px; border: 1px solid var(--vp-c-divider); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
 <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🏢</div>
-<strong style="display: block; margin-bottom: 0.5rem;">SaaS Platforms</strong>
-<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
+<strong style="display: block; margin-bottom: 0.5rem; font-size: 1.05rem; color: var(--vp-c-text-1);">SaaS Platforms</strong>
+<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2); line-height: 1.6;">
 Each customer gets isolated infrastructure provisioned from your user database
 </p>
 </div>
 
-<div style="text-align: center;">
+<div style="text-align: center; padding: 1.5rem; background: var(--vp-c-bg); border-radius: 12px; border: 1px solid var(--vp-c-divider); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
 <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🌍</div>
-<strong style="display: block; margin-bottom: 0.5rem;">Multi-Environment Apps</strong>
-<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
+<strong style="display: block; margin-bottom: 0.5rem; font-size: 1.05rem; color: var(--vp-c-text-1);">Multi-Environment Apps</strong>
+<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2); line-height: 1.6;">
 Spin up dev/staging/prod environments dynamically per team or feature branch
 </p>
 </div>
 
-<div style="text-align: center;">
+<div style="text-align: center; padding: 1.5rem; background: var(--vp-c-bg); border-radius: 12px; border: 1px solid var(--vp-c-divider); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
 <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🔧</div>
-<strong style="display: block; margin-bottom: 0.5rem;">Internal Platforms</strong>
-<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">
+<strong style="display: block; margin-bottom: 0.5rem; font-size: 1.05rem; color: var(--vp-c-text-1);">Internal Platforms</strong>
+<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2); line-height: 1.6;">
 Self-service infrastructure for teams without manual ticket workflows
 </p>
 </div>
