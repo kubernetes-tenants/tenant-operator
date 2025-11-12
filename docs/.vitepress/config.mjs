@@ -5,10 +5,11 @@ import { withMermaid } from "vitepress-plugin-mermaid";
 export default withMermaid(
   defineConfig({
     title: "Tenant Operator",
-    description: "Multi-Tenant Kubernetes Automation Platform",
+    description: "Database-Driven Kubernetes Automation / Multi-Tenant Kubernetes Automation Platform",
     base: "/",
     srcDir: ".",
     ignoreDeadLinks: false,
+    appearance: 'force-dark', // Force dark mode only
 
     themeConfig: {
       // https://vitepress.dev/reference/default-theme-config

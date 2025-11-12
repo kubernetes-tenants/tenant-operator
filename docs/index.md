@@ -23,13 +23,37 @@ layout: home
   z-index: -1;
   background: radial-gradient(
     ellipse 35% 28% at 50% 25%,
-    rgba(100, 108, 255, 0.15) 0%,
-    rgba(88, 96, 224, 0.08) 30%,
-    rgba(74, 82, 196, 0.04) 50%,
+    rgba(100, 108, 255, 0.5) 0%,
+    rgba(88, 96, 224, 0.3) 30%,
+    rgba(74, 82, 196, 0.18) 50%,
     transparent 70%
   );
   opacity: 1;
   pointer-events: none;
+  animation: gradientPulse 8s ease-in-out infinite;
+}
+
+/* Light mode - much more visible gradient */
+html:not(.dark) .custom-hero::before {
+  background: radial-gradient(
+    ellipse 40% 32% at 50% 25%,
+    rgba(100, 108, 255, 0.35) 0%,
+    rgba(88, 96, 224, 0.22) 30%,
+    rgba(74, 82, 196, 0.12) 50%,
+    rgba(74, 82, 196, 0.04) 65%,
+    transparent 80%
+  );
+}
+
+@keyframes gradientPulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: translateX(-50%) scale(0.95);
+  }
+  50% {
+    opacity: 1.2;
+    transform: translateX(-50%) scale(1.15);
+  }
 }
 
 .hero-content {
@@ -40,36 +64,28 @@ layout: home
   z-index: 1;
 }
 
-.hero-title {
-  font-size: clamp(2.5rem, 6vw, 4rem);
-  font-weight: 800;
-  line-height: 1.1;
-  margin: 0 0 1rem;
-  background: linear-gradient(135deg, var(--vp-c-brand-1) 0%, var(--vp-c-brand-2) 50%, #42b883 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: titleFadeIn 1s ease-out;
-}
-
 .hero-tagline {
-  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+  font-size: clamp(2.5rem, 7vw, 4.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0 0 1.5rem;
   color: var(--vp-c-text-1);
-  margin: 0 0 1rem;
-  font-weight: 600;
+  letter-spacing: -0.02em;
   opacity: 0;
-  animation: fadeInUp 1s ease-out 0.2s forwards;
+  animation: fadeInUp 1s ease-out 0.1s forwards;
 }
 
 .hero-description {
-  font-size: clamp(1rem, 2vw, 1.15rem);
+  font-size: clamp(1.15rem, 2.5vw, 1.5rem);
   color: var(--vp-c-text-2);
   margin: 0 0 2.5rem;
-  max-width: 700px;
+  max-width: 800px;
   margin-left: auto;
   margin-right: auto;
+  line-height: 1.6;
+  font-weight: 500;
   opacity: 0;
-  animation: fadeInUp 1s ease-out 0.4s forwards;
+  animation: fadeInUp 1s ease-out 0.3s forwards;
 }
 
 .hero-actions {
@@ -79,55 +95,127 @@ layout: home
   flex-wrap: wrap;
   margin-bottom: 3rem;
   opacity: 0;
-  animation: fadeInUp 1s ease-out 0.6s forwards;
+  animation: fadeInUp 1s ease-out 0.5s forwards;
 }
 
 .hero-action {
+  position: relative;
   display: inline-block;
-  padding: 0.875rem 2rem;
-  border-radius: 8px;
+  padding: 1rem 2.5rem;
+  border-radius: 12px;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 1.05rem;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  z-index: 1;
 }
 
 .hero-action.brand {
-  background: linear-gradient(135deg, var(--vp-c-brand-1) 0%, var(--vp-c-brand-2) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(102, 126, 234, 0.15) 0%,
+    rgba(118, 75, 162, 0.15) 100%
+  );
   color: white;
-  box-shadow: 0 4px 14px rgba(100, 108, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow:
+    0 8px 32px rgba(102, 126, 234, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  position: relative;
+  isolation: isolate;
+}
+
+.hero-action.brand::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.02) 50%,
+    rgba(0, 0, 0, 0.05) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hero-action.brand::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from var(--gradient-angle),
+    transparent 0deg,
+    rgba(102, 126, 234, 0.5) 60deg,
+    rgba(118, 75, 162, 0.5) 120deg,
+    rgba(240, 147, 251, 0.5) 180deg,
+    transparent 240deg
+  );
+  animation: rotateGradient 4s linear infinite;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  filter: blur(15px);
+  z-index: 0;
+}
+
+.hero-action.brand:hover::after {
+  opacity: 1;
 }
 
 .hero-action.brand:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(100, 108, 255, 0.4);
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.3);
+  background: linear-gradient(
+    135deg,
+    rgba(102, 126, 234, 0.25) 0%,
+    rgba(118, 75, 162, 0.25) 100%
+  );
+  box-shadow:
+    0 12px 40px rgba(102, 126, 234, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
 }
 
 .hero-action.alt {
-  background: var(--vp-c-bg);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--vp-c-text-1);
-  border: 1px solid var(--vp-c-divider);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
 }
 
 .hero-action.alt:hover {
-  border-color: var(--vp-c-brand-1);
-  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(102, 126, 234, 0.5);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+@property --gradient-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rotateGradient {
+  0% {
+    --gradient-angle: 0deg;
+  }
+  100% {
+    --gradient-angle: 360deg;
+  }
 }
 
 .hero-diagram {
   opacity: 0;
-  animation: fadeInUp 1s ease-out 0.8s forwards;
-}
-
-@keyframes titleFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  animation: fadeInUp 1s ease-out 0.7s forwards;
 }
 
 @keyframes fadeInUp {
@@ -159,15 +247,15 @@ layout: home
 
 <div class="custom-hero">
 <div class="hero-content">
-<h1 class="hero-title">Tenant Operator</h1>
-<p class="hero-tagline">Multi-Tenant Kubernetes Automation</p>
+<h1 class="hero-tagline">Database-Driven<br/>Kubernetes Automation</h1>
 <p class="hero-description">
-Declarative, template-based resource provisioning with Server-Side Apply
+Turn database rows into production-ready infrastructure.<br/>
+Automatically.
 </p>
 
 <div class="hero-actions">
 <a href="/quickstart" class="hero-action brand">Get Started</a>
-<a href="https://github.com/kubernetes-tenants/tenant-operator" class="hero-action alt">View on GitHub</a>
+<a href="https://github.com/kubernetes-tenants/tenant-operator" class="hero-action alt" target="_blank" rel="noopener noreferrer">View on GitHub</a>
 </div>
 
 <div class="hero-diagram">
@@ -496,7 +584,7 @@ Follow the [Quick Start Guide](/quickstart) to see this in action with a working
   <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px">
     <h3 style="margin: 0 0 0.75rem">📦 GitHub Repository</h3>
     <p style="margin: 0 0 0.5rem">
-      <a href="https://github.com/kubernetes-tenants/tenant-operator">kubernetes-tenants/tenant-operator</a>
+      <a href="https://github.com/kubernetes-tenants/tenant-operator" target="_blank" rel="noopener noreferrer">kubernetes-tenants/tenant-operator</a>
     </p>
     <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2)">
       Source code, releases, and project roadmap
@@ -506,7 +594,7 @@ Follow the [Quick Start Guide](/quickstart) to see this in action with a working
   <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px">
     <h3 style="margin: 0 0 0.75rem">🐛 Issue Tracker</h3>
     <p style="margin: 0 0 0.5rem">
-      <a href="https://github.com/kubernetes-tenants/tenant-operator/issues">Report Issues</a>
+      <a href="https://github.com/kubernetes-tenants/tenant-operator/issues" target="_blank" rel="noopener noreferrer">Report Issues</a>
     </p>
     <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2)">
       Bug reports, feature requests, and discussions
