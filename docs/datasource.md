@@ -26,7 +26,7 @@ flowchart LR
     DB[(MySQL Datasource)]
     Sync[LynqHub<br/>Controller]
     API[Kubernetes API Server]
-    Tenants[Tenant CRs]
+    Tenants[LynqNode CRs]
     Resources["Tenant Resources<br/>(Deployments, Services, ...)"]
 
     DB -- syncInterval --> Sync
@@ -104,7 +104,7 @@ valueMappings:
 
 - **Type**: String
 - **Required**: Yes
-- **Purpose**: Tenant's URL or hostname
+- **Purpose**: LynqNode's URL or hostname
 - **Examples**:
   - `"https://acme.example.com"`
   - `"acme.example.com"`
@@ -598,7 +598,7 @@ tenant-2       https://beta.myapp.com          1          startup            eu-
 tenant-3       https://gamma.myapp.com         0          free               ap-south-1         5
 ```
 
-**Result:** 2 Tenant CRs created (tenant-1, tenant-2). tenant-3 is skipped because `is_active = "0"`.
+**Result:** 2 LynqNode CRs created (tenant-1, tenant-2). tenant-3 is skipped because `is_active = "0"`.
 
 ## Contributing a New Datasource
 

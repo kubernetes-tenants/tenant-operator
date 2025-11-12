@@ -119,7 +119,7 @@ With `CreationPolicy: Once`, the operator **SKIPS** resources that have the `cre
 ```mermaid
 sequenceDiagram
     participant User
-    participant Tenant as Tenant CR
+    participant Tenant as LynqNode CR
     participant Operator
     participant PVC as PVC (acme-data)
 
@@ -448,7 +448,7 @@ Unlike Example 1 (PVC with `Once`), resources with `WhenNeeded` automatically re
 ```mermaid
 sequenceDiagram
     participant User
-    participant Tenant as Tenant CR
+    participant Tenant as LynqNode CR
     participant Operator
     participant ConfigMap as ConfigMap<br/>(acme-shared-config)
 

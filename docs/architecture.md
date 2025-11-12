@@ -22,7 +22,7 @@ flowchart TB
         subgraph CRDs["Custom Resources"]
             TR[LynqHub]
             TT[LynqForm]
-            T[Tenant CRs]
+            T[LynqNode CRs]
         end
 
         subgraph Engine["Apply Engine"]
@@ -40,7 +40,7 @@ flowchart TB
     end
 
     DB -->|"syncInterval<br/>(e.g., 1m)"| RC
-    RC -->|"Creates/Updates/Deletes<br/>Tenant CRs"| API
+    RC -->|"Creates/Updates/Deletes<br/>LynqNode CRs"| API
     API -->|"Stores"| TR
     API -->|"Stores"| TT
     API -->|"Stores"| T
@@ -73,11 +73,11 @@ Quick reference for the three main components:
 
 | Component          | Purpose                                 | Example                               |
 | ------------------ | --------------------------------------- | ------------------------------------- |
-| **LynqHub** | Connects to database, syncs tenant rows | MySQL every 30s → Creates Tenant CRs  |
+| **LynqHub** | Connects to database, syncs tenant rows | MySQL every 30s → Creates LynqNode CRs  |
 | **LynqForm** | Defines resource blueprint              | Deployment + Service per tenant       |
 | **Tenant**         | Instance of a single tenant             | `acme-corp-web-app` → 5 K8s resources |
 
-**Workflow**: Database row → LynqHub syncs → Creates Tenant CR → Tenant controller applies LynqForm → Kubernetes resources created.
+**Workflow**: Database row → LynqHub syncs → Creates LynqNode CR → LynqNode controller applies LynqForm → Kubernetes resources created.
 
 ---
 
@@ -97,14 +97,14 @@ sequenceDiagram
     RC->>DB: SELECT * FROM tenants WHERE activate=TRUE
     DB-->>RC: Active tenant rows
 
-    RC->>API: Create/Update Tenant CRs (desired set)
+    RC->>API: Create/Update LynqNode CRs (desired set)
     RC->>API: Delete Tenants not in desired set
 
     TC->>API: Validate Template-Registry linkage
     TC->>API: Ensure consistency
 
     loop For Each Tenant
-        TNC->>API: Get Tenant spec
+        TNC->>API: Get LynqNode spec
         TNC->>TNC: Build dependency graph (dependIds)
         TNC->>TNC: Topological sort resources
 
@@ -119,7 +119,7 @@ sequenceDiagram
             end
         end
 
-        TNC->>API: Update Tenant status (ready/failed counts)
+        TNC->>API: Update LynqNode status (ready/failed counts)
     end
 
     RC->>API: Update Registry status (desired/ready/failed)
@@ -131,16 +131,16 @@ The operator uses a three-controller architecture to separate concerns and optim
 
 ### 1. LynqHub Controller
 
-**Purpose**: Syncs database (e.g., 1m interval) → Creates/Updates/Deletes Tenant CRs
+**Purpose**: Syncs database (e.g., 1m interval) → Creates/Updates/Deletes LynqNode CRs
 
 **Responsibilities**:
 
 - Periodically queries external datasource at `spec.source.syncInterval`
 - Filters active rows where `activate` field is truthy
 - Calculates desired Tenant set: `referencingTemplates × activeRows`
-- Creates missing Tenant CRs (naming: `{uid}-{template-name}`)
-- Updates existing Tenant CRs with fresh data
-- Deletes Tenant CRs for inactive/removed rows (garbage collection)
+- Creates missing LynqNode CRs (naming: `{uid}-{template-name}`)
+- Updates existing LynqNode CRs with fresh data
+- Deletes LynqNode CRs for inactive/removed rows (garbage collection)
 - Updates Registry status with counts
 
 **Key Status Fields**:
@@ -171,12 +171,12 @@ status:
 
 **Responsibilities**:
 
-- Builds template variables from Tenant spec
+- Builds template variables from LynqNode spec
 - Resolves resource dependencies (DAG + topological sort)
 - Renders all templates (names, namespaces, specs)
 - Applies resources using Server-Side Apply
 - Waits for resource readiness (if `waitForReady=true`)
-- Updates Tenant status with resource counts and conditions
+- Updates LynqNode status with resource counts and conditions
 - Handles conflicts according to ConflictPolicy
 - Manages finalizers for proper cleanup
 
@@ -213,7 +213,7 @@ spec:
     deployImage: container_image
 ```
 
-**Multi-Template Support**: One registry can be referenced by multiple LynqForms, creating separate Tenant CRs for each template-row combination.
+**Multi-Template Support**: One registry can be referenced by multiple LynqForms, creating separate LynqNode CRs for each template-row combination.
 
 ### LynqForm
 
@@ -249,7 +249,7 @@ spec:
 - `namespaces`
 - `manifests` (raw resources)
 
-### Tenant
+### LynqNode
 
 Instance representing a single tenant:
 
@@ -341,7 +341,7 @@ Automatic cleanup when:
 - Database row is deleted
 - Row's `activate` field becomes false
 - Template no longer references the registry
-- Tenant CR is deleted (with finalizer-based cleanup)
+- LynqNode CR is deleted (with finalizer-based cleanup)
 
 Resources respect `DeletionPolicy`:
 

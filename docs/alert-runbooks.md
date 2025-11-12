@@ -28,11 +28,11 @@ Use the table of contents (right sidebar) to jump directly to a specific alert.
 
 #### Description
 
-Tenant CR has entered a degraded state, indicating the operator cannot successfully reconcile the tenant's resources. This is a critical condition preventing normal tenant operation.
+LynqNode CR has entered a degraded state, indicating the operator cannot successfully reconcile the tenant's resources. This is a critical condition preventing normal tenant operation.
 
 #### Symptoms
 
-- Tenant's `Ready` condition is `False`
+- LynqNode's `Ready` condition is `False`
 - `status.degraded` shows specific degradation reason
 - Resources may be partially applied or stuck
 - Events show template, conflict, or dependency errors
@@ -161,7 +161,7 @@ Tenant has not reached Ready state for an extended period, indicating persistent
 
 - `Ready` condition is `False` for 15+ minutes
 - Resources may be pending, creating, or failing health checks
-- Tenant status shows ongoing reconciliation
+- LynqNode status shows ongoing reconciliation
 
 #### Diagnosis
 
@@ -199,7 +199,7 @@ kubectl get lynqnode <lynqnode-name> -o jsonpath='{.spec.*.dependIds}'
 
 #### Description
 
-Tenant status is Unknown, indicating potential controller or API server communication issues.
+LynqNode status is Unknown, indicating potential controller or API server communication issues.
 
 #### Symptoms
 
@@ -304,7 +304,7 @@ kubectl describe lynqnode <any-failed-node>
 
 #### Description
 
-Tenant's ready resource count doesn't match desired count, but no failures are detected. Reconciliation may be stuck or slow.
+LynqNode's ready resource count doesn't match desired count, but no failures are detected. Reconciliation may be stuck or slow.
 
 #### Diagnosis
 

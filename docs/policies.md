@@ -130,7 +130,7 @@ metadata:
 
 ## DeletionPolicy
 
-Controls what happens to resources when a Tenant CR is deleted.
+Controls what happens to resources when a LynqNode CR is deleted.
 
 ### `Delete` (Default)
 
@@ -226,7 +226,7 @@ kubectl get all -A -l lynq.sh/orphaned=true \
 ### Orphan Resource Cleanup
 
 ::: tip Dynamic Template Evolution
-DeletionPolicy applies not only when a Tenant CR is deleted, but also when resources are **removed from the LynqForm**.
+DeletionPolicy applies not only when a LynqNode CR is deleted, but also when resources are **removed from the LynqForm**.
 :::
 
 **How it works:**
@@ -252,14 +252,14 @@ This means you can safely experiment with template changes:
 ## Protecting Tenants from Cascade Deletion
 
 ::: danger Cascading deletions are immediate
-Deleting a LynqHub or LynqForm cascades to all Tenant CRs, which in turn deletes managed resources unless retention policies are set.
+Deleting a LynqHub or LynqForm cascades to all LynqNode CRs, which in turn deletes managed resources unless retention policies are set.
 :::
 
 ### The Problem
 
 ```mermaid
 flowchart TB
-    Registry[LynqHub<br/>deleted] --> Tenants[Tenant CRs<br/>finalizers trigger]
+    Registry[LynqHub<br/>deleted] --> Tenants[LynqNode CRs<br/>finalizers trigger]
     Tenants --> Resources["Tenant Resources<br/>(Deployments, PVCs, ...)"]
     style Registry fill:#ffebee,stroke:#ef5350,stroke-width:2px;
     style Tenants fill:#fff3e0,stroke:#ffb74d,stroke-width:2px;
@@ -305,8 +305,8 @@ spec:
 
 With `deletionPolicy: Retain`:
 1. **At creation time**: Resources are created with label-based tracking only (NO ownerReference)
-2. Even if LynqHub/LynqForm is deleted → Tenant CRs are deleted
-3. When Tenant CRs are deleted → Resources stay in cluster (no ownerReference = no automatic deletion)
+2. Even if LynqHub/LynqForm is deleted → LynqNode CRs are deleted
+3. When LynqNode CRs are deleted → Resources stay in cluster (no ownerReference = no automatic deletion)
 4. Finalizer adds orphan labels for easy identification
 5. **Resources stay in the cluster** because Kubernetes garbage collector never marks them for deletion
 

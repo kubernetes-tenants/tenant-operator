@@ -276,7 +276,7 @@ WHERE tenant_id = 'acme-corp';
 
 Since the database view `tenants_with_ai` filters on `feature_ai_assistant = TRUE`:
 1. Registry nodes-with-ai syncs and detects new node
-2. Creates Tenant CR `acme-corp-ai-assistant`
+2. Creates LynqNode CR `acme-corp-ai-assistant`
 3. Deploys AI assistant Deployment + Service with GPU
 4. Marks Tenant as Ready once all resources are up
 
@@ -320,7 +320,7 @@ UPDATE tenants SET feature_ai_assistant = FALSE WHERE tenant_id = 'acme-corp';
 
 - Tenant `acme-corp` no longer appears in `tenants_with_ai` view
 - Registry nodes-with-ai syncs and detects node removal
-- Lynq deletes Tenant CR `acme-corp-ai-assistant`
+- Lynq deletes LynqNode CR `acme-corp-ai-assistant`
 - AI assistant Deployment + Service automatically garbage collected
 - GPU resources freed
 

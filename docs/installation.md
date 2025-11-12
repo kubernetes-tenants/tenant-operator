@@ -300,7 +300,7 @@ kubectl delete crd lynqforms.operator.lynq.sh
 kubectl delete crd lynqnodes.operator.lynq.sh
 ```
 
-**Warning:** Deleting CRDs will delete all LynqHub, LynqForm, and Tenant resources. Ensure you have backups if needed.
+**Warning:** Deleting CRDs will delete all LynqHub, LynqForm, and LynqNode resources. Ensure you have backups if needed.
 
 ## Troubleshooting Installation
 

@@ -22,13 +22,13 @@ kubectl get events -n lynq-system --sort-by='.lastTimestamp'
 ### Check CRD Status
 
 ```bash
-# List all Tenant CRs
+# List all LynqNode CRs
 kubectl get lynqnodes --all-namespaces
 
 # Describe a specific Tenant
 kubectl describe lynqnode <lynqnode-name>
 
-# Get Tenant status
+# Get LynqNode status
 kubectl get lynqnode <lynqnode-name> -o jsonpath='{.status}'
 ```
 
@@ -103,13 +103,13 @@ kubectl get issuer -n lynq-system
 ### 2. Tenant Not Creating Resources
 
 **Symptoms:**
-- Tenant CR exists
+- LynqNode CR exists
 - Status shows `desiredResources > 0`
 - But `readyResources = 0`
 
 **Diagnosis:**
 ```bash
-# Check Tenant status
+# Check LynqNode status
 kubectl get lynqnode <name> -o yaml
 
 # Check events
@@ -192,7 +192,7 @@ spec:
 
 **Symptoms:**
 - Resources are ready in cluster
-- Tenant status shows `readyResources = 0`
+- LynqNode status shows `readyResources = 0`
 
 **Causes:**
 - Reconciliation not triggered
@@ -232,7 +232,7 @@ C. Wait longer (resources take time to become ready):
 
 **Diagnosis:**
 ```bash
-# Check rendered Tenant spec
+# Check rendered LynqNode spec
 kubectl get lynqnode <name> -o jsonpath='{.spec.deployments[0].nameTemplate}'
 ```
 
@@ -316,7 +316,7 @@ args:
 ### 8. Finalizer Stuck
 
 **Symptoms:**
-- Tenant CR stuck in `Terminating` state
+- LynqNode CR stuck in `Terminating` state
 - Can't delete Tenant
 
 **Diagnosis:**
@@ -347,7 +347,7 @@ kubectl patch lynqnode <name> -p '{"metadata":{"finalizers":[]}}' --type=merge
 
 **Symptoms:**
 - Database has active rows
-- No Tenant CRs created
+- No LynqNode CRs created
 
 **Diagnosis:**
 ```bash

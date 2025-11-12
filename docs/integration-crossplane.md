@@ -16,7 +16,7 @@ This guide shows how to integrate Lynq with Crossplane for provisioning cloud re
 flowchart LR
     subgraph TO["Lynq"]
         Template["LynqForm<br/>(defines what to create)"]
-        Tenant["Tenant CR<br/>(per tenant)"]
+        Tenant["LynqNode CR<br/>(per tenant)"]
     end
 
     subgraph XP["Crossplane"]
@@ -42,8 +42,8 @@ flowchart LR
 ```
 
 **Key Points:**
-- **Lynq** manages Tenant CRs (one per tenant)
-- **Tenant CR** creates both Crossplane Managed Resources AND native K8s resources
+- **Lynq** manages LynqNode CRs (one per tenant)
+- **LynqNode CR** creates both Crossplane Managed Resources AND native K8s resources
 - **Crossplane** watches Managed Resources and provisions actual cloud infrastructure
 - **Two operators work independently**: Lynq orchestrates, Crossplane provisions
 
@@ -51,7 +51,7 @@ flowchart LR
 
 ```mermaid
 sequenceDiagram
-    participant T as Tenant CR
+    participant T as LynqNode CR
     participant TO as Lynq
     participant XP as Crossplane
     participant AWS as AWS
@@ -668,7 +668,7 @@ With `waitForReady=false` on CloudFront, nodes become operational in ~5 minutes 
 ### Verify Deployment
 
 ```bash
-# 1. Check Tenant status (should be Ready in ~5 minutes)
+# 1. Check LynqNode status (should be Ready in ~5 minutes)
 kubectl get lynqnode node-alpha -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
 
 # 2. Check all Crossplane resources

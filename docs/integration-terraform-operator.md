@@ -10,7 +10,7 @@ This guide shows how to integrate Lynq with Terraform Operator for provisioning 
 
 ```mermaid
 flowchart LR
-    Tenant["Tenant CR"]
+    Tenant["LynqNode CR"]
     Template["Terraform<br/>manifest"]
     Tofu["tofu-controller<br/>Terraform CR"]
     Cloud["Cloud / On-Prem Resources"]
@@ -300,8 +300,8 @@ Additional examples including RDS databases, CloudFront CDN, Kafka topics, Rabbi
 
 ### Workflow
 
-1. **Tenant Created**: LynqHub creates Tenant CR from database
-2. **Terraform Applied**: Tenant controller creates Terraform CR
+1. **Tenant Created**: LynqHub creates LynqNode CR from database
+2. **Terraform Applied**: LynqNode controller creates Terraform CR
 3. **tf-controller Processes**: Runs terraform init/plan/apply
 4. **Resources Provisioned**: Cloud resources created (S3, RDS, etc.)
 5. **Outputs Saved**: Terraform outputs written to Kubernetes Secret

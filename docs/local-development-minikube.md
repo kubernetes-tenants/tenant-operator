@@ -215,7 +215,7 @@ kubectl logs -n lynq-system -l control-plane=controller-manager --previous
 View what the operator sees:
 
 ```bash
-# Check Tenant CR status
+# Check LynqNode CR status
 kubectl get lynqnode acme-corp-test-template -o yaml
 
 # Check registry sync status
@@ -378,7 +378,7 @@ vim internal/controller/lynqhub_controller.go
 # 3. Change database and watch sync
 mysql-test -e "UPDATE tenant_configs SET subscription_plan = 'premium' WHERE tenant_id = 'acme-corp';"
 
-# 4. Verify Tenant CR updated
+# 4. Verify LynqNode CR updated
 kubectl get lynqnode acme-corp-test-template -o yaml | grep planId
 ```
 

@@ -137,7 +137,7 @@ v1.1.4 introduces enhanced status tracking with a 30-second requeue interval for
 :::
 
 **Key Changes:**
-- **Fast Status Updates**: Child resource status changes reflected in Tenant status within 30 seconds (down from 5 minutes)
+- **Fast Status Updates**: Child resource status changes reflected in LynqNode status within 30 seconds (down from 5 minutes)
 - **Event-Driven**: Immediate reconciliation on watched resource changes
 - **Smart Predicates**: Only reconcile on Generation/Annotation changes, not status-only updates
 

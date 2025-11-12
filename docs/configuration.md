@@ -109,7 +109,7 @@ flowchart TB
     Template["LynqForm<br/>Spec"]
     Policies["Policies<br/>(Creation/Deletion/Conflict/Patch)"]
     Renderer["Template Renderer"]
-    Tenant["Tenant CR"]
+    Tenant["LynqNode CR"]
     Resources["Applied Resources"]
 
     Template --> Policies --> Renderer --> Tenant --> Resources
@@ -161,7 +161,7 @@ spec:
 ### RBAC
 
 Default RBAC is automatically created during installation and includes:
-- Full access to LynqHub, LynqForm, Tenant CRDs
+- Full access to LynqHub, LynqForm, LynqNode CRDs
 - Management of workload resources (Deployments, Services, etc.)
 - Read-only access to Secrets (for database credentials)
 - Events and lease management for leader election

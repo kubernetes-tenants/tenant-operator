@@ -52,9 +52,9 @@ spec:
 status:
   observedGeneration: int64          # Last observed generation
   referencingTemplates: int32        # Number of templates referencing this registry
-  desired: int32                     # Desired Tenant CRs (templates × rows)
-  ready: int32                       # Ready Tenant CRs
-  failed: int32                      # Failed Tenant CRs
+  desired: int32                     # Desired LynqNode CRs (templates × rows)
+  ready: int32                       # Ready LynqNode CRs
+  failed: int32                      # Failed LynqNode CRs
   conditions:                        # Status conditions
   - type: Ready
     status: "True"
@@ -133,17 +133,17 @@ status:
     reason: ValidationSucceeded
 ```
 
-## Tenant
+## LynqNode
 
 Represents a single tenant instance.
 
 ::: info Resource metadata
-- **Kind:** `Tenant`
+- **Kind:** `LynqNode`
 - **API Version:** `operator.lynq.sh/v1`
 :::
 
 ::: warning Managed resource
-Tenant objects are typically managed by the operator and rarely created manually.
+LynqNode objects are typically managed by the operator and rarely created manually.
 :::
 
 ### Spec
@@ -328,7 +328,7 @@ When resources are retained (not deleted) due to `DeletionPolicy=Retain`, the op
 - **Annotation** `orphaned-at` - RFC3339 timestamp when the resource became orphaned
 - **Annotation** `orphaned-reason` - Reason for becoming orphaned:
   - `RemovedFromTemplate`: Resource was removed from LynqForm
-  - `LynqNodeDeleted`: Tenant CR was deleted
+  - `LynqNodeDeleted`: LynqNode CR was deleted
 
 **Why split label/annotation?**
 - **Label**: Simple value for selector queries (Kubernetes label values must be RFC 1123 compliant)
@@ -403,7 +403,7 @@ See [Templates Guide](templates.md) and [Quick Start Guide](quickstart.md) for c
 - `dependIds` must not form cycles
 - Templates must be valid Go templates
 
-### Tenant
+### LynqNode
 
 - Typically validated by operator, not manually created
 - All referenced resources must exist

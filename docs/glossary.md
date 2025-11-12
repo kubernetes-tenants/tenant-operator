@@ -48,10 +48,10 @@ A Custom Resource that defines:
 - Lifecycle policies (creation, deletion, conflict)
 - Dependency relationships between resources
 
-**Referenced by:** Tenant CRs
+**Referenced by:** LynqNode CRs
 **References:** LynqHub (via `registryId`)
 
-### Tenant
+### LynqNode
 
 A Custom Resource representing a single tenant instance. Automatically created by LynqHub controller based on active database rows.
 
@@ -258,7 +258,7 @@ The base structure for all resources in LynqForm. Contains:
 A Kubernetes metadata field that establishes parent-child relationships between resources.
 
 **In Lynq:**
-- Resources with `deletionPolicy: Delete` (default) have `ownerReference` pointing to their Tenant CR
+- Resources with `deletionPolicy: Delete` (default) have `ownerReference` pointing to their LynqNode CR
 - Enables automatic garbage collection by Kubernetes when Tenant is deleted
 - Resources with `deletionPolicy: Retain` use label-based tracking instead (NO ownerReference)
 
@@ -424,7 +424,7 @@ A Kubernetes status condition indicating resource health. Different resource typ
 
 ### Tenant Status
 
-The `status` field in Tenant CR tracks resource provisioning state:
+The `status` field in LynqNode CR tracks resource provisioning state:
 
 **Fields:**
 - `conditions` - Array of status conditions
@@ -462,7 +462,7 @@ The control loop process where the operator compares desired state (from templat
 **1. LynqHub Reconciliation:**
 - Query database at `syncInterval`
 - Calculate desired Tenant set
-- Create/update/delete Tenant CRs
+- Create/update/delete LynqNode CRs
 
 **2. LynqForm Reconciliation:**
 - Validate template-registry linkage
@@ -509,7 +509,7 @@ The capability for one LynqHub to be referenced by multiple LynqForms.
 # Registry: my-registry (5 active rows)
 # Template 1: prod-template (registryId: my-registry)
 # Template 2: staging-template (registryId: my-registry)
-# Result: 10 Tenant CRs (5 rows × 2 templates)
+# Result: 10 LynqNode CRs (5 rows × 2 templates)
 ```
 :::
 
@@ -526,7 +526,7 @@ desired = len(referencingTemplates) × activeRows
 
 ### Desired Count Calculation
 
-Formula for determining expected number of Tenant CRs:
+Formula for determining expected number of LynqNode CRs:
 
 ```
 LynqHub.status.desired = referencingTemplates × activeRows
@@ -631,7 +631,7 @@ A Kubernetes mechanism that prevents resource deletion until cleanup tasks compl
 
 **Lynq finalizer:** `lynqnode.operator.lynq.sh/finalizer`
 
-**Added to:** Tenant CRs
+**Added to:** LynqNode CRs
 
 **Purpose:** Ensures proper cleanup of resources when Tenant is deleted (respecting `deletionPolicy`).
 
@@ -643,12 +643,12 @@ The automatic deletion of child resources when parent resource is deleted.
 
 **Normal flow:**
 ```
-Tenant CR deleted → Finalizer runs → Resources deleted (per deletionPolicy) → Finalizer removed → Tenant CR removed
+LynqNode CR deleted → Finalizer runs → Resources deleted (per deletionPolicy) → Finalizer removed → LynqNode CR removed
 ```
 
 **Warning:**
 ```
-LynqHub deleted → All Tenant CRs deleted (ownerReference) → All tenant resources deleted
+LynqHub deleted → All LynqNode CRs deleted (ownerReference) → All tenant resources deleted
 ```
 
 **Protection:** Set `deletionPolicy: Retain` on critical resources BEFORE deleting Registry/Template.

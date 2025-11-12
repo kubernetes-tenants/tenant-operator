@@ -19,7 +19,7 @@ flowchart LR
     Operator["Lynq"]
     Database["MySQL Test DB"]
     Templates["Sample Registry & Template"]
-    Tenants["Tenant CRs & Resources"]
+    Tenants["LynqNode CRs & Resources"]
 
     Cluster --> Operator --> Database --> Templates --> Tenants
 
@@ -170,14 +170,14 @@ You now have:
 
 For each active tenant (acme-corp, beta-inc):
 ```
-Tenant CR: acme-corp-test-template
+LynqNode CR: acme-corp-test-template
 ├── Deployment: acme-corp-app
 └── Service: acme-corp-app
 ```
 
 **Verify your setup:**
 ```bash
-# Check Tenant CRs
+# Check LynqNode CRs
 kubectl get lynqnodes
 
 # Check tenant resources
@@ -205,7 +205,7 @@ VALUES ('acme-corp', 'https://acme.example.com', 1, 'enterprise');
 Within 30 seconds (syncInterval), the operator creates:
 
 ```bash
-# 1. Tenant CR
+# 1. LynqNode CR
 kubectl get lynqnode acme-corp-test-template
 
 # 2. Namespace (if configured)
@@ -234,7 +234,7 @@ UPDATE tenant_configs SET is_active = 0 WHERE tenant_id = 'acme-corp';
 **What happens automatically:**
 
 Within 30 seconds:
-- Tenant CR is deleted
+- LynqNode CR is deleted
 - All associated resources are cleaned up (based on `DeletionPolicy`)
 - Namespace is removed (if created)
 
@@ -357,7 +357,7 @@ kubectl exec -it deployment/mysql -n lynq-test -- \
 **Common issues:**
 - **Operator not starting**: Check cert-manager is ready (`kubectl get pods -n cert-manager`)
 - **Tenants not created**: Verify MySQL is ready and `is_active = 1` in database
-- **Resources missing**: Check Tenant CR status and operator logs
+- **Resources missing**: Check LynqNode CR status and operator logs
 
 ::: tip Detailed Troubleshooting
 For comprehensive troubleshooting, see [Troubleshooting Guide](troubleshooting.md).

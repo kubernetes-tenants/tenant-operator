@@ -13,7 +13,7 @@ flowchart LR
     Registry["LynqHub<br/>Row Data"]
     Template["LynqForm<br/>TResource"]
     Renderer["Template Renderer<br/>(text/template + Sprig)"]
-    Tenant["Tenant CR<br/>resolved spec"]
+    Tenant["LynqNode CR<br/>resolved spec"]
     K8s["Kubernetes Resources"]
 
     Registry -- variables --> Template
@@ -405,10 +405,10 @@ Rendered resource is applied to Kubernetes using Server-Side Apply.
 
 ### Check Rendered Values
 
-View rendered Tenant CR to see evaluated templates:
+View rendered LynqNode CR to see evaluated templates:
 
 ```bash
-# Get Tenant CR
+# Get LynqNode CR
 kubectl get lynqnode <lynqnode-name> -o yaml
 
 # Check spec (contains rendered resources)

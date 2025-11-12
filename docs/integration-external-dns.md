@@ -10,7 +10,7 @@ This guide shows how to integrate Lynq with ExternalDNS for automatic DNS record
 
 ```mermaid
 flowchart LR
-    Tenant["Tenant CR<br/>(Ingress/Service templates)"]
+    Tenant["LynqNode CR<br/>(Ingress/Service templates)"]
     Resource["Kubernetes Ingress/Service"]
     ExternalDNS["ExternalDNS Controller"]
     Provider["DNS Provider<br/>(Route53, Cloudflare, ...)"]
@@ -201,12 +201,12 @@ services:
 
 ### Workflow
 
-1. **Tenant Created**: LynqHub creates Tenant CR from database
-2. **Resources Applied**: Tenant controller creates Ingress/Service with ExternalDNS annotations
+1. **Tenant Created**: LynqHub creates LynqNode CR from database
+2. **Resources Applied**: LynqNode controller creates Ingress/Service with ExternalDNS annotations
 3. **IP Assignment**: Kubernetes assigns LoadBalancer IP or Ingress IP
 4. **DNS Sync**: ExternalDNS detects annotated resource and creates DNS record
 5. **Propagation**: DNS record propagates through provider (seconds to minutes)
-6. **Tenant Deleted**: Tenant resources deleted → ExternalDNS removes DNS record
+6. **Tenant Deleted**: LynqNode resources deleted → ExternalDNS removes DNS record
 
 ### DNS Record Lifecycle
 

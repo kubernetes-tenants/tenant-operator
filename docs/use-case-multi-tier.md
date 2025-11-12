@@ -15,10 +15,10 @@ graph TB
     WorkerTemplate["LynqForm<br/>worker-tier"]
     DataTemplate["LynqForm<br/>data-tier"]
 
-    WebTenant["Tenant<br/>acme-web-tier"]
-    ApiTenant["Tenant<br/>acme-api-tier"]
-    WorkerTenant["Tenant<br/>acme-worker-tier"]
-    DataTenant["Tenant<br/>acme-data-tier"]
+    WebTenant["LynqNode<br/>acme-web-tier"]
+    ApiTenant["LynqNode<br/>acme-api-tier"]
+    WorkerTenant["LynqNode<br/>acme-worker-tier"]
+    DataTenant["LynqNode<br/>acme-data-tier"]
 
     Registry --> WebTemplate
     Registry --> ApiTemplate

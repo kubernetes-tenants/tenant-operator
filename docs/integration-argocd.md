@@ -12,7 +12,7 @@ Lynq can render Argo CD `Application` manifests for every active tenant row. Eac
 flowchart LR
     Registry["LynqHub<br/>DB rows"]
     Template["LynqForm<br/>Argo CD manifest"]
-    Tenant["Tenant CR"]
+    Tenant["LynqNode CR"]
     ArgoApp["Argo CD Application"]
     ArgoCD["Argo CD Controller"]
     Targets["Target Cluster / Namespace"]
@@ -88,13 +88,13 @@ spec:
 sequenceDiagram
     participant DB as MySQL (Tenant Data)
     participant Registry as LynqHub Controller
-    participant Tenant as Tenant CR
+    participant Tenant as LynqNode CR
     participant Operator as Tenant Controller
     participant Argo as Argo CD Controller
 
     Registry->>DB: SELECT active nodes
     DB-->>Registry: Tenant rows
-    Registry->>Tenant: Create/Update Tenant CR
+    Registry->>Tenant: Create/Update LynqNode CR
     Operator->>Tenant: Render Argo CD manifest
     Operator->>Argo: Apply Application (SSA)
     Argo->>Argo: Sync Git repo
@@ -151,7 +151,7 @@ flowchart TD
 
 - Label Applications with tenant metadata for quick filtering (`node.lynq.sh/uid`).
 - Grant the operator service account access to `argoproj.io` API group via ClusterRole.
-- Monitor Argo CD sync status alongside Tenant status; both must be healthy for end-to-end readiness.
+- Monitor Argo CD sync status alongside LynqNode status; both must be healthy for end-to-end readiness.
 - Use the `Retain` deletion policy when you need to keep Applications for post-mortem analysis.
 
 ## What to Read Next

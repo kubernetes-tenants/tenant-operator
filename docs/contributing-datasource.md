@@ -333,12 +333,12 @@ The controller (`internal/controller/lynqhub_controller.go`) may need updates fo
 
 ```go
 // buildDatasourceConfig builds datasource configuration from LynqHub spec
-func (r *LynqHubReconciler) buildDatasourceConfig(registry *tenantsv1.LynqHub, password string) (datasource.Config, string, error) {
+func (r *LynqHubReconciler) buildDatasourceConfig(registry *lynqv1.LynqHub, password string) (datasource.Config, string, error) {
     switch registry.Spec.Source.Type {
-    case tenantsv1.SourceTypeMySQL:
+    case lynqv1.SourceTypeMySQL:
         // ... existing MySQL logic
 
-    case tenantsv1.SourceTypeYours: // Add your case
+    case lynqv1.SourceTypeYours: // Add your case
         yours := registry.Spec.Source.YourDatasource
         if yours == nil {
             return datasource.Config{}, "", fmt.Errorf("YourDatasource configuration is nil")
@@ -613,7 +613,7 @@ kubectl get lynqnodes
 - [ ] Query returns expected rows
 - [ ] Active filtering works
 - [ ] Extra mappings work
-- [ ] Tenant CRs are created
+- [ ] LynqNode CRs are created
 - [ ] Status updates correctly
 - [ ] Errors are handled gracefully
 - [ ] Resource cleanup works
