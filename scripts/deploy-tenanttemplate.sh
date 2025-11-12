@@ -22,7 +22,8 @@ echo "  Namespace:         $NAMESPACE"
 echo "  Registry Name:     $REGISTRY_NAME"
 echo "  Template Name:     $TEMPLATE_NAME"
 echo ""
-echo -e "${YELLOW}Note: All tenant resources will be created in the same namespace as the Tenant CR ($NAMESPACE)${NC}"
+echo -e "${YELLOW}Note: Each tenant will have its own dynamically created namespace (tenant-<uid>)${NC}"
+echo -e "${YELLOW}      All tenant resources will be deployed into their respective namespaces${NC}"
 echo ""
 
 # Check if kubectl is available
@@ -65,11 +66,29 @@ metadata:
 spec:
   registryId: $REGISTRY_NAME
 
+  # Namespace per tenant (dynamically created)
+  # Each tenant gets its own isolated namespace
+  namespaces:
+  - id: tenant-namespace
+    nameTemplate: "tenant-{{ .uid }}"
+    spec:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        labels:
+          tenant-id: "{{ .uid }}"
+          tenant-host: "{{ .host }}"
+          tenant-plan: "{{ default \"basic\" .planId }}"
+          managed-by: tenant-operator
+
   # ConfigMap for tenant configuration
-  # Note: All resources are created in the same namespace as the Tenant CR
+  # Deployed into the tenant's own namespace
   configMaps:
   - id: tenant-config
     nameTemplate: "{{ .uid }}-config"
+    targetNamespace: "tenant-{{ .uid }}"
+    dependIds:
+    - tenant-namespace
     spec:
       apiVersion: v1
       kind: ConfigMap
@@ -87,7 +106,9 @@ spec:
   deployments:
   - id: tenant-deployment
     nameTemplate: "{{ .uid }}-app"
+    targetNamespace: "tenant-{{ .uid }}"
     dependIds:
+    - tenant-namespace
     - tenant-config
     ignoreFields:
     - "$.spec.replicas"
@@ -136,7 +157,9 @@ spec:
   services:
   - id: tenant-service
     nameTemplate: "{{ .uid }}-svc"
+    targetNamespace: "tenant-{{ .uid }}"
     dependIds:
+    - tenant-namespace
     - tenant-deployment
     spec:
       apiVersion: v1
@@ -159,7 +182,9 @@ spec:
   horizontalPodAutoscalers:
   - id: tenant-hpa
     nameTemplate: "{{ .uid }}-hpa"
+    targetNamespace: "tenant-{{ .uid }}"
     dependIds:
+    - tenant-namespace
     - tenant-deployment
     spec:
       apiVersion: autoscaling/v2
@@ -236,10 +261,19 @@ echo -e "${BLUE}Resources Created:${NC}"
 echo "  TenantTemplate:   $TEMPLATE_NAME"
 echo ""
 echo -e "${BLUE}Template includes:${NC}"
+echo "  - Namespace (dynamically created per tenant: tenant-<uid>)"
 echo "  - ConfigMap (tenant configuration)"
 echo "  - Deployment (application, replicas ignored for HPA)"
 echo "  - Service (ClusterIP)"
 echo "  - HorizontalPodAutoscaler (min: 1, max: 5, CPU: 70%, Memory: 80%)"
+echo ""
+echo -e "${BLUE}Namespace Isolation:${NC}"
+echo "  Each tenant gets its own namespace for complete resource isolation"
+echo "  Expected namespaces:"
+echo "    - tenant-alpha"
+echo "    - tenant-beta"
+echo "    - tenant-gamma"
+echo "    - tenant-epsilon"
 echo ""
 echo -e "${BLUE}Expected Active Tenants (from MySQL):${NC}"
 echo "  - tenant-alpha (activate=true)"
@@ -254,24 +288,36 @@ echo ""
 echo "  # Watch Tenant creation"
 echo "  watch kubectl get tenants -n $NAMESPACE"
 echo ""
+echo "  # List all tenant namespaces"
+echo "  kubectl get namespaces -l managed-by=tenant-operator"
+echo ""
 echo "  # Check specific Tenant"
 echo "  kubectl describe tenant tenant-alpha -n $NAMESPACE"
 echo ""
-echo "  # List tenant resources in namespace"
-echo "  kubectl get all -n $NAMESPACE -l managed-by=tenant-operator"
+echo "  # List resources in a specific tenant namespace"
+echo "  kubectl get all -n tenant-alpha"
 echo ""
-echo "  # Watch tenant pods"
-echo "  watch kubectl get pods -n $NAMESPACE -l managed-by=tenant-operator"
+echo "  # Watch all tenant pods across all namespaces"
+echo "  watch kubectl get pods -A -l managed-by=tenant-operator"
+echo ""
+echo "  # Get all resources for a specific tenant (across namespaces)"
+echo "  kubectl get all -A -l tenant-id=alpha"
 echo ""
 echo -e "${BLUE}Verify Deployment:${NC}"
 echo "  # Check if active tenants were created"
 echo "  kubectl get tenants -n $NAMESPACE | grep -E 'alpha|beta|gamma|epsilon'"
 echo ""
-echo "  # Check tenant resources"
-echo "  kubectl get deployments,services,configmaps,hpa -n $NAMESPACE -l tenant"
+echo "  # Check if tenant namespaces were created"
+echo "  kubectl get namespaces | grep tenant-"
 echo ""
-echo "  # Check HPA status"
-echo "  kubectl get hpa -n $NAMESPACE -l managed-by=tenant-operator"
+echo "  # Check resources in a specific tenant namespace"
+echo "  kubectl get deployments,services,configmaps,hpa -n tenant-alpha"
+echo ""
+echo "  # Check all tenant resources across all namespaces"
+echo "  kubectl get deployments,services,configmaps,hpa -A -l managed-by=tenant-operator"
+echo ""
+echo "  # Check HPA status for all tenants"
+echo "  kubectl get hpa -A -l managed-by=tenant-operator"
 echo ""
 echo -e "${BLUE}Operator Logs:${NC}"
 echo "  kubectl logs -n tenant-operator-system -l control-plane=controller-manager -f --all-containers"

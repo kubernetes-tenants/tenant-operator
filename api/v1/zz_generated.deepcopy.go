@@ -420,6 +420,13 @@ func (in *TenantSpec) DeepCopyInto(out *TenantSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Namespaces != nil {
+		in, out := &in.Namespaces, &out.Namespaces
+		*out = make([]TResource, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Manifests != nil {
 		in, out := &in.Manifests, &out.Manifests
 		*out = make([]TResource, len(*in))
@@ -636,6 +643,13 @@ func (in *TenantTemplateSpec) DeepCopyInto(out *TenantTemplateSpec) {
 	}
 	if in.HorizontalPodAutoscalers != nil {
 		in, out := &in.HorizontalPodAutoscalers, &out.HorizontalPodAutoscalers
+		*out = make([]TResource, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.Namespaces != nil {
+		in, out := &in.Namespaces, &out.Namespaces
 		*out = make([]TResource, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

@@ -195,6 +195,7 @@ func (r *TenantTemplateReconciler) collectAllResources(tmpl *tenantsv1.TenantTem
 	resources = append(resources, tmpl.Spec.PodDisruptionBudgets...)
 	resources = append(resources, tmpl.Spec.NetworkPolicies...)
 	resources = append(resources, tmpl.Spec.HorizontalPodAutoscalers...)
+	resources = append(resources, tmpl.Spec.Namespaces...)
 	resources = append(resources, tmpl.Spec.Manifests...)
 
 	return resources

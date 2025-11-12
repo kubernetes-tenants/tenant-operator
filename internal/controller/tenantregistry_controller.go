@@ -372,6 +372,7 @@ func (r *TenantRegistryReconciler) renderAllTemplateResources(
 		PodDisruptionBudgets:     make([]tenantsv1.TResource, 0),
 		NetworkPolicies:          make([]tenantsv1.TResource, 0),
 		HorizontalPodAutoscalers: make([]tenantsv1.TResource, 0),
+		Namespaces:               make([]tenantsv1.TResource, 0),
 		Manifests:                make([]tenantsv1.TResource, 0),
 	}
 
@@ -446,6 +447,11 @@ func (r *TenantRegistryReconciler) renderAllTemplateResources(
 	spec.HorizontalPodAutoscalers, err = r.renderResourceList(engine, tmpl.Spec.HorizontalPodAutoscalers, vars)
 	if err != nil {
 		return nil, fmt.Errorf("failed to render horizontalPodAutoscalers: %w", err)
+	}
+
+	spec.Namespaces, err = r.renderResourceList(engine, tmpl.Spec.Namespaces, vars)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render namespaces: %w", err)
 	}
 
 	spec.Manifests, err = r.renderResourceList(engine, tmpl.Spec.Manifests, vars)
@@ -983,6 +989,7 @@ func (r *TenantRegistryReconciler) processRetainResourcesForTenant(ctx context.C
 	allResources = append(allResources, tenant.Spec.PodDisruptionBudgets...)
 	allResources = append(allResources, tenant.Spec.NetworkPolicies...)
 	allResources = append(allResources, tenant.Spec.HorizontalPodAutoscalers...)
+	allResources = append(allResources, tenant.Spec.Namespaces...)
 	allResources = append(allResources, tenant.Spec.Manifests...)
 
 	// Process each resource with Retain policy

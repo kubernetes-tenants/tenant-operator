@@ -1,62 +1,180 @@
 ---
 layout: home
-
-hero:
-  name: "Tenant Operator"
-  text: "Multi-Tenant Kubernetes Automation"
-  tagline: Declarative, template-based resource provisioning with Server-Side Apply
-  image:
-    src: /logo.png
-    alt: Tenant Operator
-  actions:
-    - theme: brand
-      text: Get Started
-      link: /quickstart
-    - theme: alt
-      text: View on GitHub
-      link: https://github.com/kubernetes-tenants/tenant-operator
-
-features:
-  - icon: 🚀
-    title: Multi-Tenant Auto-Provisioning
-    details: Read tenant data from external datasources (MySQL) and automatically create/sync Kubernetes resources using templates
-
-  - icon: ⚙️
-    title: Policy-Based Lifecycle
-    details: CreationPolicy (Once/WhenNeeded), DeletionPolicy (Delete/Retain), ConflictPolicy (Stuck/Force), PatchStrategy (apply/merge/replace)
-
-  - icon: 🔄
-    title: Server-Side Apply (SSA)
-    details: Kubernetes-native declarative resource management with conflict-free updates using SSA field manager
-
-  - icon: 🧩
-    title: Native + Custom Resources
-    details: Provision any API resource (including your own CRDs) alongside core Kubernetes objects with the same template workflow
-
-  - icon: 📊
-    title: Dependency Management
-    details: DAG-based resource ordering with automatic cycle detection and topological sorting
-
-  - icon: 📝
-    title: Powerful Template System
-    details: Go text/template with 200+ Sprig functions and custom helpers (toHost, trunc63, sha1sum, fromJson)
-
-  - icon: 🔍
-    title: Comprehensive Observability
-    details: 12 Prometheus metrics, structured logging, Kubernetes events, and Grafana dashboards
-
-  - icon: ✅
-    title: Strong Consistency
-    details: Ensures desired count = (referencing templates × active rows) with automatic garbage collection
-
-  - icon: 🛡️
-    title: Production Ready
-    details: Webhooks, finalizers, drift detection, auto-correction, RBAC, and comprehensive validation
-
-  - icon: 🔌
-    title: Extensible Integration
-    details: External datasource support (MySQL), Crossplane, External-DNS, Terraform Operator, and custom resources
 ---
+
+<style scoped>
+.custom-hero {
+  position: relative;
+  width: 100vw;
+  margin-left: 50%;
+  transform: translateX(-50%);
+  padding: 5rem 2rem 4rem;
+  overflow: hidden;
+}
+
+.custom-hero::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background: radial-gradient(
+    ellipse 35% 28% at 50% 25%,
+    rgba(100, 108, 255, 0.15) 0%,
+    rgba(88, 96, 224, 0.08) 30%,
+    rgba(74, 82, 196, 0.04) 50%,
+    transparent 70%
+  );
+  opacity: 1;
+  pointer-events: none;
+}
+
+.hero-content {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+  z-index: 1;
+}
+
+.hero-title {
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  margin: 0 0 1rem;
+  background: linear-gradient(135deg, var(--vp-c-brand-1) 0%, var(--vp-c-brand-2) 50%, #42b883 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: titleFadeIn 1s ease-out;
+}
+
+.hero-tagline {
+  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+  color: var(--vp-c-text-1);
+  margin: 0 0 1rem;
+  font-weight: 600;
+  opacity: 0;
+  animation: fadeInUp 1s ease-out 0.2s forwards;
+}
+
+.hero-description {
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  color: var(--vp-c-text-2);
+  margin: 0 0 2.5rem;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  opacity: 0;
+  animation: fadeInUp 1s ease-out 0.4s forwards;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 3rem;
+  opacity: 0;
+  animation: fadeInUp 1s ease-out 0.6s forwards;
+}
+
+.hero-action {
+  display: inline-block;
+  padding: 0.875rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.hero-action.brand {
+  background: linear-gradient(135deg, var(--vp-c-brand-1) 0%, var(--vp-c-brand-2) 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(100, 108, 255, 0.3);
+}
+
+.hero-action.brand:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(100, 108, 255, 0.4);
+}
+
+.hero-action.alt {
+  background: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+  border: 1px solid var(--vp-c-divider);
+}
+
+.hero-action.alt:hover {
+  border-color: var(--vp-c-brand-1);
+  transform: translateY(-2px);
+}
+
+.hero-diagram {
+  opacity: 0;
+  animation: fadeInUp 1s ease-out 0.8s forwards;
+}
+
+@keyframes titleFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .custom-hero {
+    padding: 3rem 1.5rem 2.5rem;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero-action {
+    text-align: center;
+  }
+}
+</style>
+
+<div class="custom-hero">
+<div class="hero-content">
+<h1 class="hero-title">Tenant Operator</h1>
+<p class="hero-tagline">Multi-Tenant Kubernetes Automation</p>
+<p class="hero-description">
+Declarative, template-based resource provisioning with Server-Side Apply
+</p>
+
+<div class="hero-actions">
+<a href="/quickstart" class="hero-action brand">Get Started</a>
+<a href="https://github.com/kubernetes-tenants/tenant-operator" class="hero-action alt">View on GitHub</a>
+</div>
+
+<div class="hero-diagram">
+<AnimatedDiagram />
+</div>
+</div>
+</div>
 
 ## Why Tenant Operator?
 
@@ -226,27 +344,6 @@ Follow the [Quick Start Guide](/quickstart) for a complete walkthrough with a wo
 <p style="font-size: 1.15rem; color: var(--vp-c-text-2); margin-bottom: 2rem">
 Turn database rows into production-ready tenant infrastructure, automatically.
 </p>
-
-<div style="margin: 2.5rem auto; text-align: center; max-width: 900px">
-
-```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'fontSize':'16px'}}}%%
-flowchart LR
-    DB[("📊<br/><b>Database</b><br/><br/>tenant_id<br/>domain<br/>is_active")]
-
-    Operator["⚙️<br/><b>Tenant Operator</b><br/><br/>Sync every 1m<br/>Apply templates<br/>Manage lifecycle"]
-
-    Resources["☸️<br/><b>Kubernetes</b><br/><br/>Deployments<br/>Services<br/>Ingresses"]
-
-    DB -->|"Read active tenants"| Operator
-    Operator -->|"Create & sync resources"| Resources
-
-    style DB fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
-    style Operator fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
-    style Resources fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
-```
-
-</div>
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 3rem 0">
   <div style="text-align: center; padding: 2rem 1.5rem; background: var(--vp-c-bg-soft); border-radius: 12px">
