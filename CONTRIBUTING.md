@@ -189,12 +189,12 @@ Follow standard Go conventions:
 
 ```go
 // Good
-func (r *TenantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *LynqNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
     logger := log.FromContext(ctx)
 
-    // Get Tenant
-    tenant := &tenantsv1.Tenant{}
-    if err := r.Get(ctx, req.NamespacedName, tenant); err != nil {
+    // Get LynqNode
+    lynqnode := &lynqv1.LynqNode{}
+    if err := r.Get(ctx, req.NamespacedName, lynqnode); err != nil {
         if errors.IsNotFound(err) {
             return ctrl.Result{}, nil
         }
@@ -207,9 +207,9 @@ func (r *TenantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 }
 
 // Bad - no error handling
-func (r *TenantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-    tenant := &tenantsv1.Tenant{}
-    r.Get(ctx, req.NamespacedName, tenant)
+func (r *LynqNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+    lynqnode := &lynqv1.LynqNode{}
+    r.Get(ctx, req.NamespacedName, lynqnode)
     return ctrl.Result{}, nil
 }
 ```
@@ -226,16 +226,16 @@ func (r *TenantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 Write tests for all new code:
 
 ```go
-func TestTenantController_Reconcile(t *testing.T) {
+func TestLynqNodeController_Reconcile(t *testing.T) {
     tests := []struct {
-        name    string
-        tenant  *tenantsv1.Tenant
-        want    ctrl.Result
-        wantErr bool
+        name     string
+        lynqnode *lynqv1.LynqNode
+        want     ctrl.Result
+        wantErr  bool
     }{
         {
             name: "successful reconciliation",
-            tenant: &tenantsv1.Tenant{
+            lynqnode: &lynqv1.LynqNode{
                 // Test setup
             },
             want:    ctrl.Result{RequeueAfter: 30 * time.Second},

@@ -352,16 +352,16 @@ func (m *Manager) updateCondition(status *lynqv1.LynqNodeStatus, newCond metav1.
 	return true
 }
 
-// updateMetrics updates Prometheus metrics for a tenant
+// updateMetrics updates Prometheus metrics for a LynqNode
 func (m *Manager) updateMetrics(key client.ObjectKey, metricsPayload *MetricsPayload) {
-	tenantName := key.Name
-	tenantNamespace := key.Namespace
+	lynqnodeName := key.Name
+	lynqnodeNamespace := key.Namespace
 
 	// Update resource metrics
-	metrics.TenantResourcesReady.WithLabelValues(tenantName, tenantNamespace).Set(float64(metricsPayload.Ready))
-	metrics.TenantResourcesDesired.WithLabelValues(tenantName, tenantNamespace).Set(float64(metricsPayload.Desired))
-	metrics.TenantResourcesFailed.WithLabelValues(tenantName, tenantNamespace).Set(float64(metricsPayload.Failed))
-	metrics.TenantResourcesConflicted.WithLabelValues(tenantName, tenantNamespace).Set(float64(metricsPayload.Conflicted))
+	metrics.LynqNodeResourcesReady.WithLabelValues(lynqnodeName, lynqnodeNamespace).Set(float64(metricsPayload.Ready))
+	metrics.LynqNodeResourcesDesired.WithLabelValues(lynqnodeName, lynqnodeNamespace).Set(float64(metricsPayload.Desired))
+	metrics.LynqNodeResourcesFailed.WithLabelValues(lynqnodeName, lynqnodeNamespace).Set(float64(metricsPayload.Failed))
+	metrics.LynqNodeResourcesConflicted.WithLabelValues(lynqnodeName, lynqnodeNamespace).Set(float64(metricsPayload.Conflicted))
 
 	// Update condition metrics
 	for _, condition := range metricsPayload.Conditions {
@@ -377,25 +377,25 @@ func (m *Manager) updateMetrics(key client.ObjectKey, metricsPayload *MetricsPay
 			statusValue = 2 // Unknown
 		}
 
-		metrics.TenantConditionStatus.WithLabelValues(
-			tenantName,
-			tenantNamespace,
+		metrics.LynqNodeConditionStatus.WithLabelValues(
+			lynqnodeName,
+			lynqnodeNamespace,
 			condition.Type,
 		).Set(statusValue)
 	}
 
 	// Update degraded status metric
 	if metricsPayload.IsDegraded {
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, metricsPayload.DegradedReason).Set(1)
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, metricsPayload.DegradedReason).Set(1)
 	} else {
-		// Reset all possible degraded reasons for this tenant to ensure metrics are cleared
-		// This prevents stale degraded metrics from remaining after tenant recovers
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "ResourceFailures").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "ResourceConflicts").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "ResourceFailuresAndConflicts").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "ResourcesNotReady").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "TemplateRenderError").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "DependencyCycle").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "VariablesBuildError").Set(0)
+		// Reset all possible degraded reasons for this LynqNode to ensure metrics are cleared
+		// This prevents stale degraded metrics from remaining after LynqNode recovers
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, "ResourceFailures").Set(0)
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, "ResourceConflicts").Set(0)
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, "ResourceFailuresAndConflicts").Set(0)
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, "ResourcesNotReady").Set(0)
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, "TemplateRenderError").Set(0)
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, "DependencyCycle").Set(0)
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, "VariablesBuildError").Set(0)
 	}
 }

@@ -138,7 +138,7 @@ func (r *LynqNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{}, nil
 		}
 		logger.Error(err, "Failed to get LynqNode")
-		metrics.TenantReconcileDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
+		metrics.LynqNodeReconcileDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		return ctrl.Result{}, err
 	}
 
@@ -166,7 +166,7 @@ func (r *LynqNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	default:
 		logger.Error(nil, "Unknown reconcile type", "type", reconcileType)
-		metrics.TenantReconcileDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
+		metrics.LynqNodeReconcileDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		return ctrl.Result{}, fmt.Errorf("unknown reconcile type: %v", reconcileType)
 	}
 }
@@ -294,7 +294,7 @@ func (r *LynqNodeReconciler) applyResources(ctx context.Context, tenant *lynqv1.
 				// Resource conflict detected
 				conflictedCount++
 				// Increment conflict counter metric
-				metrics.TenantConflictsTotal.WithLabelValues(tenant.Name, tenant.Namespace, kind, string(resource.ConflictPolicy)).Inc()
+				metrics.LynqNodeConflictsTotal.WithLabelValues(tenant.Name, tenant.Namespace, kind, string(resource.ConflictPolicy)).Inc()
 				r.Recorder.Eventf(tenant, corev1.EventTypeWarning, "ResourceConflict",
 					"Resource conflict detected for %s/%s (Kind: %s, Policy: %s). "+
 						"Another controller or user may be managing this resource. "+
@@ -1480,7 +1480,7 @@ func (r *LynqNodeReconciler) reconcileCleanup(ctx context.Context, tenant *lynqv
 		logger.Info("LynqNode deletion completed, finalizer removed", "tenant", tenant.Name)
 		r.Recorder.Eventf(tenant, corev1.EventTypeNormal, "TenantDeleted",
 			"LynqNode %s deleted successfully. Resources will be cleaned up by Kubernetes garbage collector.", tenant.Name)
-		metrics.TenantReconcileDuration.WithLabelValues("success").Observe(time.Since(startTime).Seconds())
+		metrics.LynqNodeReconcileDuration.WithLabelValues("success").Observe(time.Since(startTime).Seconds())
 	}
 	return ctrl.Result{}, nil
 }
@@ -1627,7 +1627,7 @@ func (r *LynqNodeReconciler) reconcileSpec(ctx context.Context, tenant *lynqv1.L
 	if failedCount > 0 {
 		result = ResultPartialFailure
 	}
-	metrics.TenantReconcileDuration.WithLabelValues(result).Observe(time.Since(startTime).Seconds())
+	metrics.LynqNodeReconcileDuration.WithLabelValues(result).Observe(time.Since(startTime).Seconds())
 
 	// Requeue after 30 seconds for faster resource status reflection
 	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -1686,7 +1686,7 @@ func (r *LynqNodeReconciler) reconcileStatus(ctx context.Context, tenant *lynqv1
 	}
 
 	// Record metrics
-	metrics.TenantReconcileDuration.WithLabelValues("status_only").Observe(time.Since(startTime).Seconds())
+	metrics.LynqNodeReconcileDuration.WithLabelValues("status_only").Observe(time.Since(startTime).Seconds())
 
 	logger.V(1).Info("Status-only reconcile completed",
 		"tenant", tenant.Name,
