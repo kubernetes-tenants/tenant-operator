@@ -433,6 +433,8 @@ Follow the [Quick Start Guide](/quickstart) for a complete walkthrough with a wo
 Turn database rows into production-ready tenant infrastructure, automatically.
 </p>
 
+<HowItWorksDiagram />
+
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 3rem 0">
   <div style="text-align: center; padding: 2rem 1.5rem; background: var(--vp-c-bg-soft); border-radius: 12px">
     <div style="font-size: 2.5rem; margin-bottom: 0.75rem">1️⃣</div>
