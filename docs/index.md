@@ -371,69 +371,14 @@ Get Started in 5 Minutes →
 </div>
 </div>
 
-## See It In Action
-
-<p style="font-size: 1.05rem; color: var(--vp-c-text-2); margin-bottom: 2rem">
-Define your tenant data source and resource templates, then let the operator handle the rest.
-</p>
-
-<div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin: 2rem 0">
-
-```yaml
-# Connect to your tenant database
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
-metadata:
-  name: production-tenants
-spec:
-  source:
-    type: mysql
-    syncInterval: 30s
-  valueMappings:
-    uid: tenant_id
-    hostOrUrl: domain
-    activate: is_active
-```
-
-```yaml
-# Define what to create per tenant
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
-metadata:
-  name: saas-stack
-spec:
-  registryId: production-tenants
-  deployments:
-    - nameTemplate: "{{ .uid }}-api"
-      spec:
-        # ... Deployment configuration with {{ .uid }}, {{ .host }} templating
-  services:
-    - nameTemplate: "{{ .uid }}-svc"
-      # ... Service configuration
-  ingresses:
-    - nameTemplate: "{{ .uid }}-ingress"
-      # ... Ingress with {{ .host }} routing
-```
-
-</div>
-
-<div style="padding: 1.25rem; background: var(--vp-c-bg-soft); border-radius: 8px; border-left: 3px solid var(--vp-c-brand); margin: 1.5rem 0">
-  <p style="margin: 0; font-size: 1rem">
-    <strong>Result:</strong> For each active tenant row, the operator automatically provisions a complete isolated stack with proper naming, configuration, and lifecycle management.
-  </p>
-</div>
-
-::: tip Ready to try it?
-Follow the [Quick Start Guide](/quickstart) for a complete walkthrough with a working example in 5 minutes.
-:::
-
 ## How It Works
 
-<p style="font-size: 1.15rem; color: var(--vp-c-text-2); margin-bottom: 2rem">
-Turn database rows into production-ready tenant infrastructure, automatically.
-</p>
-
 <HowItWorksDiagram />
+
+::: tip 💡 Interactive
+Click **TenantRegistry** and **TenantTemplate** to see the YAML, or click database rows to toggle tenants
+:::
+
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 3rem 0">
   <div style="text-align: center; padding: 2rem 1.5rem; background: var(--vp-c-bg-soft); border-radius: 12px">

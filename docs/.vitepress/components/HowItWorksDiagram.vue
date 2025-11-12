@@ -76,18 +76,24 @@
       <!-- Stage 2: TenantRegistry -->
       <div class="stage-item registry-stage" :class="{ active: currentStage >= 2 }">
         <div class="k8s-cluster-label">Kubernetes Cluster</div>
-        <div class="registry-box">
+        <div class="registry-box clickable" @click="openModal('registry')">
           <div class="resource-icon">📋</div>
           <div class="resource-title">TenantRegistry</div>
           <div class="resource-subtitle">Syncs every n seconds</div>
+          <div class="click-overlay">
+            <span class="click-overlay-text">Click to view YAML</span>
+          </div>
         </div>
       </div>
 
       <!-- TenantTemplate (separate position) -->
       <div class="stage-item template-stage" :class="{ active: currentStage >= 3 }">
-        <div class="template-box">
+        <div class="template-box clickable" @click="openModal('template')">
           <div class="resource-icon small">📄</div>
           <div class="resource-title small">TenantTemplate</div>
+          <div class="click-overlay">
+            <span class="click-overlay-text">Click to view YAML</span>
+          </div>
         </div>
       </div>
 
@@ -187,6 +193,38 @@
     <div class="progress-dots">
       <div v-for="stage in 4" :key="stage" class="dot" :class="{ active: currentStage >= stage }" @click="currentStage = stage"></div>
     </div>
+
+    <!-- Modal -->
+    <Transition name="modal">
+      <div v-if="showModal" class="modal-overlay" @click="closeModal">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <div>
+              <h3 class="modal-title">{{ modalContent?.title }}</h3>
+              <p class="modal-subtitle">{{ modalContent?.subtitle }}</p>
+            </div>
+            <button class="modal-close" @click="closeModal" aria-label="Close modal">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="code-header">
+              <span class="code-language">yaml</span>
+              <button class="copy-button" @click="copyToClipboard">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <rect x="5" y="5" width="9" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M3 10.5V3C3 2.44772 3.44772 2 4 2H10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                Copy
+              </button>
+            </div>
+            <pre class="code-block"><code>{{ modalContent?.code }}</code></pre>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -203,6 +241,117 @@ const tenants = ref({
   acme: { active: true },
   beta: { active: true }
 });
+
+// Modal state
+const showModal = ref(false);
+const modalContent = ref(null);
+
+const registryYaml = `# Connect to your tenant database
+apiVersion: operator.kubernetes-tenants.org/v1
+kind: TenantRegistry
+metadata:
+  name: production-tenants
+spec:
+  source:
+    type: mysql
+    syncInterval: 30s
+    mysql:
+      host: mysql.default.svc.cluster.local
+      port: 3306
+      database: tenants
+      table: tenant_configs
+      passwordRef:
+        name: mysql-credentials
+        key: password
+  valueMappings:
+    uid: tenant_id
+    hostOrUrl: domain
+    activate: is_active
+    extraValueMappings:
+      planId: plan_id
+      deployImage: deploy_image`;
+
+const templateYaml = `# Define what to create per tenant
+apiVersion: operator.kubernetes-tenants.org/v1
+kind: TenantTemplate
+metadata:
+  name: saas-stack
+spec:
+  registryId: production-tenants
+  deployments:
+    - id: api-deployment
+      nameTemplate: "{{ .uid }}-api"
+      spec:
+        replicas: 2
+        selector:
+          matchLabels:
+            app: "{{ .uid }}-api"
+        template:
+          metadata:
+            labels:
+              app: "{{ .uid }}-api"
+          spec:
+            containers:
+              - name: api
+                image: "{{ .deployImage | default \\"myapp:latest\\" }}"
+                env:
+                  - name: TENANT_ID
+                    value: "{{ .uid }}"
+                  - name: TENANT_HOST
+                    value: "{{ .host }}"
+  services:
+    - id: api-service
+      nameTemplate: "{{ .uid }}-svc"
+      dependIds: ["api-deployment"]
+      spec:
+        selector:
+          app: "{{ .uid }}-api"
+        ports:
+          - port: 80
+            targetPort: 8080
+  ingresses:
+    - id: api-ingress
+      nameTemplate: "{{ .uid }}-ingress"
+      dependIds: ["api-service"]
+      spec:
+        rules:
+          - host: "{{ .host }}"
+            http:
+              paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: "{{ .uid }}-svc"
+                      port:
+                        number: 80`;
+
+const openModal = (type) => {
+  modalContent.value = type === 'registry' ? {
+    title: 'TenantRegistry',
+    subtitle: 'Connect to your tenant database',
+    code: registryYaml
+  } : {
+    title: 'TenantTemplate',
+    subtitle: 'Define what to create per tenant',
+    code: templateYaml
+  };
+  showModal.value = true;
+  document.body.style.overflow = 'hidden';
+};
+
+const closeModal = () => {
+  showModal.value = false;
+  document.body.style.overflow = '';
+};
+
+const copyToClipboard = async () => {
+  try {
+    await navigator.clipboard.writeText(modalContent.value.code);
+  } catch (err) {
+    console.error('Failed to copy:', err);
+  }
+};
 
 const stageTimings = [
   { stage: 1, delay: 500 },
@@ -257,13 +406,25 @@ const toggleTenant = (tenantKey) => {
 onMounted(() => {
   // Auto-play animation on mount
   playAnimation();
+
+  // Add escape key listener
+  window.addEventListener('keydown', handleEscapeKey);
 });
 
 onUnmounted(() => {
   // Clear all timeouts on unmount
   timeoutIds.forEach(id => clearTimeout(id));
   timeoutIds = [];
+
+  // Remove escape key listener
+  window.removeEventListener('keydown', handleEscapeKey);
 });
+
+const handleEscapeKey = (e) => {
+  if (e.key === 'Escape' && showModal.value) {
+    closeModal();
+  }
+};
 </script>
 
 <style scoped>
@@ -619,7 +780,56 @@ onUnmounted(() => {
   box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
 }
 
+.registry-box.clickable,
+.template-box.clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.registry-box.clickable:hover,
+.template-box.clickable:hover {
+  transform: translateY(-4px);
+  border-color: rgba(102, 126, 234, 0.5);
+  box-shadow: 0 6px 24px rgba(102, 126, 234, 0.25);
+}
+
+.registry-box.clickable:active,
+.template-box.clickable:active {
+  transform: translateY(-2px);
+}
+
+.click-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.clickable:hover .click-overlay {
+  opacity: 1;
+}
+
+.click-overlay-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+  text-align: center;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  background: rgba(102, 126, 234, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
 .template-box {
+  position: relative;
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
   border: 1.5px solid rgba(102, 126, 234, 0.25);
   border-radius: 8px;
@@ -944,6 +1154,187 @@ onUnmounted(() => {
   .database-table,
   .resources-grid {
     max-width: 280px;
+  }
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg-soft);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--vp-c-text-1);
+}
+
+.modal-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  color: var(--vp-c-text-2);
+}
+
+.modal-close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--vp-c-text-2);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: var(--vp-c-bg-mute);
+  color: var(--vp-c-text-1);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--vp-c-bg-soft);
+  border-radius: 6px 6px 0 0;
+}
+
+.code-language {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--vp-c-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.copy-button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  background: transparent;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  color: var(--vp-c-text-2);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-button:hover {
+  background: var(--vp-c-bg);
+  border-color: var(--vp-c-brand);
+  color: var(--vp-c-brand);
+}
+
+.code-block {
+  margin: 0;
+  padding: 1.25rem;
+  background: var(--vp-code-block-bg);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 0 0 6px 6px;
+  overflow-x: auto;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--vp-c-text-1);
+}
+
+.code-block code {
+  display: block;
+  white-space: pre;
+}
+
+/* Modal Transitions */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-active .modal-content,
+.modal-leave-active .modal-content {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .modal-content,
+.modal-leave-to .modal-content {
+  transform: scale(0.95);
+  opacity: 0;
+}
+
+@media (max-width: 768px) {
+  .modal-content {
+    max-width: 100%;
+    max-height: 90vh;
+  }
+
+  .modal-header {
+    padding: 1.25rem;
+  }
+
+  .modal-body {
+    padding: 1.25rem;
+  }
+
+  .modal-title {
+    font-size: 1.25rem;
+  }
+
+  .code-block {
+    font-size: 0.8rem;
+    padding: 1rem;
   }
 }
 </style>
