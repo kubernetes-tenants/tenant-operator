@@ -2,15 +2,7 @@
  * Custom theme overrides for Tenant Operator documentation
  */
 
-:root {
-  /* Dark mode background colors */
-  --vp-c-bg: #101010;
-  --vp-c-bg-alt: #0a0a0a;
-  --vp-c-bg-soft: #1a1a1a;
-  --vp-c-bg-elv: #1f1f1f;
-}
-
-/* Apply dark background in dark mode */
+/* Apply dark background only in dark mode */
 .dark {
   --vp-c-bg: #101010;
   --vp-c-bg-alt: #0a0a0a;
@@ -18,11 +10,29 @@
   --vp-c-bg-elv: #1f1f1f;
 }
 
-/* Ensure body background matches */
+/* Ensure body background matches in dark mode */
 html.dark {
   background-color: #101010;
 }
 
 html.dark body {
   background-color: #101010;
+}
+
+/* Glass-like blur effect for navbar (Vite style) */
+.VPNavBar {
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+/* Light theme navbar */
+.VPNavBar {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-bottom: 1px solid rgba(219, 219, 219, 0.6) !important;
+}
+
+/* Dark theme navbar */
+.dark .VPNavBar {
+  background-color: rgba(15, 15, 15, 0.85) !important;
+  border-bottom: 1px solid rgba(38, 38, 38, 0.8) !important;
 }
