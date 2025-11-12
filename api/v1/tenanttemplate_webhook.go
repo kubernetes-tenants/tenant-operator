@@ -72,6 +72,7 @@ func (d *TenantTemplateDefaulter) Default(ctx context.Context, obj runtime.Objec
 	SetDefaultsForTResourceList(tmpl.Spec.PodDisruptionBudgets)
 	SetDefaultsForTResourceList(tmpl.Spec.NetworkPolicies)
 	SetDefaultsForTResourceList(tmpl.Spec.HorizontalPodAutoscalers)
+	SetDefaultsForTResourceList(tmpl.Spec.Namespaces)
 	SetDefaultsForTResourceList(tmpl.Spec.Manifests)
 
 	return nil
@@ -266,6 +267,7 @@ func (v *TenantTemplateValidator) collectAllResources(tmpl *TenantTemplate) []TR
 	resources = append(resources, tmpl.Spec.PodDisruptionBudgets...)
 	resources = append(resources, tmpl.Spec.NetworkPolicies...)
 	resources = append(resources, tmpl.Spec.HorizontalPodAutoscalers...)
+	resources = append(resources, tmpl.Spec.Namespaces...)
 	resources = append(resources, tmpl.Spec.Manifests...)
 
 	return resources

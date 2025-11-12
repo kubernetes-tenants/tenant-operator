@@ -1,0 +1,28 @@
+/**
+ * Custom theme overrides for Tenant Operator documentation
+ */
+
+:root {
+  /* Dark mode background colors */
+  --vp-c-bg: #101010;
+  --vp-c-bg-alt: #0a0a0a;
+  --vp-c-bg-soft: #1a1a1a;
+  --vp-c-bg-elv: #1f1f1f;
+}
+
+/* Apply dark background in dark mode */
+.dark {
+  --vp-c-bg: #101010;
+  --vp-c-bg-alt: #0a0a0a;
+  --vp-c-bg-soft: #1a1a1a;
+  --vp-c-bg-elv: #1f1f1f;
+}
+
+/* Ensure body background matches */
+html.dark {
+  background-color: #101010;
+}
+
+html.dark body {
+  background-color: #101010;
+}

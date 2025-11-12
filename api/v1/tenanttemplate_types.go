@@ -24,8 +24,9 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // TenantTemplateSpec defines the desired state of TenantTemplate.
-// Note: Namespace management has been removed. All resources are created in the same namespace as the Tenant CR.
-// Users must create the target namespace before deploying the Tenant CR.
+// Resources are created in the same namespace as the Tenant CR by default.
+// Use TResource.targetNamespace to create resources in different namespaces.
+// Namespaces can be created using the dedicated 'namespaces' field or 'manifests' field.
 type TenantTemplateSpec struct {
 	// RegistryID references the TenantRegistry that this template is associated with
 	// +kubebuilder:validation:Required
@@ -115,6 +116,14 @@ type TenantTemplateSpec struct {
 	// +listType=map
 	// +listMapKey=id
 	HorizontalPodAutoscalers []TResource `json:"horizontalPodAutoscalers,omitempty"`
+
+	// Namespaces defines Namespace resources to create
+	// Note: Namespaces are cluster-scoped and always use label-based tracking
+	// The targetNamespace field is ignored for Namespace resources
+	// +optional
+	// +listType=map
+	// +listMapKey=id
+	Namespaces []TResource `json:"namespaces,omitempty"`
 
 	// Manifests defines arbitrary Kubernetes resources as raw manifests
 	// Use this for any resource type not explicitly supported above

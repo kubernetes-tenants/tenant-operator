@@ -600,6 +600,7 @@ func (r *TenantReconciler) collectResourcesFromTenant(tenant *tenantsv1.Tenant) 
 	resources = append(resources, tenant.Spec.PodDisruptionBudgets...)
 	resources = append(resources, tenant.Spec.NetworkPolicies...)
 	resources = append(resources, tenant.Spec.HorizontalPodAutoscalers...)
+	resources = append(resources, tenant.Spec.Namespaces...)
 	resources = append(resources, tenant.Spec.Manifests...)
 
 	return resources

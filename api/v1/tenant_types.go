@@ -24,7 +24,8 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // TenantSpec defines the desired state of Tenant.
-// Note: All resources are created in the same namespace as this Tenant CR.
+// Resources are created in the same namespace as this Tenant CR by default.
+// Use TResource.targetNamespace to create resources in different namespaces.
 type TenantSpec struct {
 	// UID is the unique identifier from the registry data source
 	// +kubebuilder:validation:Required
@@ -89,6 +90,10 @@ type TenantSpec struct {
 	// HorizontalPodAutoscalers are the resolved HPA resources
 	// +optional
 	HorizontalPodAutoscalers []TResource `json:"horizontalPodAutoscalers,omitempty"`
+
+	// Namespaces are the resolved Namespace resources
+	// +optional
+	Namespaces []TResource `json:"namespaces,omitempty"`
 
 	// Manifests are the resolved arbitrary resources
 	// +optional
