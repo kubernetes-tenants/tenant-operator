@@ -282,7 +282,7 @@ kind: LynqForm
 metadata:
   name: simple-app
 spec:
-  hubId: my-registry
+  hubId: my-hub
 
   # 1. Secret (no dependencies)
   secrets:
@@ -319,7 +319,7 @@ kind: LynqForm
 metadata:
   name: multi-tier-app
 spec:
-  hubId: my-registry
+  hubId: my-hub
 
   # Level 1: Namespace
   manifests:
@@ -408,7 +408,7 @@ kind: LynqForm
 metadata:
   name: parallel-app
 spec:
-  hubId: my-registry
+  hubId: my-hub
 
   # Level 1: Multiple independent resources (can run in parallel)
   secrets:
@@ -479,9 +479,9 @@ kind: LynqForm
 metadata:
   name: invalid-cycle
 spec:
-  hubId: my-registry
+  hubId: my-hub
 
-  # This template has a dependency cycle - INVALID!
+  # This form has a dependency cycle - INVALID!
   deployments:
     - id: service-a
       dependIds: ["service-b"]  # A depends on B
@@ -569,7 +569,7 @@ const analyzeYaml = () => {
     });
 
     if (extractedNodes.length === 0) {
-      parseError.value = 'No resources with "id" field found in template';
+      parseError.value = 'No resources with "id" field found in form';
       return;
     }
 

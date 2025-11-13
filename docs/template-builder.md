@@ -3,9 +3,9 @@ layout: doc
 aside: false
 ---
 
-# Template Builder
+# Form Builder
 
-Build LynqForm YAML configurations using an intuitive UI. Create resources, manage dependencies, and export production-ready templates.
+Build LynqForm YAML configurations using an intuitive UI. Create resources, manage dependencies, and export production-ready forms.
 
 <TemplateBuilder />
 
@@ -13,13 +13,13 @@ Build LynqForm YAML configurations using an intuitive UI. Create resources, mana
 
 ### Building from Scratch
 
-1. **Set Registry ID**: Enter your LynqHub name
+1. **Set Hub ID**: Enter your LynqHub name
 2. **Add Resources**: Click "+ Add Resource" to create new resources
    - Select resource type (Deployment, Service, ConfigMap, etc.)
    - Set unique ID and name template
    - Configure dependencies
 3. **Preview YAML**: Switch to Preview tab to see generated YAML
-4. **Export**: Copy or download your template
+4. **Export**: Copy or download your form
 
 ### Importing Existing YAML
 
@@ -41,7 +41,7 @@ Build LynqForm YAML configurations using an intuitive UI. Create resources, mana
 ### 🔄 Bidirectional Sync
 
 - **UI → YAML**: Build visually, export YAML
-- **YAML → UI**: Import existing templates, edit visually
+- **YAML → UI**: Import existing forms, edit visually
 
 ### 🎯 Template Variables
 
@@ -116,9 +116,9 @@ For each resource, configure:
 ## Next Steps
 
 - [Dependencies Guide](./dependencies.md) - Learn about dependency management
-- [🔍 Dependency Visualizer](./dependency-visualizer.md) - Visualize your template's dependency graph
+- [🔍 Dependency Visualizer](./dependency-visualizer.md) - Visualize your form's dependency graph
 - [Templates Guide](./templates.md) - Complete template documentation
-- [Quick Start](./quickstart.md) - Deploy your first template
+- [Quick Start](./quickstart.md) - Deploy your first form
 
 ---
 

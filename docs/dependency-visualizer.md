@@ -22,7 +22,7 @@ Interactive tool to analyze and visualize LynqForm dependencies. Paste your YAML
 
 ## What it Shows
 
-- **Nodes**: Each resource in your template (Deployment, Service, Secret, etc.)
+- **Nodes**: Each resource in your form (Deployment, Service, Secret, etc.)
 - **Arrows**: Dependencies between resources (A → B means "A depends on B")
 - **Numbers**: Execution order (1 = first, 2 = second, etc.)
 - **Parallel Execution**: Resources with the same number can run in parallel
@@ -58,5 +58,5 @@ Shows what happens when you have circular dependencies (invalid configuration)
 ---
 
 ::: tip Need Help?
-If you encounter issues with your template, check the [Troubleshooting Guide](./troubleshooting) or review the error message shown by the visualizer.
+If you encounter issues with your form, check the [Troubleshooting Guide](./troubleshooting) or review the error message shown by the visualizer.
 :::

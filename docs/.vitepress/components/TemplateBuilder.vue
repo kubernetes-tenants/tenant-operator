@@ -4,19 +4,19 @@
       <!-- Left Panel: Form UI -->
       <div class="form-panel">
         <div class="panel-header">
-          <h3>Template Builder</h3>
+          <h3>Form Builder</h3>
           <button @click="resetBuilder" class="btn-secondary">🔄 Reset</button>
         </div>
 
-        <!-- Registry Settings -->
+        <!-- Hub Settings -->
         <section class="form-section">
-          <h4>Registry Settings</h4>
+          <h4>Hub Settings</h4>
           <div class="form-group">
-            <label>Registry ID *</label>
+            <label>Hub ID *</label>
             <input
               v-model="hubId"
               type="text"
-              placeholder="my-registry"
+              placeholder="my-hub"
               class="form-input"
             />
             <span class="hint">Reference to your LynqHub</span>
@@ -293,7 +293,7 @@ import { ref, computed, watch } from 'vue';
 import yaml from 'js-yaml';
 
 // State
-const hubId = ref('my-registry');
+const hubId = ref('my-hub');
 const resources = ref([]);
 const showAddResource = ref(false);
 const editingIndex = ref(null);
@@ -343,14 +343,14 @@ const isResourceValid = computed(() => {
 
 const generatedYaml = computed(() => {
   if (!hubId.value) {
-    return '# Set Registry ID to start building your template';
+    return '# Set Hub ID to start building your form';
   }
 
   const template = {
     apiVersion: 'operator.lynq.sh/v1',
     kind: 'LynqForm',
     metadata: {
-      name: 'my-template'
+      name: 'my-form'
     },
     spec: {
       hubId: hubId.value
@@ -419,7 +419,7 @@ const toggleSection = (section) => {
 
 const resetBuilder = () => {
   if (confirm('Are you sure you want to reset? All resources will be removed.')) {
-    hubId.value = 'my-registry';
+    hubId.value = 'my-hub';
     resources.value = [];
   }
 };
@@ -513,7 +513,7 @@ const importFromYaml = () => {
       return;
     }
 
-    // Extract registry ID
+    // Extract hub ID
     if (parsed.spec.hubId) {
       hubId.value = parsed.spec.hubId;
     }

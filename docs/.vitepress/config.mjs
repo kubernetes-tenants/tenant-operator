@@ -46,7 +46,7 @@ export default withMermaid(
               collapsed: false,
               items: [
                 { text: "Overview", link: "/templates" },
-                { text: "🛠️ Builder", link: "/template-builder" },
+                { text: "🛠️ Form Builder", link: "/template-builder" },
               ],
             },
             {
