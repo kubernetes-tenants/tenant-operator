@@ -59,108 +59,138 @@ cert-manager is **automatically installed** by the setup script. It's required f
 
 ### Step 1: Setup Minikube Cluster
 
-Create a Minikube cluster with all prerequisites:
+<QuickstartStep
+  :step="1"
+  title="Prepare Minikube Cluster"
+  duration="~2 min"
+  command="./scripts/setup-minikube.sh"
+  focus="Bootstraps the base cluster with cert-manager and Lynq CRDs."
+  :creates='[
+    "Minikube control plane + kubeconfig",
+    "cert-manager v1.13.2",
+    "Namespaces: lynq-system, lynq-test",
+    "Lynq CRDs"
+  ]'
+  :checklist='[
+    "kubectl get nodes shows Ready",
+    "kubectl get pods -n cert-manager",
+    "kubectl get crds | grep lynq"
+  ]'
+  next-hint="Once the cluster objects are ready, continue with Step 2 to deploy the controller."
+  next-target-id="qs-step-2"
+/>
 
-```bash
-cd /path/to/lynq
-./scripts/setup-minikube.sh
-```
-
-**What this does:**
-- ✅ Creates Minikube cluster (2 CPUs, 2GB RAM)
-- ✅ **Installs cert-manager v1.13.2** (required for webhooks)
-- ✅ Installs Lynq CRDs
-- ✅ Creates namespaces: `lynq-system`, `lynq-test`
-
-::: warning cert-manager is Essential
-cert-manager provides webhook TLS certificates for validation and defaulting. It's no longer optional, even for local development, to ensure consistency with production environments.
-:::
-
-**Time:** ~2 minutes
-
----
 
 ### Step 2: Deploy Lynq
 
-Build and deploy the operator to Minikube:
+<QuickstartStep
+  :step="2"
+  title="Deploy Lynq Operator"
+  duration="~2 min"
+  command="./scripts/deploy-to-minikube.sh"
+  focus="Builds the controller image and deploys it into lynq-system."
+  :prerequisites='[
+    "Step 1 complete: Minikube + cert-manager running",
+    "kubectl context points to Minikube"
+  ]'
+  :creates='[
+    "Lynq controller-manager Deployment/Service",
+    "Webhook configuration and TLS Secret (via cert-manager)",
+    "Metrics and leader-election resources"
+  ]'
+  :checklist='[
+    "kubectl get pods -n lynq-system to confirm controller Ready",
+    "kubectl logs -n lynq-system -l control-plane=controller-manager --tail=20",
+    "kubectl get validatingwebhookconfiguration | grep lynq"
+  ]'
+  next-hint="With the controller online you can move to Step 3 and deploy the database it will read from."
+  next-target-id="qs-step-3"
+/>
 
-```bash
-./scripts/deploy-to-minikube.sh
-```
-
-**What this does:**
-- ✅ Builds operator Docker image with timestamp tag
-- ✅ Loads image into Minikube's internal registry
-- ✅ Deploys operator to `lynq-system` namespace
-- ✅ Waits for operator to be ready
-
-**Time:** ~2 minutes
-
----
 
 ### Step 3: Deploy MySQL Test Database
 
-Deploy a MySQL database with sample node data:
+<QuickstartStep
+  :step="3"
+  title="Seed MySQL Test Database"
+  duration="~1 min"
+  command="./scripts/deploy-mysql.sh"
+  focus="Installs a MySQL 8.0 instance with sample node rows inside lynq-test."
+  :prerequisites='[
+    "Step 2 complete: Lynq operator is running",
+    "Namespace lynq-test exists (created during Step 1)"
+  ]'
+  :creates='[
+    "mysql Deployment/Service",
+    "nodes database and node_configs table",
+    "Three sample node rows",
+    "Read-only user node_reader and Secret"
+  ]'
+  :checklist="[
+    'kubectl get pods -n lynq-test | grep mysql',
+    'kubectl exec -it deployment/mysql -n lynq-test -- mysql -e &quot;SHOW DATABASES;&quot;',
+    'kubectl get secret mysql-credentials -n lynq-test'
+  ]"
+  next-hint="With the datasource online you can create the LynqHub in Step 4."
+  next-target-id="qs-step-4"
+/>
 
-```bash
-./scripts/deploy-mysql.sh
-```
-
-**What this does:**
-- ✅ Deploys MySQL 8.0 to `lynq-test` namespace
-- ✅ Creates `nodes` database and `node_configs` table
-- ✅ Inserts 3 sample node rows
-- ✅ Creates read-only user `node_reader`
-- ✅ Creates Kubernetes Secret with credentials
-
-**Sample data inserted:**
-```sql
-node_id         node_url                        is_active   subscription_plan
------------     -----------------------------   ---------   -----------------
-acme-corp       https://acme.example.com        1           enterprise
-beta-inc        https://beta.example.com        1           startup
-gamma-llc       https://gamma.example.com       0           trial
-```
-
-**Time:** ~1 minute
-
----
 
 ### Step 4: Deploy LynqHub
 
-Create a LynqHub that connects to the MySQL database:
+<QuickstartStep
+  :step="4"
+  title="Create LynqHub"
+  duration="~30 sec"
+  command="./scripts/deploy-lynqhub.sh"
+  focus="Creates the LynqHub CR that syncs MySQL rows every 30 seconds."
+  :prerequisites="[
+    'Step 3 complete: MySQL endpoint is Ready',
+    'mysql-credentials Secret exists'
+  ]"
+  :creates="[
+    'LynqHub CR (test-hub)',
+    'Column and extraValue mappings',
+    'Recurring sync loop'
+  ]"
+  :checklist="[
+    'kubectl get lynqhub test-hub -n lynq-system -o yaml | grep syncInterval',
+    'kubectl get lynqhub test-hub -o jsonpath=&quot;{.status.desiredNodes}&quot; 2>/dev/null || true',
+    'Tail operator logs for hub sync messages'
+  ]"
+  next-hint="Once the hub is feeding node specs you can define the LynqForm in Step 5 to materialize resources."
+  next-target-id="qs-step-5"
+/>
 
-```bash
-./scripts/deploy-lynqhub.sh
-```
-
-**What this does:**
-- ✅ Creates LynqHub CR named `test-hub`
-- ✅ Configures MySQL connection to test database
-- ✅ Sets up column mappings (uid, hostOrUrl, activate)
-- ✅ Starts syncing every 30 seconds
-
-**Time:** ~30 seconds
-
----
 
 ### Step 5: Deploy LynqForm
 
-Create a LynqForm that provisions resources for each node:
+<QuickstartStep
+  :step="5"
+  title="Apply LynqForm"
+  duration="~30 sec"
+  command="./scripts/deploy-lynqform.sh"
+  focus="Defines the blueprint (Deployment, Service, etc.) for each active node."
+  :prerequisites='[
+    "Step 4 complete: test-hub reports Ready",
+    "Permissions to create templates in the same namespace as the hub"
+  ]'
+  :creates='[
+    "LynqForm CR (test-template)",
+    "Deployment/Service definitions",
+    "Hub ↔ Template linkage"
+  ]'
+  :checklist='[
+    "kubectl get lynqform test-template -n lynq-system",
+    "kubectl get lynqnodes",
+    "kubectl get deployments,services -n lynq-test -l lynq.sh/node"
+  ]'
+  next-hint="All steps are done. Adding a new database row now provisions resources automatically."
+  next-target-id="qs-success"
+/>
 
-```bash
-./scripts/deploy-lynqform.sh
-```
-
-**What this does:**
-- ✅ Creates LynqForm CR named `test-template`
-- ✅ Defines resource blueprints (Deployment, Service)
-- ✅ Links to `test-hub`
-- ✅ Triggers automatic node provisioning
-
-**Time:** ~30 seconds
-
-## 🎉 Success! You're Running Lynq
+<div id="qs-success"></div>
+<h2>🎉 Success! You're Running Lynq</h2>
 
 You now have:
 - ✅ **Minikube cluster** with **cert-manager** (for webhook TLS)

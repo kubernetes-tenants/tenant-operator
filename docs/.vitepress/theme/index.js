@@ -6,6 +6,7 @@ import ComparisonSection from '../components/ComparisonSection.vue';
 import DependencyGraphVisualizer from '../components/DependencyGraphVisualizer.vue';
 import TemplateBuilder from '../components/TemplateBuilder.vue';
 import AnnouncementBanner from '../components/AnnouncementBanner.vue';
+import QuickstartStep from '../components/QuickstartStep.vue';
 import './custom.css';
 
 export default {
@@ -19,5 +20,6 @@ export default {
     app.component('DependencyGraphVisualizer', DependencyGraphVisualizer);
     app.component('TemplateBuilder', TemplateBuilder);
     app.component('AnnouncementBanner', AnnouncementBanner);
+    app.component('QuickstartStep', QuickstartStep);
   }
 };
