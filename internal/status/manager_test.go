@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
+	lynqv1 "github.com/k8s-lynq/lynq/api/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,13 +32,13 @@ import (
 )
 
 func TestStatusUpdate_Apply(t *testing.T) {
-	key := client.ObjectKey{Name: "test-tenant", Namespace: "default"}
+	key := client.ObjectKey{Name: "test-node", Namespace: "default"}
 	update := NewStatusUpdate(key)
 
 	// Test resource counts update
 	event1 := StatusEvent{
-		Type:      EventResourceCountsUpdated,
-		TenantKey: key,
+		Type:    EventResourceCountsUpdated,
+		NodeKey: key,
 		Payload: ResourceCountsPayload{
 			Ready:      5,
 			Failed:     1,
@@ -58,8 +58,8 @@ func TestStatusUpdate_Apply(t *testing.T) {
 
 	// Test condition update
 	event2 := StatusEvent{
-		Type:      EventConditionChanged,
-		TenantKey: key,
+		Type:    EventConditionChanged,
+		NodeKey: key,
 		Payload: ConditionPayload{
 			Condition: metav1.Condition{
 				Type:   "Ready",
@@ -77,8 +77,8 @@ func TestStatusUpdate_Apply(t *testing.T) {
 
 	// Test applied resources update
 	event3 := StatusEvent{
-		Type:      EventAppliedResourcesUpdated,
-		TenantKey: key,
+		Type:    EventAppliedResourcesUpdated,
+		NodeKey: key,
 		Payload: AppliedResourcesPayload{
 			Keys: []string{"Deployment/default/app1@dep1", "Service/default/svc1@svc1"},
 		},
@@ -91,7 +91,7 @@ func TestStatusUpdate_Apply(t *testing.T) {
 }
 
 func TestStatusUpdate_HasChanges(t *testing.T) {
-	key := client.ObjectKey{Name: "test-tenant", Namespace: "default"}
+	key := client.ObjectKey{Name: "test-node", Namespace: "default"}
 
 	// Empty update has no changes
 	update := NewStatusUpdate(key)
@@ -111,36 +111,36 @@ func TestStatusUpdate_HasChanges(t *testing.T) {
 func TestManager_PublishSync(t *testing.T) {
 	// Setup
 	scheme := runtime.NewScheme()
-	err := tenantsv1.AddToScheme(scheme)
+	err := lynqv1.AddToScheme(scheme)
 	require.NoError(t, err)
 
-	tenant := &tenantsv1.Tenant{
+	node := &lynqv1.LynqNode{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-tenant",
+			Name:       "test-node",
 			Namespace:  "default",
 			Generation: 1,
 		},
-		Spec: tenantsv1.TenantSpec{
-			UID:         "tenant-123",
+		Spec: lynqv1.LynqNodeSpec{
+			UID:         "node-123",
 			TemplateRef: "test-template",
 		},
 	}
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(tenant).
-		WithStatusSubresource(tenant).
+		WithObjects(node).
+		WithStatusSubresource(node).
 		Build()
 
 	// Create manager in sync mode for testing
 	manager := NewManager(fakeClient, WithSyncMode())
 
 	// Publish resource counts
-	manager.PublishResourceCounts(tenant, 5, 1, 6, 0)
+	manager.PublishResourceCounts(node, 5, 1, 6, 0)
 
 	// Verify status was updated
-	updated := &tenantsv1.Tenant{}
-	err = fakeClient.Get(context.Background(), client.ObjectKeyFromObject(tenant), updated)
+	updated := &lynqv1.LynqNode{}
+	err = fakeClient.Get(context.Background(), client.ObjectKeyFromObject(node), updated)
 	require.NoError(t, err)
 
 	assert.Equal(t, int32(5), updated.Status.ReadyResources)
@@ -151,35 +151,35 @@ func TestManager_PublishSync(t *testing.T) {
 func TestManager_PublishConditionSync(t *testing.T) {
 	// Setup
 	scheme := runtime.NewScheme()
-	err := tenantsv1.AddToScheme(scheme)
+	err := lynqv1.AddToScheme(scheme)
 	require.NoError(t, err)
 
-	tenant := &tenantsv1.Tenant{
+	node := &lynqv1.LynqNode{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-tenant",
+			Name:       "test-node",
 			Namespace:  "default",
 			Generation: 1,
 		},
-		Spec: tenantsv1.TenantSpec{
-			UID:         "tenant-123",
+		Spec: lynqv1.LynqNodeSpec{
+			UID:         "node-123",
 			TemplateRef: "test-template",
 		},
 	}
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(tenant).
-		WithStatusSubresource(tenant).
+		WithObjects(node).
+		WithStatusSubresource(node).
 		Build()
 
 	manager := NewManager(fakeClient, WithSyncMode())
 
 	// Publish Ready condition
-	manager.PublishReadyCondition(tenant, true, "AllResourcesReady", "All 6 resources are ready")
+	manager.PublishReadyCondition(node, true, "AllResourcesReady", "All 6 resources are ready")
 
 	// Verify condition was updated
-	updated := &tenantsv1.Tenant{}
-	err = fakeClient.Get(context.Background(), client.ObjectKeyFromObject(tenant), updated)
+	updated := &lynqv1.LynqNode{}
+	err = fakeClient.Get(context.Background(), client.ObjectKeyFromObject(node), updated)
 	require.NoError(t, err)
 
 	require.Len(t, updated.Status.Conditions, 1)
@@ -191,38 +191,38 @@ func TestManager_PublishConditionSync(t *testing.T) {
 func TestManager_PublishMultipleConditionsSync(t *testing.T) {
 	// Setup
 	scheme := runtime.NewScheme()
-	err := tenantsv1.AddToScheme(scheme)
+	err := lynqv1.AddToScheme(scheme)
 	require.NoError(t, err)
 
-	tenant := &tenantsv1.Tenant{
+	node := &lynqv1.LynqNode{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-tenant",
+			Name:       "test-node",
 			Namespace:  "default",
 			Generation: 1,
 		},
-		Spec: tenantsv1.TenantSpec{
-			UID:         "tenant-123",
+		Spec: lynqv1.LynqNodeSpec{
+			UID:         "node-123",
 			TemplateRef: "test-template",
 		},
 	}
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(tenant).
-		WithStatusSubresource(tenant).
+		WithObjects(node).
+		WithStatusSubresource(node).
 		Build()
 
 	manager := NewManager(fakeClient, WithSyncMode())
 
 	// Publish multiple conditions
-	manager.PublishReadyCondition(tenant, true, "AllResourcesReady", "All resources ready")
-	manager.PublishProgressingCondition(tenant, false, "ReconcileComplete", "Reconciliation completed")
-	manager.PublishConflictedCondition(tenant, false)
-	manager.PublishDegradedCondition(tenant, false, "Healthy", "All resources healthy")
+	manager.PublishReadyCondition(node, true, "AllResourcesReady", "All resources ready")
+	manager.PublishProgressingCondition(node, false, "ReconcileComplete", "Reconciliation completed")
+	manager.PublishConflictedCondition(node, false)
+	manager.PublishDegradedCondition(node, false, "Healthy", "All resources healthy")
 
 	// Verify all conditions were updated
-	updated := &tenantsv1.Tenant{}
-	err = fakeClient.Get(context.Background(), client.ObjectKeyFromObject(tenant), updated)
+	updated := &lynqv1.LynqNode{}
+	err = fakeClient.Get(context.Background(), client.ObjectKeyFromObject(node), updated)
 	require.NoError(t, err)
 
 	assert.Len(t, updated.Status.Conditions, 4)
@@ -242,25 +242,25 @@ func TestManager_PublishMultipleConditionsSync(t *testing.T) {
 func TestManager_PublishAppliedResourcesSync(t *testing.T) {
 	// Setup
 	scheme := runtime.NewScheme()
-	err := tenantsv1.AddToScheme(scheme)
+	err := lynqv1.AddToScheme(scheme)
 	require.NoError(t, err)
 
-	tenant := &tenantsv1.Tenant{
+	node := &lynqv1.LynqNode{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-tenant",
+			Name:       "test-node",
 			Namespace:  "default",
 			Generation: 1,
 		},
-		Spec: tenantsv1.TenantSpec{
-			UID:         "tenant-123",
+		Spec: lynqv1.LynqNodeSpec{
+			UID:         "node-123",
 			TemplateRef: "test-template",
 		},
 	}
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(tenant).
-		WithStatusSubresource(tenant).
+		WithObjects(node).
+		WithStatusSubresource(node).
 		Build()
 
 	manager := NewManager(fakeClient, WithSyncMode())
@@ -270,11 +270,11 @@ func TestManager_PublishAppliedResourcesSync(t *testing.T) {
 		"Deployment/default/app1@dep1",
 		"Service/default/svc1@svc1",
 	}
-	manager.PublishAppliedResources(tenant, keys)
+	manager.PublishAppliedResources(node, keys)
 
 	// Verify applied resources were updated
-	updated := &tenantsv1.Tenant{}
-	err = fakeClient.Get(context.Background(), client.ObjectKeyFromObject(tenant), updated)
+	updated := &lynqv1.LynqNode{}
+	err = fakeClient.Get(context.Background(), client.ObjectKeyFromObject(node), updated)
 	require.NoError(t, err)
 
 	assert.Len(t, updated.Status.AppliedResources, 2)
@@ -285,25 +285,25 @@ func TestManager_PublishAppliedResourcesSync(t *testing.T) {
 func TestManager_PublishFullStatusSync(t *testing.T) {
 	// Setup
 	scheme := runtime.NewScheme()
-	err := tenantsv1.AddToScheme(scheme)
+	err := lynqv1.AddToScheme(scheme)
 	require.NoError(t, err)
 
-	tenant := &tenantsv1.Tenant{
+	node := &lynqv1.LynqNode{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-tenant",
+			Name:       "test-node",
 			Namespace:  "default",
 			Generation: 1,
 		},
-		Spec: tenantsv1.TenantSpec{
-			UID:         "tenant-123",
+		Spec: lynqv1.LynqNodeSpec{
+			UID:         "node-123",
 			TemplateRef: "test-template",
 		},
 	}
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(tenant).
-		WithStatusSubresource(tenant).
+		WithObjects(node).
+		WithStatusSubresource(node).
 		Build()
 
 	manager := NewManager(fakeClient, WithSyncMode())
@@ -327,11 +327,11 @@ func TestManager_PublishFullStatusSync(t *testing.T) {
 	}
 	appliedKeys := []string{"Deployment/default/app1@dep1"}
 
-	manager.PublishFullStatus(tenant, 5, 1, 6, 0, conditions, appliedKeys, false, "")
+	manager.PublishFullStatus(node, 5, 1, 6, 0, conditions, appliedKeys, false, "")
 
 	// Verify everything was updated
-	updated := &tenantsv1.Tenant{}
-	err = fakeClient.Get(context.Background(), client.ObjectKeyFromObject(tenant), updated)
+	updated := &lynqv1.LynqNode{}
+	err = fakeClient.Get(context.Background(), client.ObjectKeyFromObject(node), updated)
 	require.NoError(t, err)
 
 	// Check resource counts
@@ -350,20 +350,20 @@ func TestManager_PublishFullStatusSync(t *testing.T) {
 func TestManager_UpdateConditionDeduplication(t *testing.T) {
 	// Setup
 	scheme := runtime.NewScheme()
-	err := tenantsv1.AddToScheme(scheme)
+	err := lynqv1.AddToScheme(scheme)
 	require.NoError(t, err)
 
-	tenant := &tenantsv1.Tenant{
+	node := &lynqv1.LynqNode{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-tenant",
+			Name:       "test-node",
 			Namespace:  "default",
 			Generation: 1,
 		},
-		Spec: tenantsv1.TenantSpec{
-			UID:         "tenant-123",
+		Spec: lynqv1.LynqNodeSpec{
+			UID:         "node-123",
 			TemplateRef: "test-template",
 		},
-		Status: tenantsv1.TenantStatus{
+		Status: lynqv1.LynqNodeStatus{
 			Conditions: []metav1.Condition{
 				{
 					Type:               "Ready",
@@ -378,18 +378,18 @@ func TestManager_UpdateConditionDeduplication(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(tenant).
-		WithStatusSubresource(tenant).
+		WithObjects(node).
+		WithStatusSubresource(node).
 		Build()
 
 	manager := NewManager(fakeClient, WithSyncMode())
 
 	// Update the same condition with different status
-	manager.PublishReadyCondition(tenant, true, "AllResourcesReady", "All resources ready")
+	manager.PublishReadyCondition(node, true, "AllResourcesReady", "All resources ready")
 
 	// Verify condition was updated (not duplicated)
-	updated := &tenantsv1.Tenant{}
-	err = fakeClient.Get(context.Background(), client.ObjectKeyFromObject(tenant), updated)
+	updated := &lynqv1.LynqNode{}
+	err = fakeClient.Get(context.Background(), client.ObjectKeyFromObject(node), updated)
 	require.NoError(t, err)
 
 	assert.Len(t, updated.Status.Conditions, 1)
@@ -398,10 +398,10 @@ func TestManager_UpdateConditionDeduplication(t *testing.T) {
 	assert.Equal(t, "AllResourcesReady", updated.Status.Conditions[0].Reason)
 }
 
-func TestManager_HandleDeletedTenant(t *testing.T) {
+func TestManager_HandleDeletedLynqNode(t *testing.T) {
 	// Setup
 	scheme := runtime.NewScheme()
-	err := tenantsv1.AddToScheme(scheme)
+	err := lynqv1.AddToScheme(scheme)
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().
@@ -410,21 +410,21 @@ func TestManager_HandleDeletedTenant(t *testing.T) {
 
 	manager := NewManager(fakeClient, WithSyncMode())
 
-	// Try to publish to a non-existent tenant
-	tenant := &tenantsv1.Tenant{
+	// Try to publish to a non-existent node
+	node := &lynqv1.LynqNode{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deleted-tenant",
+			Name:      "deleted-node",
 			Namespace: "default",
 		},
 	}
 
-	// This should not error - it should gracefully handle missing tenant
-	manager.PublishResourceCounts(tenant, 5, 1, 6, 0)
+	// This should not error - it should gracefully handle missing node
+	manager.PublishResourceCounts(node, 5, 1, 6, 0)
 
-	// Verify tenant still doesn't exist
-	updated := &tenantsv1.Tenant{}
+	// Verify node still doesn't exist
+	updated := &lynqv1.LynqNode{}
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name:      "deleted-tenant",
+		Name:      "deleted-node",
 		Namespace: "default",
 	}, updated)
 	assert.Error(t, err)

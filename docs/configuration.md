@@ -1,6 +1,6 @@
 # Configuration Guide
 
-Configure Tenant Operator consistently across environments.
+Configure Lynq consistently across environments.
 
 [[toc]]
 
@@ -61,35 +61,35 @@ resources:
 Requests ensure the controller can start on smaller nodes, while the higher limits accommodate bursts from reconciliation loops and template rendering.
 :::
 
-## Registry Configuration
+## Hub Configuration
 
 ### MySQL Data Source
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: my-registry
+  name: my-hub
 spec:
   source:
     type: mysql
     mysql:
       host: mysql.default.svc.cluster.local
       port: 3306
-      username: tenant_reader
+      username: node_reader
       passwordRef:
         name: mysql-credentials
         key: password
-      database: tenants
-      table: tenant_configs
+      database: nodes
+      table: node_configs
 
     # Sync interval - how often to check database for changes
     syncInterval: 1m
 
-  # Required value mappings (map database columns to tenant variables)
+  # Required value mappings (map database columns to node variables)
   valueMappings:
-    uid: tenant_id           # Unique tenant identifier
-    hostOrUrl: tenant_url    # Tenant URL/hostname
+    uid: node_id           # Unique node identifier
+    hostOrUrl: node_url    # Node URL/hostname
     activate: is_active      # Activation flag (boolean)
 
   # Optional extra mappings (custom variables for templates)
@@ -99,34 +99,34 @@ spec:
 ```
 
 ::: warning Production reminder
-Grant the registry user read-only credentials and limit network access between the operator namespace and the database.
+Grant the hub user read-only credentials and limit network access between the operator namespace and the database.
 :::
 
 ## Template Configuration
 
 ```mermaid
 flowchart TB
-    Template["TenantTemplate<br/>Spec"]
+    Template["LynqForm<br/>Spec"]
     Policies["Policies<br/>(Creation/Deletion/Conflict/Patch)"]
     Renderer["Template Renderer"]
-    Tenant["Tenant CR"]
+    Node["LynqNode CR"]
     Resources["Applied Resources"]
 
-    Template --> Policies --> Renderer --> Tenant --> Resources
+    Template --> Policies --> Renderer --> Node --> Resources
 
     classDef block fill:#fff8e1,stroke:#ffca28,stroke-width:2px;
-    class Template,Policies,Renderer,Tenant,Resources block;
+    class Template,Policies,Renderer,Node,Resources block;
 ```
 
 ### Default Policies
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: my-template
 spec:
-  registryId: my-registry
+  hubId: my-hub
 
   deployments:
     - id: app
@@ -161,7 +161,7 @@ spec:
 ### RBAC
 
 Default RBAC is automatically created during installation and includes:
-- Full access to TenantRegistry, TenantTemplate, Tenant CRDs
+- Full access to LynqHub, LynqForm, LynqNode CRDs
 - Management of workload resources (Deployments, Services, etc.)
 - Read-only access to Secrets (for database credentials)
 - Events and lease management for leader election
@@ -173,7 +173,7 @@ RBAC manifests are located in `config/rbac/` and are applied automatically via `
 Network policies are not included by default. If your cluster requires network policies, create them based on your security requirements:
 - Allow ingress from Kubernetes API server for **webhooks** (webhooks require cert-manager)
 - Allow ingress from cert-manager for certificate provisioning
-- Allow egress to database for registry sync
+- Allow egress to database for hub sync
 - Allow egress to Kubernetes API for resource management
 
 See `config/network-policy/` for example configurations.

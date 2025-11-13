@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
-	"github.com/kubernetes-tenants/tenant-operator/internal/metrics"
+	lynqv1 "github.com/k8s-lynq/lynq/api/v1"
+	"github.com/k8s-lynq/lynq/internal/metrics"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	// DefaultBatchSize is the default number of tenants to batch before flushing
+	// DefaultBatchSize is the default number of nodes to batch before flushing
 	DefaultBatchSize = 10
 
 	// DefaultFlushInterval is the default time interval to flush batches
@@ -42,7 +42,7 @@ const (
 	DefaultEventBufferSize = 100
 )
 
-// Manager manages status updates for tenants using an event-driven approach
+// Manager manages status updates for nodes using an event-driven approach
 // It collects status events, aggregates them, and performs batch updates to minimize API calls
 type Manager struct {
 	client        client.Client
@@ -126,10 +126,10 @@ func (m *Manager) Publish(event StatusEvent) {
 		defer m.syncMutex.Unlock()
 
 		batch := make(map[client.ObjectKey]*StatusUpdate)
-		update := batch[event.TenantKey]
+		update := batch[event.NodeKey]
 		if update == nil {
-			update = NewStatusUpdate(event.TenantKey)
-			batch[event.TenantKey] = update
+			update = NewStatusUpdate(event.NodeKey)
+			batch[event.NodeKey] = update
 		}
 		update.Apply(event)
 		m.flushBatch(context.Background(), batch)
@@ -143,7 +143,7 @@ func (m *Manager) Publish(event StatusEvent) {
 			// In production, this should be rare due to buffer size and flush interval
 			logger := log.Log.WithName("status-manager")
 			logger.V(1).Info("Dropping status event due to full buffer",
-				"tenant", event.TenantKey,
+				"node", event.NodeKey,
 				"type", event.Type)
 		}
 	}
@@ -204,10 +204,10 @@ func (m *Manager) run() {
 
 		case event := <-m.events:
 			// Aggregate event
-			update := batch[event.TenantKey]
+			update := batch[event.NodeKey]
 			if update == nil {
-				update = NewStatusUpdate(event.TenantKey)
-				batch[event.TenantKey] = update
+				update = NewStatusUpdate(event.NodeKey)
+				batch[event.NodeKey] = update
 			}
 			update.Apply(event)
 
@@ -239,7 +239,7 @@ func (m *Manager) flushBatch(ctx context.Context, batch map[client.ObjectKey]*St
 
 		if err := m.applyUpdate(batchCtx, update); err != nil {
 			logger.Error(err, "Failed to apply status update",
-				"tenant", key.Name,
+				"node", key.Name,
 				"namespace", key.Namespace)
 			failCount++
 		} else {
@@ -255,19 +255,19 @@ func (m *Manager) flushBatch(ctx context.Context, batch map[client.ObjectKey]*St
 	}
 }
 
-// applyUpdate applies a single status update to a tenant
+// applyUpdate applies a single status update to a node
 func (m *Manager) applyUpdate(ctx context.Context, update *StatusUpdate) error {
 	logger := log.Log.WithName("status-manager")
 
 	// Update Kubernetes status
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// Get latest version
-		tenant := &tenantsv1.Tenant{}
-		if err := m.client.Get(ctx, update.Key, tenant); err != nil {
+		node := &lynqv1.LynqNode{}
+		if err := m.client.Get(ctx, update.Key, node); err != nil {
 			if errors.IsNotFound(err) {
-				// Tenant was deleted, skip update
-				logger.V(1).Info("Tenant not found, skipping status update",
-					"tenant", update.Key.Name,
+				// LynqNode was deleted, skip update
+				logger.V(1).Info("LynqNode not found, skipping status update",
+					"node", update.Key.Name,
 					"namespace", update.Key.Namespace)
 				return nil
 			}
@@ -278,33 +278,33 @@ func (m *Manager) applyUpdate(ctx context.Context, update *StatusUpdate) error {
 		statusChanged := false
 
 		if update.ObservedGeneration != nil {
-			tenant.Status.ObservedGeneration = *update.ObservedGeneration
+			node.Status.ObservedGeneration = *update.ObservedGeneration
 			statusChanged = true
 		}
 
 		if update.ReadyResources != nil {
-			tenant.Status.ReadyResources = *update.ReadyResources
+			node.Status.ReadyResources = *update.ReadyResources
 			statusChanged = true
 		}
 
 		if update.FailedResources != nil {
-			tenant.Status.FailedResources = *update.FailedResources
+			node.Status.FailedResources = *update.FailedResources
 			statusChanged = true
 		}
 
 		if update.DesiredResources != nil {
-			tenant.Status.DesiredResources = *update.DesiredResources
+			node.Status.DesiredResources = *update.DesiredResources
 			statusChanged = true
 		}
 
 		if update.AppliedResources != nil {
-			tenant.Status.AppliedResources = update.AppliedResources
+			node.Status.AppliedResources = update.AppliedResources
 			statusChanged = true
 		}
 
 		// Update conditions
 		for _, cond := range update.Conditions {
-			if m.updateCondition(&tenant.Status, cond) {
+			if m.updateCondition(&node.Status, cond) {
 				statusChanged = true
 			}
 		}
@@ -315,11 +315,11 @@ func (m *Manager) applyUpdate(ctx context.Context, update *StatusUpdate) error {
 		}
 
 		// Update status subresource
-		return m.client.Status().Update(ctx, tenant)
+		return m.client.Status().Update(ctx, node)
 	})
 
 	if err != nil {
-		return fmt.Errorf("failed to update tenant status: %w", err)
+		return fmt.Errorf("failed to update node status: %w", err)
 	}
 
 	// Update metrics if provided (metrics don't require retry)
@@ -332,7 +332,7 @@ func (m *Manager) applyUpdate(ctx context.Context, update *StatusUpdate) error {
 
 // updateCondition updates or appends a condition to the status
 // Returns true if the condition was changed
-func (m *Manager) updateCondition(status *tenantsv1.TenantStatus, newCond metav1.Condition) bool {
+func (m *Manager) updateCondition(status *lynqv1.LynqNodeStatus, newCond metav1.Condition) bool {
 	// Find existing condition
 	for i := range status.Conditions {
 		if status.Conditions[i].Type == newCond.Type {
@@ -352,16 +352,16 @@ func (m *Manager) updateCondition(status *tenantsv1.TenantStatus, newCond metav1
 	return true
 }
 
-// updateMetrics updates Prometheus metrics for a tenant
+// updateMetrics updates Prometheus metrics for a LynqNode
 func (m *Manager) updateMetrics(key client.ObjectKey, metricsPayload *MetricsPayload) {
-	tenantName := key.Name
-	tenantNamespace := key.Namespace
+	lynqnodeName := key.Name
+	lynqnodeNamespace := key.Namespace
 
 	// Update resource metrics
-	metrics.TenantResourcesReady.WithLabelValues(tenantName, tenantNamespace).Set(float64(metricsPayload.Ready))
-	metrics.TenantResourcesDesired.WithLabelValues(tenantName, tenantNamespace).Set(float64(metricsPayload.Desired))
-	metrics.TenantResourcesFailed.WithLabelValues(tenantName, tenantNamespace).Set(float64(metricsPayload.Failed))
-	metrics.TenantResourcesConflicted.WithLabelValues(tenantName, tenantNamespace).Set(float64(metricsPayload.Conflicted))
+	metrics.LynqNodeResourcesReady.WithLabelValues(lynqnodeName, lynqnodeNamespace).Set(float64(metricsPayload.Ready))
+	metrics.LynqNodeResourcesDesired.WithLabelValues(lynqnodeName, lynqnodeNamespace).Set(float64(metricsPayload.Desired))
+	metrics.LynqNodeResourcesFailed.WithLabelValues(lynqnodeName, lynqnodeNamespace).Set(float64(metricsPayload.Failed))
+	metrics.LynqNodeResourcesConflicted.WithLabelValues(lynqnodeName, lynqnodeNamespace).Set(float64(metricsPayload.Conflicted))
 
 	// Update condition metrics
 	for _, condition := range metricsPayload.Conditions {
@@ -377,25 +377,25 @@ func (m *Manager) updateMetrics(key client.ObjectKey, metricsPayload *MetricsPay
 			statusValue = 2 // Unknown
 		}
 
-		metrics.TenantConditionStatus.WithLabelValues(
-			tenantName,
-			tenantNamespace,
+		metrics.LynqNodeConditionStatus.WithLabelValues(
+			lynqnodeName,
+			lynqnodeNamespace,
 			condition.Type,
 		).Set(statusValue)
 	}
 
 	// Update degraded status metric
 	if metricsPayload.IsDegraded {
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, metricsPayload.DegradedReason).Set(1)
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, metricsPayload.DegradedReason).Set(1)
 	} else {
-		// Reset all possible degraded reasons for this tenant to ensure metrics are cleared
-		// This prevents stale degraded metrics from remaining after tenant recovers
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "ResourceFailures").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "ResourceConflicts").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "ResourceFailuresAndConflicts").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "ResourcesNotReady").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "TemplateRenderError").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "DependencyCycle").Set(0)
-		metrics.TenantDegradedStatus.WithLabelValues(tenantName, tenantNamespace, "VariablesBuildError").Set(0)
+		// Reset all possible degraded reasons for this LynqNode to ensure metrics are cleared
+		// This prevents stale degraded metrics from remaining after LynqNode recovers
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, "ResourceFailures").Set(0)
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, "ResourceConflicts").Set(0)
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, "ResourceFailuresAndConflicts").Set(0)
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, "ResourcesNotReady").Set(0)
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, "TemplateRenderError").Set(0)
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, "DependencyCycle").Set(0)
+		metrics.LynqNodeDegradedStatus.WithLabelValues(lynqnodeName, lynqnodeNamespace, "VariablesBuildError").Set(0)
 	}
 }

@@ -19,12 +19,12 @@ package graph
 import (
 	"fmt"
 
-	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
+	lynqv1 "github.com/k8s-lynq/lynq/api/v1"
 )
 
 // Node represents a resource in the dependency graph
 type Node struct {
-	Resource   tenantsv1.TResource
+	Resource   lynqv1.TResource
 	ID         string
 	DependsOn  []string
 	Level      int // Depth in the graph (0 = no dependencies)
@@ -44,7 +44,7 @@ func NewDependencyGraph() *DependencyGraph {
 }
 
 // AddResource adds a resource to the graph
-func (g *DependencyGraph) AddResource(resource tenantsv1.TResource) error {
+func (g *DependencyGraph) AddResource(resource lynqv1.TResource) error {
 	if resource.ID == "" {
 		return fmt.Errorf("resource ID cannot be empty")
 	}
@@ -214,7 +214,7 @@ func (g *DependencyGraph) GetResourcesByLevel() map[int][]*Node {
 }
 
 // BuildGraph builds a dependency graph from a list of resources
-func BuildGraph(resources []tenantsv1.TResource) (*DependencyGraph, error) {
+func BuildGraph(resources []lynqv1.TResource) (*DependencyGraph, error) {
 	graph := NewDependencyGraph()
 
 	for _, resource := range resources {

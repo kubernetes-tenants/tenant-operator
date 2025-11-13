@@ -43,13 +43,13 @@ const (
 	EventMetricsUpdate EventType = "MetricsUpdate"
 )
 
-// StatusEvent represents a status change event for a tenant
+// StatusEvent represents a status change event for a LynqNode
 type StatusEvent struct {
 	// Type is the event type
 	Type EventType
 
-	// TenantKey is the namespaced name of the tenant
-	TenantKey client.ObjectKey
+	// NodeKey is the namespaced name of the LynqNode
+	NodeKey client.ObjectKey
 
 	// Payload contains event-specific data
 	Payload interface{}
@@ -92,9 +92,9 @@ type MetricsPayload struct {
 	DegradedReason string
 }
 
-// StatusUpdate represents accumulated status changes for a single tenant
+// StatusUpdate represents accumulated status changes for a single LynqNode
 type StatusUpdate struct {
-	// Key is the tenant's namespaced name
+	// Key is the LynqNode's namespaced name
 	Key client.ObjectKey
 
 	// Generation to update
@@ -118,7 +118,7 @@ type StatusUpdate struct {
 	LastEventTime time.Time
 }
 
-// NewStatusUpdate creates a new StatusUpdate for a tenant
+// NewStatusUpdate creates a new StatusUpdate for a LynqNode
 func NewStatusUpdate(key client.ObjectKey) *StatusUpdate {
 	return &StatusUpdate{
 		Key:        key,

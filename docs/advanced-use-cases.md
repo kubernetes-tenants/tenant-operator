@@ -1,14 +1,18 @@
 # Advanced Use Cases
 
+::: info Multi-Tenancy Examples
+As the most common use case for Lynq, this guide presents various patterns using **Multi-Tenancy** (SaaS application with multiple customers/nodes) as examples. These patterns can be adapted for any database-driven infrastructure automation scenario.
+:::
+
 ## Overview
 
-Tenant Operator's flexible architecture enables powerful multi-tenant patterns beyond basic resource provisioning. This guide helps you understand which pattern fits your requirements.
+Lynq's flexible architecture enables powerful automation patterns beyond basic resource provisioning. This guide helps you understand which pattern fits your requirements.
 
 ## Available Patterns
 
 ### 1. Custom Domain Provisioning
 
-**Use when:** Each tenant needs their own custom domain with automatic DNS and SSL.
+**Use when:** Each node needs their own custom domain with automatic DNS and SSL.
 
 **Key features:**
 - Automatic DNS record creation via External DNS
@@ -54,9 +58,9 @@ Tenant Operator's flexible architecture enables powerful multi-tenant patterns b
 
 ---
 
-### 4. Database-per-Tenant
+### 4. Database-per-Node
 
-**Use when:** Each tenant needs complete data isolation with dedicated database instances.
+**Use when:** Each node needs complete data isolation with dedicated database instances.
 
 **Key features:**
 - Automatic RDS/Cloud SQL provisioning via Crossplane
@@ -72,7 +76,7 @@ Tenant Operator's flexible architecture enables powerful multi-tenant patterns b
 
 ### 5. Dynamic Feature Flags
 
-**Use when:** You want to enable/disable features per tenant without redeployment.
+**Use when:** You want to enable/disable features per node without redeployment.
 
 **Key features:**
 - Application-level flags via environment variables
@@ -97,8 +101,8 @@ Tenant Operator's flexible architecture enables powerful multi-tenant patterns b
 
 | Requirement | Recommended Pattern |
 |-------------|---------------------|
-| Custom domains per tenant | [Custom Domain Provisioning](/use-case-custom-domains) |
-| Dedicated databases | [Database-per-Tenant](/use-case-database-per-tenant) |
+| Custom domains per node | [Custom Domain Provisioning](/use-case-custom-domains) |
+| Dedicated databases | [Database-per-Node](/use-case-database-per-tenant) |
 | Optional expensive features | [Feature Flags](/use-case-feature-flags) (Pattern 2) |
 
 ### By Business Model
@@ -106,7 +110,7 @@ Tenant Operator's flexible architecture enables powerful multi-tenant patterns b
 | Business Model | Recommended Patterns |
 |----------------|----------------------|
 | SaaS with subscription tiers | [Feature Flags](/use-case-feature-flags) + [Custom Domains](/use-case-custom-domains) |
-| Enterprise B2B | [Database-per-Tenant](/use-case-database-per-tenant) + [Multi-Tier](/use-case-multi-tier) |
+| Enterprise B2B | [Database-per-Node](/use-case-database-per-tenant) + [Multi-Tier](/use-case-multi-tier) |
 | High-traffic consumer app | [Blue-Green Deployments](/use-case-blue-green) + [Feature Flags](/use-case-feature-flags) |
 
 ## Combining Patterns
@@ -120,7 +124,7 @@ Many use cases benefit from combining multiple patterns:
 4. **Blue-Green Deployments** - Safe deployment of new versions
 
 ### Enterprise Platform
-1. **Database-per-Tenant** - Complete data isolation
+1. **Database-per-Node** - Complete data isolation
 2. **Multi-Tier Stack** - Complex application architecture
 3. **Blue-Green** - Zero-downtime updates for mission-critical systems
 
@@ -138,9 +142,9 @@ Begin with a single pattern that addresses your most critical need, then add mor
 For complex filtering logic, create database views rather than trying to implement logic in templates.
 
 ```sql
--- Example: Filter tenants by plan and feature
+-- Example: Filter nodes by plan and feature
 CREATE OR REPLACE VIEW enterprise_with_ai AS
-SELECT * FROM tenants
+SELECT * FROM nodes
 WHERE plan_type = 'enterprise'
   AND feature_ai_enabled = TRUE
   AND is_active = TRUE;
@@ -153,7 +157,7 @@ Use `targetNamespace` to organize resources across namespaces for better isolati
 deployments:
   - id: app
     nameTemplate: "{{ .uid }}-app"
-    targetNamespace: "tenant-{{ .uid }}"  # Creates in tenant's namespace
+    targetNamespace: "node-{{ .uid }}"  # Creates in node's namespace
 ```
 
 ### 4. Set Appropriate Policies
@@ -166,9 +170,9 @@ Choose policies based on resource type:
 ### 5. Monitor Everything
 Set up comprehensive monitoring for:
 - Resource provisioning status
-- Feature usage per tenant
+- Feature usage per node
 - Deployment progression
-- Cost per tenant
+- Cost per node
 
 ## Common Pitfalls
 
@@ -186,31 +190,31 @@ deployments:
 ### ✅ Do: Use database views and separate templates
 ```sql
 -- Database view
-CREATE VIEW tenants_with_feature AS
-SELECT * FROM tenants WHERE feature_enabled = TRUE;
+CREATE VIEW nodes_with_feature AS
+SELECT * FROM nodes WHERE feature_enabled = TRUE;
 ```
 
 ```yaml
-# Separate TenantRegistry and Template
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+# Separate LynqHub and Template
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: feature-enabled-tenants
+  name: feature-enabled-nodes
 spec:
   source:
     mysql:
-      table: tenants_with_feature  # Use the view
+      table: nodes_with_feature  # Use the view
 ```
 
-### ❌ Don't: Store complex logic in TenantRegistry
-The registry should only read and map data, not transform it.
+### ❌ Don't: Store complex logic in LynqHub
+The hub should only read and map data, not transform it.
 
 ### ✅ Do: Use database views for complex queries
 Move JOIN operations and complex filtering to database views.
 
 ## Getting Help
 
-- **Documentation Issues**: [Report on GitHub](https://github.com/kubernetes-tenants/tenant-operator/issues)
+- **Documentation Issues**: [Report on GitHub](https://github.com/k8s-lynq/lynq/issues)
 - **Architecture Questions**: Review [Architecture Guide](/architecture)
 - **Template Help**: See [Templates Guide](/templates)
 - **Policy Questions**: Check [Policies Documentation](/policies)
@@ -220,13 +224,13 @@ Move JOIN operations and complex filtering to database views.
 1. Review the pattern that best matches your needs
 2. Study the full guide for that pattern
 3. Adapt the example to your requirements
-4. Start with a single tenant for testing
-5. Gradually roll out to more tenants
+4. Start with a single node for testing
+5. Gradually roll out to more nodes
 
 ## Contributing
 
 Have a use case not covered here? We'd love to hear about it!
 
-- **Open an Issue**: [GitHub Issues](https://github.com/kubernetes-tenants/tenant-operator/issues)
+- **Open an Issue**: [GitHub Issues](https://github.com/k8s-lynq/lynq/issues)
 - **Share Your Story**: Contribute a use case guide
 - **Join Discussions**: Share your experience with the community

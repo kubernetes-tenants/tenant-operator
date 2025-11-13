@@ -13,7 +13,7 @@ echo -e "${BLUE}=== Deploy MySQL Test Database ===${NC}"
 echo ""
 
 # Configuration
-NAMESPACE="${MYSQL_NAMESPACE:-tenant-operator-test}"
+NAMESPACE="${MYSQL_NAMESPACE:-lynq-test}"
 MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-rootpassword}"
 MYSQL_DATABASE="${MYSQL_DATABASE:-tenant_registry}"
 MYSQL_USER="${MYSQL_USER:-tenant_user}"
@@ -60,7 +60,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: mysql-init-sql
-  namespace: tenant-operator-test
+  namespace: lynq-test
 data:
   init.sql: |
     -- Create tenants table
@@ -83,12 +83,12 @@ data:
     -- Insert test data
     INSERT INTO tenants (uid, host_or_url, activate, deploy_image, plan_id, max_users, storage_gb, custom_config)
     VALUES
-      ('tenant-alpha', 'https://alpha.example.com', TRUE, 'nginx:1.21', 'enterprise', 1000, 100, '{"features": ["advanced-analytics", "custom-domain"]}'),
-      ('tenant-beta', 'https://beta.example.com', TRUE, 'nginx:1.21', 'professional', 500, 50, '{"features": ["analytics", "api-access"]}'),
-      ('tenant-gamma', 'https://gamma.example.com', TRUE, 'nginx:1.21', 'basic', 100, 10, '{"features": ["basic-support"]}'),
-      ('tenant-delta', 'https://delta.example.com', FALSE, 'nginx:1.21', 'professional', 500, 50, '{"features": ["analytics"]}'),
-      ('tenant-epsilon', 'https://epsilon.example.com', TRUE, 'nginx:1.22', 'enterprise', 2000, 200, '{"features": ["advanced-analytics", "custom-domain", "sso"]}'),
-      ('tenant-zeta', 'https://zeta.example.com', FALSE, 'nginx:1.20', 'basic', 50, 5, '{"features": []}')
+      ('node-alpha', 'https://alpha.example.com', TRUE, 'nginx:1.21', 'enterprise', 1000, 100, '{"features": ["advanced-analytics", "custom-domain"]}'),
+      ('node-beta', 'https://beta.example.com', TRUE, 'nginx:1.21', 'professional', 500, 50, '{"features": ["analytics", "api-access"]}'),
+      ('node-gamma', 'https://gamma.example.com', TRUE, 'nginx:1.21', 'basic', 100, 10, '{"features": ["basic-support"]}'),
+      ('node-delta', 'https://delta.example.com', FALSE, 'nginx:1.21', 'professional', 500, 50, '{"features": ["analytics"]}'),
+      ('node-epsilon', 'https://epsilon.example.com', TRUE, 'nginx:1.22', 'enterprise', 2000, 200, '{"features": ["advanced-analytics", "custom-domain", "sso"]}'),
+      ('node-zeta', 'https://zeta.example.com', FALSE, 'nginx:1.20', 'basic', 50, 5, '{"features": []}')
     ON DUPLICATE KEY UPDATE
       host_or_url=VALUES(host_or_url),
       activate=VALUES(activate),
@@ -284,6 +284,6 @@ echo -e "${BLUE}Test Query:${NC}"
 echo "  kubectl exec -it deployment/mysql -n $NAMESPACE -- \\"
 echo "    mysql -u $MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE -e 'SELECT * FROM tenants;'"
 echo ""
-echo -e "${BLUE}Create TenantRegistry:${NC}"
-echo "  Apply the sample: config/samples/tenants_v1_tenantregistry.yaml"
+echo -e "${BLUE}Create LynqHub:${NC}"
+echo "  Apply the sample: config/samples/lynqnodes_v1_lynqhub.yaml"
 echo ""

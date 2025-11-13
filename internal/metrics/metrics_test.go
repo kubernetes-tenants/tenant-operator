@@ -26,102 +26,102 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTenantReconcileDuration(t *testing.T) {
+func TestLynqNodeReconcileDuration(t *testing.T) {
 	// Reset the metric before testing
-	TenantReconcileDuration.Reset()
+	LynqNodeReconcileDuration.Reset()
 
 	// Observe a reconciliation duration
 	duration := 2.5 // 2.5 seconds
-	TenantReconcileDuration.WithLabelValues("success").Observe(duration)
+	LynqNodeReconcileDuration.WithLabelValues("success").Observe(duration)
 
 	// Collect metrics
-	count := testutil.CollectAndCount(TenantReconcileDuration)
+	count := testutil.CollectAndCount(LynqNodeReconcileDuration)
 	assert.Equal(t, 1, count, "Expected 1 metric to be collected")
 
 	// Verify metric can be collected and has the expected type
-	problems, err := testutil.CollectAndLint(TenantReconcileDuration)
+	problems, err := testutil.CollectAndLint(LynqNodeReconcileDuration)
 	assert.NoError(t, err)
 	assert.Empty(t, problems, "Metric should have no lint problems")
 
 	// Test with error result
-	TenantReconcileDuration.WithLabelValues("error").Observe(1.0)
-	count = testutil.CollectAndCount(TenantReconcileDuration)
+	LynqNodeReconcileDuration.WithLabelValues("error").Observe(1.0)
+	count = testutil.CollectAndCount(LynqNodeReconcileDuration)
 	assert.Equal(t, 2, count, "Expected 2 metrics to be collected after error observation")
 }
 
-func TestTenantReconcileDuration_Timer(t *testing.T) {
-	TenantReconcileDuration.Reset()
+func TestLynqNodeReconcileDuration_Timer(t *testing.T) {
+	LynqNodeReconcileDuration.Reset()
 
 	// Test using a timer
-	timer := prometheus.NewTimer(TenantReconcileDuration.WithLabelValues("success"))
+	timer := prometheus.NewTimer(LynqNodeReconcileDuration.WithLabelValues("success"))
 	time.Sleep(10 * time.Millisecond)
 	timer.ObserveDuration()
 
-	count := testutil.CollectAndCount(TenantReconcileDuration)
+	count := testutil.CollectAndCount(LynqNodeReconcileDuration)
 	assert.Equal(t, 1, count)
 }
 
-func TestTenantResourcesReady(t *testing.T) {
-	TenantResourcesReady.Reset()
+func TestLynqNodeResourcesReady(t *testing.T) {
+	LynqNodeResourcesReady.Reset()
 
 	// Set ready resources count
-	TenantResourcesReady.WithLabelValues("tenant1", "default").Set(5)
-	TenantResourcesReady.WithLabelValues("tenant2", "production").Set(10)
+	LynqNodeResourcesReady.WithLabelValues("lynqnode1", "default").Set(5)
+	LynqNodeResourcesReady.WithLabelValues("lynqnode2", "production").Set(10)
 
 	// Verify count
-	count := testutil.CollectAndCount(TenantResourcesReady)
+	count := testutil.CollectAndCount(LynqNodeResourcesReady)
 	assert.Equal(t, 2, count)
 
 	// Verify metric values
 	expected := `
-# HELP tenant_resources_ready Number of ready resources for a tenant
-# TYPE tenant_resources_ready gauge
-tenant_resources_ready{namespace="default",tenant="tenant1"} 5
-tenant_resources_ready{namespace="production",tenant="tenant2"} 10
+# HELP lynqnode_resources_ready Number of ready resources for a LynqNode
+# TYPE lynqnode_resources_ready gauge
+lynqnode_resources_ready{lynqnode="lynqnode1",namespace="default"} 5
+lynqnode_resources_ready{lynqnode="lynqnode2",namespace="production"} 10
 `
-	err := testutil.CollectAndCompare(TenantResourcesReady, strings.NewReader(expected))
+	err := testutil.CollectAndCompare(LynqNodeResourcesReady, strings.NewReader(expected))
 	assert.NoError(t, err)
 }
 
-func TestTenantResourcesDesired(t *testing.T) {
-	TenantResourcesDesired.Reset()
+func TestLynqNodeResourcesDesired(t *testing.T) {
+	LynqNodeResourcesDesired.Reset()
 
 	// Set desired resources count
-	TenantResourcesDesired.WithLabelValues("tenant1", "default").Set(8)
+	LynqNodeResourcesDesired.WithLabelValues("lynqnode1", "default").Set(8)
 
-	count := testutil.CollectAndCount(TenantResourcesDesired)
+	count := testutil.CollectAndCount(LynqNodeResourcesDesired)
 	assert.Equal(t, 1, count)
 
 	// Verify metric has no lint problems
-	problems, err := testutil.CollectAndLint(TenantResourcesDesired)
+	problems, err := testutil.CollectAndLint(LynqNodeResourcesDesired)
 	assert.NoError(t, err)
 	assert.Empty(t, problems)
 }
 
-func TestTenantResourcesFailed(t *testing.T) {
-	TenantResourcesFailed.Reset()
+func TestLynqNodeResourcesFailed(t *testing.T) {
+	LynqNodeResourcesFailed.Reset()
 
 	// Set failed resources count
-	TenantResourcesFailed.WithLabelValues("tenant1", "default").Set(2)
+	LynqNodeResourcesFailed.WithLabelValues("lynqnode1", "default").Set(2)
 
-	count := testutil.CollectAndCount(TenantResourcesFailed)
+	count := testutil.CollectAndCount(LynqNodeResourcesFailed)
 	assert.Equal(t, 1, count)
 
 	// Verify metric can be incremented
-	TenantResourcesFailed.WithLabelValues("tenant1", "default").Inc()
+	LynqNodeResourcesFailed.WithLabelValues("lynqnode1", "default").Inc()
 	expected := `
-# HELP tenant_resources_failed Number of failed resources for a tenant
-# TYPE tenant_resources_failed gauge
-tenant_resources_failed{namespace="default",tenant="tenant1"} 3
+# HELP lynqnode_resources_failed Number of failed resources for a LynqNode
+# TYPE lynqnode_resources_failed gauge
+lynqnode_resources_failed{lynqnode="lynqnode1",namespace="default"} 3
 `
-	err := testutil.CollectAndCompare(TenantResourcesFailed, strings.NewReader(expected))
+	err := testutil.CollectAndCompare(LynqNodeResourcesFailed, strings.NewReader(expected))
 	assert.NoError(t, err)
 }
 
 func TestRegistryDesired(t *testing.T) {
 	RegistryDesired.Reset()
 
-	// Set desired tenant count for registries
+	// Set desired LynqNode count for registries
 	RegistryDesired.WithLabelValues("mysql-prod", "default").Set(100)
 	RegistryDesired.WithLabelValues("mysql-staging", "staging").Set(20)
 
@@ -129,7 +129,7 @@ func TestRegistryDesired(t *testing.T) {
 	assert.Equal(t, 2, count)
 
 	expected := `
-# HELP registry_desired Number of desired tenants from the registry data source
+# HELP registry_desired Number of desired LynqNodes from the registry data source
 # TYPE registry_desired gauge
 registry_desired{namespace="default",registry="mysql-prod"} 100
 registry_desired{namespace="staging",registry="mysql-staging"} 20
@@ -141,7 +141,7 @@ registry_desired{namespace="staging",registry="mysql-staging"} 20
 func TestRegistryReady(t *testing.T) {
 	RegistryReady.Reset()
 
-	// Set ready tenant count
+	// Set ready LynqNode count
 	RegistryReady.WithLabelValues("mysql-prod", "default").Set(95)
 
 	count := testutil.CollectAndCount(RegistryReady)
@@ -155,14 +155,14 @@ func TestRegistryReady(t *testing.T) {
 func TestRegistryFailed(t *testing.T) {
 	RegistryFailed.Reset()
 
-	// Set failed tenant count
+	// Set failed LynqNode count
 	RegistryFailed.WithLabelValues("mysql-prod", "default").Set(5)
 
 	count := testutil.CollectAndCount(RegistryFailed)
 	assert.Equal(t, 1, count)
 
 	expected := `
-# HELP registry_failed Number of failed tenants for a registry
+# HELP registry_failed Number of failed LynqNodes for a registry
 # TYPE registry_failed gauge
 registry_failed{namespace="default",registry="mysql-prod"} 5
 `
@@ -194,102 +194,102 @@ apply_attempts_total{conflict_policy="Stuck",kind="Service",result="success"} 1
 	assert.NoError(t, err)
 }
 
-func TestTenantConditionStatus(t *testing.T) {
-	TenantConditionStatus.Reset()
+func TestLynqNodeConditionStatus(t *testing.T) {
+	LynqNodeConditionStatus.Reset()
 
 	// Set condition statuses (0=False, 1=True, 2=Unknown)
-	TenantConditionStatus.WithLabelValues("tenant1", "default", "Ready").Set(1)    // True
-	TenantConditionStatus.WithLabelValues("tenant2", "default", "Ready").Set(0)    // False
-	TenantConditionStatus.WithLabelValues("tenant3", "default", "Degraded").Set(2) // Unknown
+	LynqNodeConditionStatus.WithLabelValues("lynqnode1", "default", "Ready").Set(1)    // True
+	LynqNodeConditionStatus.WithLabelValues("lynqnode2", "default", "Ready").Set(0)    // False
+	LynqNodeConditionStatus.WithLabelValues("lynqnode3", "default", "Degraded").Set(2) // Unknown
 
-	count := testutil.CollectAndCount(TenantConditionStatus)
+	count := testutil.CollectAndCount(LynqNodeConditionStatus)
 	assert.Equal(t, 3, count)
 
 	expected := `
-# HELP tenant_condition_status Status of tenant conditions (0=False, 1=True, 2=Unknown)
-# TYPE tenant_condition_status gauge
-tenant_condition_status{namespace="default",tenant="tenant1",type="Ready"} 1
-tenant_condition_status{namespace="default",tenant="tenant2",type="Ready"} 0
-tenant_condition_status{namespace="default",tenant="tenant3",type="Degraded"} 2
+# HELP lynqnode_condition_status Status of LynqNode conditions (0=False, 1=True, 2=Unknown)
+# TYPE lynqnode_condition_status gauge
+lynqnode_condition_status{lynqnode="lynqnode1",namespace="default",type="Ready"} 1
+lynqnode_condition_status{lynqnode="lynqnode2",namespace="default",type="Ready"} 0
+lynqnode_condition_status{lynqnode="lynqnode3",namespace="default",type="Degraded"} 2
 `
-	err := testutil.CollectAndCompare(TenantConditionStatus, strings.NewReader(expected))
+	err := testutil.CollectAndCompare(LynqNodeConditionStatus, strings.NewReader(expected))
 	assert.NoError(t, err)
 }
 
-func TestTenantConflictsTotal(t *testing.T) {
-	TenantConflictsTotal.Reset()
+func TestLynqNodeConflictsTotal(t *testing.T) {
+	LynqNodeConflictsTotal.Reset()
 
 	// Increment conflict counters
-	TenantConflictsTotal.WithLabelValues("tenant1", "default", "Deployment", "Stuck").Inc()
-	TenantConflictsTotal.WithLabelValues("tenant1", "default", "Deployment", "Stuck").Inc()
-	TenantConflictsTotal.WithLabelValues("tenant1", "default", "Service", "Force").Inc()
+	LynqNodeConflictsTotal.WithLabelValues("lynqnode1", "default", "Deployment", "Stuck").Inc()
+	LynqNodeConflictsTotal.WithLabelValues("lynqnode1", "default", "Deployment", "Stuck").Inc()
+	LynqNodeConflictsTotal.WithLabelValues("lynqnode1", "default", "Service", "Force").Inc()
 
-	count := testutil.CollectAndCount(TenantConflictsTotal)
+	count := testutil.CollectAndCount(LynqNodeConflictsTotal)
 	assert.Equal(t, 2, count)
 
 	expected := `
-# HELP tenant_conflicts_total Total number of resource conflicts encountered during reconciliation
-# TYPE tenant_conflicts_total counter
-tenant_conflicts_total{conflict_policy="Force",namespace="default",resource_kind="Service",tenant="tenant1"} 1
-tenant_conflicts_total{conflict_policy="Stuck",namespace="default",resource_kind="Deployment",tenant="tenant1"} 2
+# HELP lynqnode_conflicts_total Total number of resource conflicts encountered during reconciliation
+# TYPE lynqnode_conflicts_total counter
+lynqnode_conflicts_total{conflict_policy="Force",lynqnode="lynqnode1",namespace="default",resource_kind="Service"} 1
+lynqnode_conflicts_total{conflict_policy="Stuck",lynqnode="lynqnode1",namespace="default",resource_kind="Deployment"} 2
 `
-	err := testutil.CollectAndCompare(TenantConflictsTotal, strings.NewReader(expected))
+	err := testutil.CollectAndCompare(LynqNodeConflictsTotal, strings.NewReader(expected))
 	assert.NoError(t, err)
 }
 
-func TestTenantResourcesConflicted(t *testing.T) {
-	TenantResourcesConflicted.Reset()
+func TestLynqNodeResourcesConflicted(t *testing.T) {
+	LynqNodeResourcesConflicted.Reset()
 
 	// Set conflicted resources count
-	TenantResourcesConflicted.WithLabelValues("tenant1", "default").Set(3)
+	LynqNodeResourcesConflicted.WithLabelValues("lynqnode1", "default").Set(3)
 
-	count := testutil.CollectAndCount(TenantResourcesConflicted)
+	count := testutil.CollectAndCount(LynqNodeResourcesConflicted)
 	assert.Equal(t, 1, count)
 
 	expected := `
-# HELP tenant_resources_conflicted Number of resources currently in conflict state for a tenant
-# TYPE tenant_resources_conflicted gauge
-tenant_resources_conflicted{namespace="default",tenant="tenant1"} 3
+# HELP lynqnode_resources_conflicted Number of resources currently in conflict state for a LynqNode
+# TYPE lynqnode_resources_conflicted gauge
+lynqnode_resources_conflicted{lynqnode="lynqnode1",namespace="default"} 3
 `
-	err := testutil.CollectAndCompare(TenantResourcesConflicted, strings.NewReader(expected))
+	err := testutil.CollectAndCompare(LynqNodeResourcesConflicted, strings.NewReader(expected))
 	assert.NoError(t, err)
 }
 
-func TestTenantDegradedStatus(t *testing.T) {
-	TenantDegradedStatus.Reset()
+func TestLynqNodeDegradedStatus(t *testing.T) {
+	LynqNodeDegradedStatus.Reset()
 
 	// Set degraded status (1=degraded, 0=not degraded)
-	TenantDegradedStatus.WithLabelValues("tenant1", "default", "ResourceConflict").Set(1)
-	TenantDegradedStatus.WithLabelValues("tenant2", "default", "").Set(0)
+	LynqNodeDegradedStatus.WithLabelValues("lynqnode1", "default", "ResourceConflict").Set(1)
+	LynqNodeDegradedStatus.WithLabelValues("lynqnode2", "default", "").Set(0)
 
-	count := testutil.CollectAndCount(TenantDegradedStatus)
+	count := testutil.CollectAndCount(LynqNodeDegradedStatus)
 	assert.Equal(t, 2, count)
 
 	expected := `
-# HELP tenant_degraded_status Indicates if a tenant is in degraded state (1=degraded, 0=not degraded)
-# TYPE tenant_degraded_status gauge
-tenant_degraded_status{namespace="default",reason="",tenant="tenant2"} 0
-tenant_degraded_status{namespace="default",reason="ResourceConflict",tenant="tenant1"} 1
+# HELP lynqnode_degraded_status Indicates if a LynqNode is in degraded state (1=degraded, 0=not degraded)
+# TYPE lynqnode_degraded_status gauge
+lynqnode_degraded_status{lynqnode="lynqnode1",namespace="default",reason="ResourceConflict"} 1
+lynqnode_degraded_status{lynqnode="lynqnode2",namespace="default",reason=""} 0
 `
-	err := testutil.CollectAndCompare(TenantDegradedStatus, strings.NewReader(expected))
+	err := testutil.CollectAndCompare(LynqNodeDegradedStatus, strings.NewReader(expected))
 	assert.NoError(t, err)
 }
 
 func TestMetricsRegistration(t *testing.T) {
 	// Test that all metrics are properly defined and can collect data
 	metrics := []prometheus.Collector{
-		TenantReconcileDuration,
-		TenantResourcesReady,
-		TenantResourcesDesired,
-		TenantResourcesFailed,
+		LynqNodeReconcileDuration,
+		LynqNodeResourcesReady,
+		LynqNodeResourcesDesired,
+		LynqNodeResourcesFailed,
 		RegistryDesired,
 		RegistryReady,
 		RegistryFailed,
 		ApplyAttemptsTotal,
-		TenantConditionStatus,
-		TenantConflictsTotal,
-		TenantResourcesConflicted,
-		TenantDegradedStatus,
+		LynqNodeConditionStatus,
+		LynqNodeConflictsTotal,
+		LynqNodeResourcesConflicted,
+		LynqNodeDegradedStatus,
 	}
 
 	for _, metric := range metrics {
@@ -305,16 +305,16 @@ func TestMetricLabels(t *testing.T) {
 	// Test that metrics accept the correct label values
 
 	// Reset all metrics
-	TenantReconcileDuration.Reset()
-	TenantResourcesReady.Reset()
+	LynqNodeReconcileDuration.Reset()
+	LynqNodeResourcesReady.Reset()
 	ApplyAttemptsTotal.Reset()
 
-	// TenantReconcileDuration: result
-	TenantReconcileDuration.WithLabelValues("success")
-	TenantReconcileDuration.WithLabelValues("error")
+	// LynqNodeReconcileDuration: result
+	LynqNodeReconcileDuration.WithLabelValues("success")
+	LynqNodeReconcileDuration.WithLabelValues("error")
 
-	// TenantResourcesReady: tenant, namespace
-	TenantResourcesReady.WithLabelValues("test-tenant", "test-namespace")
+	// LynqNodeResourcesReady: lynqnode, namespace
+	LynqNodeResourcesReady.WithLabelValues("test-lynqnode", "test-namespace")
 
 	// ApplyAttemptsTotal: kind, result, conflict_policy
 	ApplyAttemptsTotal.WithLabelValues("Deployment", "success", "Stuck")

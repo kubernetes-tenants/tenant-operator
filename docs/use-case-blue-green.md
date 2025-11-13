@@ -1,5 +1,9 @@
 # Blue-Green Deployment Pattern
 
+::: info Multi-Tenancy Example
+This guide uses **Multi-Tenancy** (SaaS application with multiple customers) as an example, which is the most common use case for Lynq. The pattern shown here can be adapted for any database-driven infrastructure automation scenario.
+:::
+
 ## Overview
 
 Implement zero-downtime deployments by maintaining two complete environments (blue and green) and switching traffic between them.
@@ -16,10 +20,10 @@ This pattern is useful when:
 graph TB
     DB[(Database<br/>deployment_color:<br/>blue/green)]
 
-    TO[Tenant Operator]
+    TO[Lynq]
 
-    BlueTemplate[TenantTemplate<br/>blue-env]
-    GreenTemplate[TenantTemplate<br/>green-env]
+    BlueTemplate[LynqForm<br/>blue-env]
+    GreenTemplate[LynqForm<br/>green-env]
 
     BlueDeployment[Deployment<br/>acme-blue]
     GreenDeployment[Deployment<br/>acme-green]
@@ -51,8 +55,8 @@ graph TB
 ## Database Schema
 
 ```sql
-CREATE TABLE tenants (
-  tenant_id VARCHAR(63) PRIMARY KEY,
+CREATE TABLE nodes (
+  node_id VARCHAR(63) PRIMARY KEY,
   domain VARCHAR(255) NOT NULL,
   is_active BOOLEAN DEFAULT TRUE,
 
@@ -76,14 +80,14 @@ CREATE TABLE tenants (
 -- 7. Blue environment now becomes next deployment target
 ```
 
-## TenantRegistry
+## LynqHub
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: blue-green-tenants
-  namespace: tenant-operator-system
+  name: blue-green-nodes
+  namespace: lynq-system
 spec:
   source:
     type: mysql
@@ -91,15 +95,15 @@ spec:
     mysql:
       host: mysql.database.svc.cluster.local
       port: 3306
-      database: tenants_db
-      username: tenant_reader
+      database: nodes_db
+      username: node_reader
       passwordRef:
         name: mysql-credentials
         key: password
-      table: tenants
+      table: nodes
 
   valueMappings:
-    uid: tenant_id
+    uid: node_id
     hostOrUrl: domain
     activate: is_active
 
@@ -110,16 +114,16 @@ spec:
     deploymentStatus: deployment_status
 ```
 
-## TenantTemplate
+## LynqForm
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: blue-green-app
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: blue-green-tenants
+  hubId: blue-green-nodes
 
   deployments:
     # Blue Deployment
@@ -148,7 +152,7 @@ spec:
                 env:
                   - name: ENVIRONMENT_COLOR
                     value: "blue"
-                  - name: TENANT_ID
+                  - name: NODE_ID
                     value: "{{ .uid }}"
                 ports:
                   - containerPort: 8080
@@ -183,7 +187,7 @@ spec:
                 env:
                   - name: ENVIRONMENT_COLOR
                     value: "green"
-                  - name: TENANT_ID
+                  - name: NODE_ID
                     value: "{{ .uid }}"
                 ports:
                   - containerPort: 8080
@@ -289,14 +293,14 @@ spec:
 -- Current state: blue is active with v1.0.0
 -- Deploy v2.0.0 to green (inactive)
 
-UPDATE tenants
+UPDATE nodes
 SET green_version = 'v2.0.0',
     deployment_status = 'deploying',
     last_deployment_at = NOW()
-WHERE tenant_id = 'acme-corp';
+WHERE node_id = 'acme-corp';
 ```
 
-Tenant Operator automatically updates green deployment with new version.
+Lynq automatically updates green deployment with new version.
 
 ### Step 2: Test Inactive Environment
 
@@ -314,48 +318,48 @@ kubectl run test-runner --rm -it --image=curlimages/curl -- \
 
 ```sql
 -- Switch active environment
-UPDATE tenants
+UPDATE nodes
 SET active_color = 'green',
     deployment_status = 'stable'
-WHERE tenant_id = 'acme-corp';
+WHERE node_id = 'acme-corp';
 ```
 
-Tenant Operator updates Service selector from `color: blue` to `color: green`. Traffic instantly switches.
+Lynq updates Service selector from `color: blue` to `color: green`. Traffic instantly switches.
 
 ### Step 4: Rollback (if needed)
 
 ```sql
 -- Instant rollback by switching back
-UPDATE tenants
+UPDATE nodes
 SET active_color = 'blue',
     deployment_status = 'rolled-back'
-WHERE tenant_id = 'acme-corp';
+WHERE node_id = 'acme-corp';
 ```
 
 ### Step 5: Cleanup Old Version
 
 ```sql
 -- After confirming green is stable, update blue to match
-UPDATE tenants
+UPDATE nodes
 SET blue_version = 'v2.0.0'
-WHERE tenant_id = 'acme-corp';
+WHERE node_id = 'acme-corp';
 ```
 
 ## Monitoring
 
 ```promql
-# Track active deployment color per tenant
-tenant_deployment_color{tenant="acme-corp"} == 1  # 1=blue, 2=green
+# Track active deployment color per node
+lynqnode_deployment_color{lynqnode="acme-corp"} == 1  # 1=blue, 2=green
 
 # Monitor deployment status
-tenant_deployment_status{status="deploying"}
+lynqnode_deployment_status{status="deploying"}
 
 # Alert on prolonged deployment
 ALERT DeploymentStuck
   FOR 30m
-  WHERE tenant_deployment_status{status="deploying"} == 1
+  WHERE lynqnode_deployment_status{status="deploying"} == 1
   ANNOTATIONS {
-    summary = "Deployment stuck for tenant {{ $labels.tenant }}"
+    summary = "Deployment stuck for node {{ $labels.lynqnode }}"
   }
 ```
 

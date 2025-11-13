@@ -1,13 +1,16 @@
 import DefaultTheme from 'vitepress/theme';
+import Layout from './Layout.vue';
 import AnimatedDiagram from '../components/AnimatedDiagram.vue';
 import HowItWorksDiagram from '../components/HowItWorksDiagram.vue';
 import ComparisonSection from '../components/ComparisonSection.vue';
 import DependencyGraphVisualizer from '../components/DependencyGraphVisualizer.vue';
 import TemplateBuilder from '../components/TemplateBuilder.vue';
+import AnnouncementBanner from '../components/AnnouncementBanner.vue';
 import './custom.css';
 
 export default {
   extends: DefaultTheme,
+  Layout,
   enhanceApp({ app }) {
     // Register custom components globally
     app.component('AnimatedDiagram', AnimatedDiagram);
@@ -15,5 +18,6 @@ export default {
     app.component('ComparisonSection', ComparisonSection);
     app.component('DependencyGraphVisualizer', DependencyGraphVisualizer);
     app.component('TemplateBuilder', TemplateBuilder);
+    app.component('AnnouncementBanner', AnnouncementBanner);
   }
 };

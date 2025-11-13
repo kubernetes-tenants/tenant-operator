@@ -1,6 +1,6 @@
 # Roadmap
 
-Future plans and feature roadmap for Tenant Operator.
+Future plans and feature roadmap for Lynq.
 
 [[toc]]
 
@@ -40,15 +40,15 @@ Cross-namespace support and operational improvements
 
 - ✅ **Helm Chart Distribution**
   - Helm chart published via GitHub Releases
-  - Public repo: https://kubernetes-tenants.github.io/tenant-operator
+  - Public repo: https://k8s-lynq.github.io/lynq
   - Customizable values and upgrade path with `helm upgrade`
 
 - ✅ **Cross-Namespace Resource Provisioning**
-  - Support creating tenant resources in different namespaces using `targetNamespace` field
-  - Uses label-based tracking (`kubernetes-tenants.org/tenant`, `kubernetes-tenants.org/tenant-namespace`) for cross-namespace resources
+  - Support creating node resources in different namespaces using `targetNamespace` field
+  - Uses label-based tracking (`lynq.sh/node`, `lynq.sh/node-namespace`) for cross-namespace resources
   - Automatic detection: same-namespace uses ownerReferences, cross-namespace uses labels
   - Dual watch system: `Owns()` for same-namespace + `Watches()` with label selectors for cross-namespace
-  - Enables multi-namespace tenant isolation and organizational boundaries
+  - Enables multi-namespace node isolation and organizational boundaries
 
 - ✅ **Orphan Resource Cleanup**
   - Automatic detection and cleanup of resources removed from templates
@@ -73,7 +73,7 @@ Additional datasources and enhanced observability
 - [ ] **Enhanced Metrics Dashboard**
   - Pre-built Grafana dashboards
   - Comprehensive AlertManager rules
-  - Multi-tenant metrics visualization
+  - Multi-node metrics visualization
   - Performance analytics
 
 ### Improvements
@@ -90,25 +90,25 @@ Scalability and advanced multi-tenancy features
 
 ### New Features
 
-- [ ] **Tenant Sharding for Large-Scale Deployments**
-  - Horizontal sharding of tenant workloads across multiple operator instances
-  - Shard key-based tenant distribution
+- [ ] **Node Sharding for Large-Scale Deployments**
+  - Horizontal sharding of node workloads across multiple operator instances
+  - Shard key-based node distribution
   - Load balancing across shards
   - Shard rebalancing and migration support
   - Use cases:
-    - Supporting 10,000+ tenants per cluster
-    - Isolating tenant failures to specific shards
+    - Supporting 10,000+ nodes per cluster
+    - Isolating node failures to specific shards
     - Reducing controller resource consumption
     - Enabling independent scaling of operator replicas
 
 - [ ] **Advanced Multi-Tenancy Isolation**
-  - Tenant priority and resource quotas
-  - Per-tenant rate limiting
-  - Tenant lifecycle hooks
-  - Custom tenant tagging and filtering
+  - Node priority and resource quotas
+  - Per-node rate limiting
+  - Node lifecycle hooks
+  - Custom node tagging and filtering
 
 ### Improvements
-- [ ] Enhanced reconciliation performance for large tenant counts
+- [ ] Enhanced reconciliation performance for large node counts
 - [ ] Improved status reporting and aggregation
 - [ ] Optimized database query batching
 - [ ] Better scaling metrics and recommendations
@@ -136,13 +136,13 @@ Want to influence the roadmap?
 
 ## Getting Involved
 
-- 💬 Discussions: https://github.com/kubernetes-tenants/tenant-operator/discussions
-- 🐛 Issues: https://github.com/kubernetes-tenants/tenant-operator/issues
+- 💬 Discussions: https://github.com/k8s-lynq/lynq/discussions
+- 🐛 Issues: https://github.com/k8s-lynq/lynq/issues
 - 📧 Email: rationlunas@gmail.com
 - 🔔 Release notifications: Watch repository
 
 ## See Also
 
-- [Contributing Guide](https://github.com/kubernetes-tenants/tenant-operator/blob/main/CONTRIBUTING.md)
+- [Contributing Guide](https://github.com/k8s-lynq/lynq/blob/main/CONTRIBUTING.md)
 - [Development Guide](development.md)
-- [GitHub Discussions](https://github.com/kubernetes-tenants/tenant-operator/discussions)
+- [GitHub Discussions](https://github.com/k8s-lynq/lynq/discussions)

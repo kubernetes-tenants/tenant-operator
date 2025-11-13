@@ -81,11 +81,11 @@ rules:
   - update
   - watch
 - apiGroups:
-  - operator.kubernetes-tenants.org
+  - operator.lynq.sh
   resources:
-  - tenantregistries
-  - tenants
-  - tenanttemplates
+  - lynqforms
+  - lynqhubs
+  - lynqnodes
   verbs:
   - create
   - delete
@@ -95,19 +95,19 @@ rules:
   - update
   - watch
 - apiGroups:
-  - operator.kubernetes-tenants.org
+  - operator.lynq.sh
   resources:
-  - tenantregistries/finalizers
-  - tenants/finalizers
-  - tenanttemplates/finalizers
+  - lynqforms/finalizers
+  - lynqhubs/finalizers
+  - lynqnodes/finalizers
   verbs:
   - update
 - apiGroups:
-  - operator.kubernetes-tenants.org
+  - operator.lynq.sh
   resources:
-  - tenantregistries/status
-  - tenants/status
-  - tenanttemplates/status
+  - lynqforms/status
+  - lynqhubs/status
+  - lynqnodes/status
   verbs:
   - get
   - patch
