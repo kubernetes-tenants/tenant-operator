@@ -1,6 +1,6 @@
 # Policies Guide
 
-Tenant Operator provides fine-grained control over resource lifecycle through four policy types. This guide explains each policy and when to use them.
+Lynq provides fine-grained control over resource lifecycle through four policy types. This guide explains each policy and when to use them.
 
 [[toc]]
 
@@ -23,7 +23,7 @@ For fine-grained control over specific fields while using `WhenNeeded`, see [Fie
 
 ```mermaid
 flowchart TD
-    Start([Tenant Template])
+    Start([LynqForm])
     Creation{{CreationPolicy}}
     Deletion{{DeletionPolicy}}
     Conflict{{ConflictPolicy}}
@@ -103,14 +103,14 @@ jobs:
             containers:
             - name: init
               image: busybox
-              command: ["sh", "-c", "echo Initializing tenant {{ .uid }}"]
+              command: ["sh", "-c", "echo Initializing node {{ .uid }}"]
             restartPolicy: Never
 ```
 
 **Behavior:**
 - ✅ Creates resource on first reconciliation
 - ❌ Never updates resource, even if template changes
-- ✅ Skips if resource already exists with `kubernetes-tenants.org/created-once` annotation
+- ✅ Skips if resource already exists with `lynq.sh/created-once` annotation
 - ✅ Re-creates if manually deleted
 
 **Use when:**
@@ -125,16 +125,16 @@ jobs:
 ```yaml
 metadata:
   annotations:
-    kubernetes-tenants.org/created-once: "true"
+    lynq.sh/created-once: "true"
 ```
 
 ## DeletionPolicy
 
-Controls what happens to resources when a Tenant CR is deleted.
+Controls what happens to resources when a LynqNode CR is deleted.
 
 ### `Delete` (Default)
 
-Resources are deleted when the Tenant is deleted via ownerReference.
+Resources are deleted when the Node is deleted via ownerReference.
 
 ```yaml
 deployments:
@@ -151,9 +151,9 @@ deployments:
 - ✅ No orphaned resources
 
 **Use when:**
-- Resources are tenant-specific and should be removed
+- Resources are node-specific and should be removed
 - You want complete cleanup
-- Resources have no value after tenant deletion
+- Resources have no value after node deletion
 
 **Example:** Deployments, Services, ConfigMaps, Secrets
 
@@ -178,17 +178,17 @@ persistentVolumeClaims:
 
 **Behavior:**
 - ✅ **No ownerReference** (label-based tracking only)
-- ✅ Resource stays in cluster even when Tenant is deleted
+- ✅ Resource stays in cluster even when Node is deleted
 - ✅ Orphan labels added on deletion for identification
 - ❌ No automatic cleanup by Kubernetes garbage collector
 - ⚠️ Manual deletion required
 
 **Why no ownerReference?**
 
-Setting ownerReference would cause Kubernetes garbage collector to automatically delete the resource when the Tenant CR is deleted, regardless of DeletionPolicy. The operator evaluates DeletionPolicy **at resource creation time** and uses label-based tracking (`kubernetes-tenants.org/tenant`, `kubernetes-tenants.org/tenant-namespace`) instead of ownerReference for Retain resources.
+Setting ownerReference would cause Kubernetes garbage collector to automatically delete the resource when the LynqNode CR is deleted, regardless of DeletionPolicy. The operator evaluates DeletionPolicy **at resource creation time** and uses label-based tracking (`lynq.sh/node`, `lynq.sh/node-namespace`) instead of ownerReference for Retain resources.
 
 **Use when:**
-- Data must survive tenant deletion
+- Data must survive node deletion
 - Resources are expensive to recreate
 - Regulatory/compliance requirements
 - Debugging or forensics needed
@@ -202,31 +202,31 @@ When resources are retained (DeletionPolicy=Retain), they are automatically mark
 ```yaml
 metadata:
   labels:
-    kubernetes-tenants.org/orphaned: "true"  # Label for selector queries
+    lynq.sh/orphaned: "true"  # Label for selector queries
   annotations:
-    kubernetes-tenants.org/orphaned-at: "2025-01-15T10:30:00Z"  # RFC3339 timestamp
-    kubernetes-tenants.org/orphaned-reason: "RemovedFromTemplate"  # or "TenantDeleted"
+    lynq.sh/orphaned-at: "2025-01-15T10:30:00Z"  # RFC3339 timestamp
+    lynq.sh/orphaned-reason: "RemovedFromTemplate"  # or "LynqNodeDeleted"
 ```
 
 **Finding orphaned resources:**
 
 ```bash
 # Find all orphaned resources
-kubectl get all -A -l kubernetes-tenants.org/orphaned=true
+kubectl get all -A -l lynq.sh/orphaned=true
 
 # Find resources orphaned due to template changes
-kubectl get all -A -l kubernetes-tenants.org/orphaned=true \
-  -o jsonpath='{range .items[?(@.metadata.annotations.kubernetes-tenants\.org/orphaned-reason=="RemovedFromTemplate")]}{.kind}/{.metadata.name}{"\n"}{end}'
+kubectl get all -A -l lynq.sh/orphaned=true \
+  -o jsonpath='{range .items[?(@.metadata.annotations.k8s-lynq\.org/orphaned-reason=="RemovedFromTemplate")]}{.kind}/{.metadata.name}{"\n"}{end}'
 
-# Find resources orphaned due to tenant deletion
-kubectl get all -A -l kubernetes-tenants.org/orphaned=true \
-  -o jsonpath='{range .items[?(@.metadata.annotations.kubernetes-tenants\.org/orphaned-reason=="TenantDeleted")]}{.kind}/{.metadata.name}{"\n"}{end}'
+# Find resources orphaned due to node deletion
+kubectl get all -A -l lynq.sh/orphaned=true \
+  -o jsonpath='{range .items[?(@.metadata.annotations.k8s-lynq\.org/orphaned-reason=="LynqNodeDeleted")]}{.kind}/{.metadata.name}{"\n"}{end}'
 ```
 
 ### Orphan Resource Cleanup
 
 ::: tip Dynamic Template Evolution
-DeletionPolicy applies not only when a Tenant CR is deleted, but also when resources are **removed from the TenantTemplate**.
+DeletionPolicy applies not only when a LynqNode CR is deleted, but also when resources are **removed from the LynqForm**.
 :::
 
 **How it works:**
@@ -249,30 +249,30 @@ This means you can safely experiment with template changes:
 - Re-add the same resource → It's cleanly re-adopted into management
 - No manual cleanup or label management needed!
 
-## Protecting Tenants from Cascade Deletion
+## Protecting LynqNodes from Cascade Deletion
 
 ::: danger Cascading deletions are immediate
-Deleting a TenantRegistry or TenantTemplate cascades to all Tenant CRs, which in turn deletes managed resources unless retention policies are set.
+Deleting a LynqHub or LynqForm cascades to all LynqNode CRs, which in turn deletes managed resources unless retention policies are set.
 :::
 
 ### The Problem
 
 ```mermaid
 flowchart TB
-    Registry[TenantRegistry<br/>deleted] --> Tenants[Tenant CRs<br/>finalizers trigger]
-    Tenants --> Resources["Tenant Resources<br/>(Deployments, PVCs, ...)"]
+    Registry[LynqHub<br/>deleted] --> Nodes[LynqNode CRs<br/>finalizers trigger]
+    Nodes --> Resources["Node Resources<br/>(Deployments, PVCs, ...)"]
     style Registry fill:#ffebee,stroke:#ef5350,stroke-width:2px;
-    style Tenants fill:#fff3e0,stroke:#ffb74d,stroke-width:2px;
+    style Nodes fill:#fff3e0,stroke:#ffb74d,stroke-width:2px;
     style Resources fill:#f3e5f5,stroke:#ba68c8,stroke-width:2px;
 ```
 
 ### Recommended Solution: Use `Retain` DeletionPolicy
 
-**Before deleting TenantRegistry or TenantTemplate**, ensure all resources in your templates use `deletionPolicy: Retain`:
+**Before deleting LynqHub or LynqForm**, ensure all resources in your templates use `deletionPolicy: Retain`:
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: my-template
 spec:
@@ -305,8 +305,8 @@ spec:
 
 With `deletionPolicy: Retain`:
 1. **At creation time**: Resources are created with label-based tracking only (NO ownerReference)
-2. Even if TenantRegistry/TenantTemplate is deleted → Tenant CRs are deleted
-3. When Tenant CRs are deleted → Resources stay in cluster (no ownerReference = no automatic deletion)
+2. Even if LynqHub/LynqForm is deleted → LynqNode CRs are deleted
+3. When LynqNode CRs are deleted → Resources stay in cluster (no ownerReference = no automatic deletion)
 4. Finalizer adds orphan labels for easy identification
 5. **Resources stay in the cluster** because Kubernetes garbage collector never marks them for deletion
 
@@ -315,14 +315,14 @@ With `deletionPolicy: Retain`:
 ### When to Use This Strategy
 
 ✅ **Use `Retain` when:**
-- You need to delete/recreate TenantRegistry for migration
-- You're updating TenantTemplate with breaking changes
+- You need to delete/recreate LynqHub for migration
+- You're updating LynqForm with breaking changes
 - You're testing registry configuration changes
-- You have production tenants that must not be interrupted
+- You have production LynqNodes that must not be interrupted
 - You're performing maintenance on operator components
 
 ❌ **Don't use `Retain` when:**
-- You actually want to clean up all tenant resources
+- You actually want to clean up all node resources
 - Testing in development environments
 - You have backup/restore procedures in place
 
@@ -332,7 +332,7 @@ Instead of deleting and recreating, consider:
 
 ```bash
 # ❌ DON'T: Delete and recreate (causes cascade deletion)
-kubectl delete tenantregistry my-registry
+kubectl delete lynqhub my-registry
 kubectl apply -f updated-registry.yaml
 
 # ✅ DO: Update in place
@@ -360,7 +360,7 @@ services:
 - ✅ Fails safe - doesn't overwrite existing resources
 - ❌ Stops reconciliation on conflict
 - 📢 Emits `ResourceConflict` event
-- ⚠️ Marks Tenant as Degraded
+- ⚠️ Marks Node as Degraded
 
 **Use when:**
 - Safety is paramount
@@ -390,12 +390,12 @@ deployments:
 - 📢 Emits events on success/failure
 
 **Use when:**
-- Tenant Operator should be the source of truth
+- Lynq should be the source of truth
 - Conflicts are expected and acceptable
 - You're migrating from another management system
 - Availability > safety
 
-**Example:** Resources exclusively managed by Tenant Operator
+**Example:** Resources exclusively managed by Lynq
 
 **Warning:** This can override changes from other controllers or users!
 
@@ -428,7 +428,7 @@ deployments:
 - You want Kubernetes-native updates
 - Default case (best practice)
 
-**Field Manager:** `tenant-operator`
+**Field Manager:** `lynq`
 
 ### `merge` (Strategic Merge Patch)
 
@@ -519,8 +519,8 @@ For in-depth explanations with diagrams and scenarios, see [Policy Combinations 
 Policies trigger various events:
 
 ```bash
-# View Tenant events
-kubectl describe tenant <tenant-name>
+# View Node events
+kubectl describe lynqnode <lynqnode-name>
 ```
 
 **Conflict Events:**
@@ -530,8 +530,8 @@ ResourceConflict: Resource conflict detected for default/acme-app (Kind: Deploym
 
 **Deletion Events:**
 ```
-TenantDeleting: Deleting Tenant 'acme-prod-template' (template: prod-template, uid: acme)
-TenantDeleted: Successfully deleted Tenant 'acme-prod-template'
+LynqNodeDeleting: Deleting LynqNode 'acme-prod-template' (template: prod-template, uid: acme)
+LynqNodeDeleted: Successfully deleted LynqNode 'acme-prod-template'
 ```
 
 ### Metrics
@@ -541,10 +541,10 @@ TenantDeleted: Successfully deleted Tenant 'acme-prod-template'
 apply_attempts_total{kind="Deployment",result="success",conflict_policy="Stuck"}
 
 # Track conflicts
-tenant_conflicts_total{tenant="acme-web",conflict_policy="Stuck"}
+lynqnode_conflicts_total{lynqnode="acme-web",conflict_policy="Stuck"}
 
 # Failed reconciliations
-tenant_reconcile_duration_seconds{result="error"}
+lynqnode_reconcile_duration_seconds{result="error"}
 ```
 
 See [Monitoring Guide](monitoring.md) for complete metrics reference.
@@ -553,7 +553,7 @@ See [Monitoring Guide](monitoring.md) for complete metrics reference.
 
 ### Conflict Stuck
 
-**Symptom:** Tenant shows `Degraded` condition
+**Symptom:** LynqNode shows `Degraded` condition
 
 **Cause:** Resource exists with different owner
 
@@ -581,7 +581,7 @@ See [Monitoring Guide](monitoring.md) for complete metrics reference.
 
 ### Resource Not Deleted
 
-**Symptom:** Resource remains after Tenant deletion
+**Symptom:** Resource remains after LynqNode deletion
 
 **Cause:** `deletionPolicy: Retain` is set
 

@@ -1,19 +1,19 @@
 # Template Guide
 
-Templates are the core of Tenant Operator's resource generation system. This guide covers template syntax, available functions, and best practices.
+Templates are the core of Lynq's resource generation system. This guide covers template syntax, available functions, and best practices.
 
 [[toc]]
 
 ## Template Basics
 
-Tenant Operator uses Go's `text/template` engine with the Sprig function library, providing 200+ built-in functions.
+Lynq uses Go's `text/template` engine with the Sprig function library, providing 200+ built-in functions.
 
 ```mermaid
 flowchart LR
-    Registry["TenantRegistry<br/>Row Data"]
-    Template["TenantTemplate<br/>TResource"]
+    Registry["LynqHub<br/>Row Data"]
+    Template["LynqForm<br/>TResource"]
     Renderer["Template Renderer<br/>(text/template + Sprig)"]
-    Tenant["Tenant CR<br/>resolved spec"]
+    Tenant["LynqNode CR<br/>resolved spec"]
     K8s["Kubernetes Resources"]
 
     Registry -- variables --> Template
@@ -70,13 +70,13 @@ These are always available from the template context:
 Automatically provided:
 
 ```yaml
-.registryId   # TenantRegistry name
-.templateRef  # TenantTemplate name
+.registryId   # LynqHub name
+.templateRef  # LynqForm name
 ```
 
 ### Custom Variables
 
-From `extraValueMappings` in TenantRegistry:
+From `extraValueMappings` in LynqHub:
 
 ```yaml
 spec:
@@ -308,7 +308,7 @@ labelsTemplate:
   tenant: "{{ .uid }}"
   plan: "{{ .planId | default \"basic\" }}"
   region: "{{ .region | default \"global\" }}"
-  managed-by: "tenant-operator"
+  managed-by: "lynq"
   version: "{{ .appVersion | default \"v1.0.0\" }}"
 ```
 
@@ -405,24 +405,24 @@ Rendered resource is applied to Kubernetes using Server-Side Apply.
 
 ### Check Rendered Values
 
-View rendered Tenant CR to see evaluated templates:
+View rendered LynqNode CR to see evaluated templates:
 
 ```bash
-# Get Tenant CR
-kubectl get tenant <tenant-name> -o yaml
+# Get LynqNode CR
+kubectl get lynqnode <lynqnode-name> -o yaml
 
 # Check spec (contains rendered resources)
-kubectl get tenant <tenant-name> -o jsonpath='{.spec.deployments[0].nameTemplate}'
+kubectl get lynqnode <lynqnode-name> -o jsonpath='{.spec.deployments[0].nameTemplate}'
 ```
 
 ### Watch for Rendering Errors
 
 ```bash
 # Check operator logs
-kubectl logs -n tenant-operator-system deployment/tenant-operator-controller-manager -f | grep "render"
+kubectl logs -n lynq-system deployment/lynq-controller-manager -f | grep "render"
 
 # Check Tenant events
-kubectl describe tenant <tenant-name>
+kubectl describe lynqnode <lynqnode-name>
 ```
 
 ### Common Errors
@@ -477,7 +477,7 @@ env:
 ## Template Evolution
 
 ::: tip Dynamic Updates
-TenantTemplates can be safely modified at runtime. The operator automatically handles resource additions, modifications, and removals.
+LynqForms can be safely modified at runtime. The operator automatically handles resource additions, modifications, and removals.
 :::
 
 ### Adding Resources
@@ -495,7 +495,7 @@ services:
       # ... service spec
 ```
 
-**Result:** Service is created for all existing Tenants using this template.
+**Result:** Service is created for all existing LynqNodes using this template.
 
 ### Modifying Resources
 
@@ -545,10 +545,10 @@ deployments:
 ```yaml
 metadata:
   labels:
-    kubernetes-tenants.org/orphaned: "true"  # Label for selector queries
+    lynq.sh/orphaned: "true"  # Label for selector queries
   annotations:
-    kubernetes-tenants.org/orphaned-at: "2025-01-15T10:30:00Z"  # RFC3339 timestamp
-    kubernetes-tenants.org/orphaned-reason: "RemovedFromTemplate"
+    lynq.sh/orphaned-at: "2025-01-15T10:30:00Z"  # RFC3339 timestamp
+    lynq.sh/orphaned-reason: "RemovedFromTemplate"
 ```
 
 **Why label + annotation?**
@@ -578,15 +578,15 @@ You can easily find these orphaned resources later:
 
 ```bash
 # Find all orphaned resources (using label selector)
-kubectl get all -A -l kubernetes-tenants.org/orphaned=true
+kubectl get all -A -l lynq.sh/orphaned=true
 
 # Find resources orphaned due to template changes (filter by annotation)
-kubectl get all -A -l kubernetes-tenants.org/orphaned=true -o jsonpath='{range .items[?(@.metadata.annotations.kubernetes-tenants\.org/orphaned-reason=="RemovedFromTemplate")]}{.kind}/{.metadata.name}{"\n"}{end}'
+kubectl get all -A -l lynq.sh/orphaned=true -o jsonpath='{range .items[?(@.metadata.annotations.k8s-lynq\.org/orphaned-reason=="RemovedFromTemplate")]}{.kind}/{.metadata.name}{"\n"}{end}'
 ```
 
 **How it works:**
 
-1. Operator tracks applied resources in `Tenant.status.appliedResources`
+1. Operator tracks applied resources in `LynqNode.status.appliedResources`
 2. During reconciliation, compares current template with previous state
 3. Detects orphaned resources (in status but not in template)
 4. Applies each resource's `deletionPolicy`:
@@ -613,16 +613,16 @@ kubectl get all -A -l kubernetes-tenants.org/orphaned=true -o jsonpath='{range .
 
 ```bash
 # 1. Check current applied resources
-kubectl get tenant my-tenant -o jsonpath='{.status.appliedResources}'
+kubectl get lynqnode -o jsonpath='{.status.appliedResources}'
 
 # 2. Update template
 kubectl apply -f updated-template.yaml
 
 # 3. Monitor reconciliation
-kubectl logs -n tenant-operator-system deployment/tenant-operator-controller-manager -f
+kubectl logs -n lynq-system deployment/lynq-controller-manager -f
 
 # 4. Verify changes
-kubectl get tenant my-tenant -o yaml
+kubectl get lynqnode -o yaml
 ```
 
 ## See Also

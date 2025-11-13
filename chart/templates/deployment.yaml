@@ -1,12 +1,12 @@
-{{- $_ := include "tenant-operator.validateWebhook" . -}}
+{{- $_ := include "lynq-operator.validateWebhook" . -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "tenant-operator.fullname" . }}-controller-manager
-  namespace: {{ include "tenant-operator.namespace" . }}
+  name: {{ include "lynq-operator.fullname" . }}-controller-manager
+  namespace: {{ include "lynq-operator.namespace" . }}
   labels:
-    {{- include "tenant-operator.labels" . | nindent 4 }}
-  {{- with include "tenant-operator.annotations" . }}
+    {{- include "lynq-operator.labels" . | nindent 4 }}
+  {{- with include "lynq-operator.annotations" . }}
   annotations:
     {{- . | nindent 4 }}
   {{- end }}
@@ -14,16 +14,16 @@ spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "tenant-operator.selectorLabels" . | nindent 6 }}
+      {{- include "lynq-operator.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
-        kubectl.kubernetes.io/default-container: {{ include "tenant-operator.managerContainerName" . }}
+        kubectl.kubernetes.io/default-container: {{ include "lynq-operator.managerContainerName" . }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
       labels:
-        {{- include "tenant-operator.selectorLabels" . | nindent 8 }}
+        {{- include "lynq-operator.selectorLabels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -32,12 +32,12 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "tenant-operator.serviceAccountName" . }}
+      serviceAccountName: {{ include "lynq-operator.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-      - name: {{ include "tenant-operator.managerContainerName" . }}
-        image: {{ include "tenant-operator.image" . }}
+      - name: {{ include "lynq-operator.managerContainerName" . }}
+        image: {{ include "lynq-operator.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command:
         - /manager
@@ -89,7 +89,7 @@ spec:
       - name: cert
         secret:
           defaultMode: 420
-          secretName: {{ include "tenant-operator.webhookCertificateName" . }}
+          secretName: {{ include "lynq-operator.webhookCertificateName" . }}
       {{- end }}
       {{- with .Values.manager.volumes }}
       {{- toYaml . | nindent 6 }}

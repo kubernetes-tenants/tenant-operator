@@ -1,12 +1,12 @@
 # Crossplane Integration Guide
 
-This guide shows how to integrate Tenant Operator with Crossplane for provisioning cloud resources (AWS, GCP, Azure) per tenant using a Kubernetes-native approach.
+This guide shows how to integrate Lynq with Crossplane for provisioning cloud resources (AWS, GCP, Azure) per node using a Kubernetes-native approach.
 
 [[toc]]
 
 ## Overview
 
-**Crossplane** is a CNCF project that extends Kubernetes to provision and manage cloud infrastructure as Kubernetes Custom Resources. When integrated with Tenant Operator, each tenant can automatically provision **declarative cloud resources** using the Kubernetes API.
+**Crossplane** is a CNCF project that extends Kubernetes to provision and manage cloud infrastructure as Kubernetes Custom Resources. When integrated with Lynq, each node can automatically provision **declarative cloud resources** using the Kubernetes API.
 
 ## How It Works
 
@@ -14,9 +14,9 @@ This guide shows how to integrate Tenant Operator with Crossplane for provisioni
 
 ```mermaid
 flowchart LR
-    subgraph TO["Tenant Operator"]
-        Template["TenantTemplate<br/>(defines what to create)"]
-        Tenant["Tenant CR<br/>(per tenant)"]
+    subgraph TO["Lynq"]
+        Template["LynqForm<br/>(defines what to create)"]
+        Tenant["LynqNode CR<br/>(per node)"]
     end
 
     subgraph XP["Crossplane"]
@@ -42,21 +42,21 @@ flowchart LR
 ```
 
 **Key Points:**
-- **Tenant Operator** manages Tenant CRs (one per tenant)
-- **Tenant CR** creates both Crossplane Managed Resources AND native K8s resources
+- **Lynq** manages LynqNode CRs (one per node)
+- **LynqNode CR** creates both Crossplane Managed Resources AND native K8s resources
 - **Crossplane** watches Managed Resources and provisions actual cloud infrastructure
-- **Two operators work independently**: Tenant Operator orchestrates, Crossplane provisions
+- **Two operators work independently**: Lynq orchestrates, Crossplane provisions
 
 ### Example Flow
 
 ```mermaid
 sequenceDiagram
-    participant T as Tenant CR
-    participant TO as Tenant Operator
+    participant T as LynqNode CR
+    participant TO as Lynq
     participant XP as Crossplane
     participant AWS as AWS
 
-    Note over T: tenant-alpha created
+    Note over T: node-alpha created
 
     TO->>XP: Create Database CR
     TO->>XP: Create Role CR
@@ -80,7 +80,7 @@ sequenceDiagram
     TO->>TO: Deploy Frontend Service
     TO->>TO: Deploy Ingress
 
-    Note over T: Tenant Ready (~5 min)
+    Note over T: Node Ready (~5 min)
 
     par CloudFront (async, non-blocking)
         XP->>AWS: Provision CloudFront
@@ -100,14 +100,14 @@ sequenceDiagram
 ### Common Use Cases
 
 - **Full-Stack Apps**: Frontend (S3 + CloudFront) + Backend + Database (RDS) + Object Storage
-- **Database Isolation**: Shared RDS with isolated databases/schemas per tenant
+- **Database Isolation**: Shared RDS with isolated databases/schemas per node
 - **Multi-Cloud**: Resources across AWS, GCP, Azure with unified management
 
 ## Prerequisites
 
 ::: info Requirements
 - Kubernetes cluster v1.20+
-- Tenant Operator installed
+- Lynq installed
 - Crossplane v1.14+ installed
 - AWS/GCP/Azure account with credentials
 :::
@@ -201,7 +201,7 @@ EOF
 This example deploys a complete production-ready application with:
 - **CloudFront CDN**: Global content delivery for frontend assets
 - **S3 Bucket**: Static asset storage with origin for CloudFront
-- **PostgreSQL Database**: Shared RDS with isolated database per tenant
+- **PostgreSQL Database**: Shared RDS with isolated database per node
 - **Backend API**: Deployment with database and S3 access
 - **Frontend**: Nginx serving static content with CDN acceleration
 
@@ -258,11 +258,11 @@ spec:
   sslMode: require
 ```
 
-### Step 2: TenantTemplate with Full Infrastructure
+### Step 2: LynqForm with Full Infrastructure
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: production-app
   namespace: default
@@ -397,7 +397,7 @@ spec:
       kind: OriginAccessIdentity
       spec:
         forProvider:
-          comment: "OAI for tenant {{ .uid }}"
+          comment: "OAI for node {{ .uid }}"
         providerConfigRef:
           name: default
     waitForReady: true
@@ -443,14 +443,14 @@ spec:
       writeConnectionSecretToRef:
         name: "{{ .uid }}-cdn-outputs"
         namespace: default
-    # IMPORTANT: waitForReady=false to avoid blocking tenant provisioning
+    # IMPORTANT: waitForReady=false to avoid blocking node provisioning
     # CloudFront distributions take 15-30 minutes to deploy, making them the
-    # biggest bottleneck in tenant provisioning. By setting waitForReady=false:
+    # biggest bottleneck in node provisioning. By setting waitForReady=false:
     #
     # Benefits:
     # - Other resources (backend, frontend) can be provisioned immediately
-    # - Tenant becomes "Ready" in ~5 minutes instead of 30+ minutes
-    # - Better user experience for rapid tenant onboarding
+    # - Node becomes "Ready" in ~5 minutes instead of 30+ minutes
+    # - Better user experience for rapid node onboarding
     #
     # Considerations:
     # - Frontend will deploy before CDN is ready (uses temporary CloudFront URL)
@@ -460,7 +460,7 @@ spec:
     # Production Recommendations:
     # 1. Application should fallback to direct S3 URLs if CDN is unavailable
     # 2. Implement CDN health checks and auto-reload when ready
-    # 3. Or use waitForReady=true if you prefer fully-ready tenants (longer wait)
+    # 3. Or use waitForReady=true if you prefer fully-ready nodes (longer wait)
     # 4. Monitor CloudFront status: kubectl describe distribution {{ .uid }}-cdn
     waitForReady: false
     timeoutSeconds: 1800  # Max wait time if changed to waitForReady=true
@@ -489,7 +489,7 @@ spec:
               ports:
               - containerPort: 8080
               env:
-              - name: TENANT_ID
+              - name: NODE_ID
                 value: "{{ .uid }}"
               - name: DB_HOST
                 valueFrom:
@@ -568,7 +568,7 @@ spec:
               ports:
               - containerPort: 80
               env:
-              - name: TENANT_ID
+              - name: NODE_ID
                 value: "{{ .uid }}"
               - name: API_URL
                 value: "http://{{ .uid }}-backend:8080"
@@ -640,12 +640,12 @@ spec:
 
 ### What Gets Provisioned
 
-When a tenant is created, the following resources are automatically provisioned:
+When a node is created, the following resources are automatically provisioned:
 
 **Sequential (Blocking) Resources:**
 1. **PostgreSQL Database** (30s): Isolated database in shared RDS instance
 2. **PostgreSQL Role** (15s): Dedicated user with secure password
-3. **Database Grant** (10s): ALL privileges on tenant database
+3. **Database Grant** (10s): ALL privileges on node database
 4. **S3 Bucket** (60s): Object storage for static assets
 5. **CloudFront OAI** (30s): Secure access identity for S3
 6. **Backend Deployment** (2 min): API pods with database connections
@@ -658,44 +658,44 @@ When a tenant is created, the following resources are automatically provisioned:
    - Frontend uses S3 direct access initially
    - Switches to CDN once available
 
-**Tenant Ready Time**: ~5 minutes (Database + Backend + Frontend)
+**Node Ready Time**: ~5 minutes (Database + Backend + Frontend)
 **Full Infrastructure Ready**: ~20-35 minutes (including CloudFront)
 
-::: tip Fast Tenant Onboarding
-With `waitForReady=false` on CloudFront, tenants become operational in ~5 minutes instead of 30+ minutes. The CDN deploys asynchronously in the background and automatically becomes available when ready.
+::: tip Fast Node Onboarding
+With `waitForReady=false` on CloudFront, nodes become operational in ~5 minutes instead of 30+ minutes. The CDN deploys asynchronously in the background and automatically becomes available when ready.
 :::
 
 ### Verify Deployment
 
 ```bash
-# 1. Check Tenant status (should be Ready in ~5 minutes)
-kubectl get tenant tenant-alpha -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+# 1. Check LynqNode status (should be Ready in ~5 minutes)
+kubectl get lynqnode node-alpha -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
 
 # 2. Check all Crossplane resources
-kubectl get database,role,grant,bucket,cloudfront -l tenant-operator.kubernetes-tenants.org/tenant-id=tenant-alpha
+kubectl get database,role,grant,bucket,cloudfront -l lynq.lynq.sh/node-id=node-alpha
 
 # 3. Check CloudFront distribution status (takes 15-30 min)
-kubectl get distribution tenant-alpha-cdn -o jsonpath='{.status.atProvider.status}'
+kubectl get distribution node-alpha-cdn -o jsonpath='{.status.atProvider.status}'
 # Expected: "InProgress" -> "Deployed" (when ready)
 
 # 4. Monitor CloudFront deployment progress
-kubectl describe distribution tenant-alpha-cdn | grep -A 5 "Status:"
+kubectl describe distribution node-alpha-cdn | grep -A 5 "Status:"
 
 # 5. Get CDN URL (available once CloudFront is deployed)
-kubectl get secret tenant-alpha-cdn-outputs -o jsonpath='{.data.domain_name}' | base64 -d 2>/dev/null || echo "CDN not ready yet"
+kubectl get secret node-alpha-cdn-outputs -o jsonpath='{.data.domain_name}' | base64 -d 2>/dev/null || echo "CDN not ready yet"
 
 # 6. Check deployments (should be running immediately)
-kubectl get deployment -l app=tenant-alpha-backend
-kubectl get deployment -l app=tenant-alpha-frontend
+kubectl get deployment -l app=node-alpha-backend
+kubectl get deployment -l app=node-alpha-frontend
 
 # 7. Check database credentials
-kubectl get secret tenant-alpha-db-creds
+kubectl get secret node-alpha-db-creds
 
 # 8. Test application (works immediately with S3 fallback)
-curl https://$(kubectl get ingress tenant-alpha-ingress -o jsonpath='{.spec.rules[0].host}')
+curl https://$(kubectl get ingress node-alpha-ingress -o jsonpath='{.spec.rules[0].host}')
 
 # 9. Watch CloudFront status until ready (optional)
-kubectl get distribution tenant-alpha-cdn -w
+kubectl get distribution node-alpha-cdn -w
 ```
 
 ::: info CloudFront Deployment Timeline
@@ -719,7 +719,7 @@ manifests:
     kind: Schema
     metadata:
       annotations:
-        crossplane.io/external-name: "tenant_{{ .uid | replace \"-\" \"_\" }}"
+        crossplane.io/external-name: "node_{{ .uid | replace \"-\" \"_\" }}"
     spec:
       forProvider:
         database: "shared_db"
@@ -736,7 +736,7 @@ manifests:
     spec:
       forProvider:
         privileges: ["ALL"]
-        schema: "tenant_{{ .uid | replace \"-\" \"_\" }}"
+        schema: "node_{{ .uid | replace \"-\" \"_\" }}"
         database: "shared_db"
         role: "{{ .uid }}_user"
       providerConfigRef:
@@ -745,9 +745,9 @@ manifests:
 
 **Benefits**: Single database, fast provisioning (seconds), minimal cost
 
-### Example 2: Dedicated RDS Instance (Premium Tenants)
+### Example 2: Dedicated RDS Instance (Premium Nodes)
 
-For high-value tenants requiring full database isolation:
+For high-value nodes requiring full database isolation:
 
 ```yaml
 manifests:
@@ -778,7 +778,7 @@ manifests:
         namespace: default
   waitForReady: true
   timeoutSeconds: 1200
-  deletionPolicy: Retain  # Keep database when tenant deleted
+  deletionPolicy: Retain  # Keep database when node deleted
 ```
 
 **Use Case**: Premium tier, compliance requirements, guaranteed performance
@@ -847,7 +847,7 @@ manifests:
 | **CloudFront** | **15-30 min** | **1800s** | **❌ false** (recommended) |
 
 ::: tip CloudFront waitForReady Strategy
-Set `waitForReady: false` for CloudFront to enable fast tenant onboarding (~5 min vs 30+ min). Your application should implement S3 fallback URLs and gracefully upgrade to CDN when available.
+Set `waitForReady: false` for CloudFront to enable fast node onboarding (~5 min vs 30+ min). Your application should implement S3 fallback URLs and gracefully upgrade to CDN when available.
 :::
 
 ### 2. Implement CDN Fallback in Applications
@@ -888,7 +888,7 @@ env:
 ### 3. Use DeletionPolicy for Critical Resources
 
 ```yaml
-deletionPolicy: Retain  # Keep database when tenant deleted
+deletionPolicy: Retain  # Keep database when node deleted
 ```
 
 ### 4. Tag All Cloud Resources
@@ -897,8 +897,8 @@ deletionPolicy: Retain  # Keep database when tenant deleted
 spec:
   forProvider:
     tags:
-      tenant-id: "{{ .uid }}"
-      managed-by: "tenant-operator"
+      node-id: "{{ .uid }}"
+      managed-by: "lynq"
       environment: "production"
 ```
 
@@ -910,35 +910,35 @@ spec:
 
 **Isolated Infrastructure** (Medium Cost):
 - Shared RDS with database isolation
-- Dedicated CloudFront per tenant
+- Dedicated CloudFront per node
 
 **Dedicated Infrastructure** (Highest Cost):
-- Dedicated RDS per tenant
-- Dedicated CloudFront per tenant
+- Dedicated RDS per node
+- Dedicated CloudFront per node
 
 ## Troubleshooting
 
 ### CloudFront Distribution Taking Too Long
 
-**Problem**: CloudFront deployment exceeds 30 minutes or tenant is waiting for CDN.
+**Problem**: CloudFront deployment exceeds 30 minutes or node is waiting for CDN.
 
 **Solution**:
 
-With `waitForReady=false`, this should NOT block tenant provisioning. If it does:
+With `waitForReady=false`, this should NOT block node provisioning. If it does:
 
 1. Verify CloudFront resource has `waitForReady: false`:
    ```bash
-   kubectl get tenant tenant-alpha -o yaml | grep -A 10 cloudfront-distribution
+   kubectl get lynqnode node-alpha -o yaml | grep -A 10 cloudfront-distribution
    ```
 
 2. Check CloudFront status (should be "InProgress"):
    ```bash
-   kubectl get distribution tenant-alpha-cdn -o jsonpath='{.status.atProvider.status}'
+   kubectl get distribution node-alpha-cdn -o jsonpath='{.status.atProvider.status}'
    ```
 
 3. Monitor deployment progress:
    ```bash
-   kubectl describe distribution tenant-alpha-cdn | grep -A 10 "Status"
+   kubectl describe distribution node-alpha-cdn | grep -A 10 "Status"
    ```
 
 4. Check AWS CloudFront console if stuck for >45 minutes
@@ -955,17 +955,17 @@ CloudFront takes 15-30 minutes. Your application should work immediately using S
 
 1. Verify database created:
    ```bash
-   kubectl get database tenant-alpha-db
+   kubectl get database node-alpha-db
    ```
 
 2. Check credentials secret:
    ```bash
-   kubectl get secret tenant-alpha-db-creds -o yaml
+   kubectl get secret node-alpha-db-creds -o yaml
    ```
 
 3. Test connection from backend pod:
    ```bash
-   kubectl exec -it deploy/tenant-alpha-backend -- \
+   kubectl exec -it deploy/node-alpha-backend -- \
      psql -h $DB_HOST -U $DB_USER -d $DB_NAME
    ```
 
@@ -983,7 +983,7 @@ CloudFront takes 15-30 minutes. Your application should work immediately using S
 
 3. Test S3 access:
    ```bash
-   aws s3 ls s3://tenant-alpha-assets-xyz
+   aws s3 ls s3://node-alpha-assets-xyz
    ```
 
 ### Crossplane Provider Not Healthy
@@ -1034,4 +1034,4 @@ kubectl delete pod -n crossplane-system -l pkg.crossplane.io/provider=provider-a
 - [Upbound Provider Marketplace](https://marketplace.upbound.io/)
 - [Terraform Operator Integration](integration-terraform-operator.md)
 - [ExternalDNS Integration](integration-external-dns.md)
-- [Tenant Operator Templates Guide](templates.md)
+- [Lynq Templates Guide](templates.md)

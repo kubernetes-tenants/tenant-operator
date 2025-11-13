@@ -32,38 +32,38 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
-	"github.com/kubernetes-tenants/tenant-operator/internal/status"
+	lynqv1 "github.com/k8s-lynq/lynq/api/v1"
+	"github.com/k8s-lynq/lynq/internal/status"
 )
 
 // TestMainReconciliationWorkflow tests the complete workflow described in docs:
-// 1. TenantRegistry reads DB (mocked) -> Emits Tenant CRs
-// 2. TenantTemplate validates linkage
-// 3. Tenant reconciles resources
+// 1. LynqHub reads DB (mocked) -> Emits LynqNode CRs
+// 2. LynqForm validates linkage
+// 3. LynqNode reconciles resources
 func TestMainReconciliationWorkflow(t *testing.T) {
-	t.Run("Tenant controller - main reconciliation loop", func(t *testing.T) {
+	t.Run("LynqNode controller - main reconciliation loop", func(t *testing.T) {
 		ctx := context.Background()
 		scheme := setupTestScheme(t)
 
-		// Step 1: Create a Tenant CR (normally created by TenantRegistry controller)
-		tenant := &tenantsv1.Tenant{
+		// Step 1: Create a LynqNode CR (normally created by LynqHub controller)
+		node := &lynqv1.LynqNode{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "tenant1-web-app",
+				Name:      "node1-web-app",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"kubernetes-tenants.org/hostOrUrl": "https://tenant1.example.com",
-					"kubernetes-tenants.org/activate":  "true",
-					"kubernetes-tenants.org/extra":     `{"plan":"premium"}`,
+					"lynq.sh/hostOrUrl": "https://tenant1.example.com",
+					"lynq.sh/activate":  "true",
+					"lynq.sh/extra":     `{"plan":"premium"}`,
 				},
 			},
-			Spec: tenantsv1.TenantSpec{
-				UID:         "tenant1",
+			Spec: lynqv1.LynqNodeSpec{
+				UID:         "node1",
 				TemplateRef: "web-app",
 				// Add simple resources to test reconciliation
-				ConfigMaps: []tenantsv1.TResource{
+				ConfigMaps: []lynqv1.TResource{
 					{
 						ID:           "config-1",
-						NameTemplate: "tenant1-config",
+						NameTemplate: "node1-config",
 						Spec: unstructured.Unstructured{
 							Object: map[string]interface{}{
 								"apiVersion": "v1",
@@ -73,8 +73,8 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 								},
 							},
 						},
-						CreationPolicy: tenantsv1.CreationPolicyWhenNeeded,
-						DeletionPolicy: tenantsv1.DeletionPolicyDelete,
+						CreationPolicy: lynqv1.CreationPolicyWhenNeeded,
+						DeletionPolicy: lynqv1.DeletionPolicyDelete,
 					},
 				},
 			},
@@ -82,13 +82,13 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithObjects(tenant).
-			WithStatusSubresource(tenant).
+			WithObjects(node).
+			WithStatusSubresource(node).
 			Build()
 
 		recorder := record.NewFakeRecorder(100)
 
-		r := &TenantReconciler{
+		r := &LynqNodeReconciler{
 			Client:        fakeClient,
 			Scheme:        scheme,
 			Recorder:      recorder,
@@ -97,8 +97,8 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 
 		req := ctrl.Request{
 			NamespacedName: types.NamespacedName{
-				Name:      tenant.Name,
-				Namespace: tenant.Namespace,
+				Name:      node.Name,
+				Namespace: node.Namespace,
 			},
 		}
 
@@ -114,48 +114,48 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 		}
 
 		// Step 3: Verify finalizer was added
-		updatedTenant := &tenantsv1.Tenant{}
-		err = fakeClient.Get(ctx, req.NamespacedName, updatedTenant)
+		updatedLynqNode := &lynqv1.LynqNode{}
+		err = fakeClient.Get(ctx, req.NamespacedName, updatedLynqNode)
 		require.NoError(t, err)
-		assert.Contains(t, updatedTenant.Finalizers, TenantFinalizer, "Finalizer should be added")
+		assert.Contains(t, updatedLynqNode.Finalizers, LynqNodeFinalizer, "Finalizer should be added")
 
 		// Step 4: Verify status fields are set (even if resources aren't actually created by fake client)
 		// This proves the controller logic ran
 		t.Logf("Status - Desired: %d, Ready: %d, Failed: %d",
-			updatedTenant.Status.DesiredResources,
-			updatedTenant.Status.ReadyResources,
-			updatedTenant.Status.FailedResources)
+			updatedLynqNode.Status.DesiredResources,
+			updatedLynqNode.Status.ReadyResources,
+			updatedLynqNode.Status.FailedResources)
 
 		// Step 5: Check if conditions were set (may be empty with fake client)
-		t.Logf("Conditions count: %d", len(updatedTenant.Status.Conditions))
+		t.Logf("Conditions count: %d", len(updatedLynqNode.Status.Conditions))
 
 		// Step 6: Test passes if controller logic executed without panicking
 		// Fake client limitations prevent full end-to-end resource creation testing
 		t.Log("Main reconciliation loop executed successfully")
 	})
 
-	t.Run("Tenant controller - dependency ordering", func(t *testing.T) {
+	t.Run("LynqNode controller - dependency ordering", func(t *testing.T) {
 		ctx := context.Background()
 		scheme := setupTestScheme(t)
 
-		// Create tenant with dependent resources
-		tenant := &tenantsv1.Tenant{
+		// Create node with dependent resources
+		node := &lynqv1.LynqNode{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "tenant2-app",
+				Name:      "node2-app",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"kubernetes-tenants.org/hostOrUrl": "https://tenant2.example.com",
-					"kubernetes-tenants.org/activate":  "true",
+					"lynq.sh/hostOrUrl": "https://tenant2.example.com",
+					"lynq.sh/activate":  "true",
 				},
 			},
-			Spec: tenantsv1.TenantSpec{
-				UID:         "tenant2",
+			Spec: lynqv1.LynqNodeSpec{
+				UID:         "node2",
 				TemplateRef: "app",
 				// ConfigMap first (no dependencies)
-				ConfigMaps: []tenantsv1.TResource{
+				ConfigMaps: []lynqv1.TResource{
 					{
 						ID:           "cm-1",
-						NameTemplate: "tenant2-cm",
+						NameTemplate: "node2-cm",
 						Spec: unstructured.Unstructured{
 							Object: map[string]interface{}{
 								"apiVersion": "v1",
@@ -165,10 +165,10 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 					},
 				},
 				// Deployment depends on ConfigMap
-				Deployments: []tenantsv1.TResource{
+				Deployments: []lynqv1.TResource{
 					{
 						ID:           "deploy-1",
-						NameTemplate: "tenant2-deploy",
+						NameTemplate: "node2-deploy",
 						DependIds:    []string{"cm-1"}, // Depends on ConfigMap
 						Spec: unstructured.Unstructured{
 							Object: map[string]interface{}{
@@ -206,13 +206,13 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithObjects(tenant).
-			WithStatusSubresource(tenant).
+			WithObjects(node).
+			WithStatusSubresource(node).
 			Build()
 
 		recorder := record.NewFakeRecorder(100)
 
-		r := &TenantReconciler{
+		r := &LynqNodeReconciler{
 			Client:        fakeClient,
 			Scheme:        scheme,
 			Recorder:      recorder,
@@ -221,8 +221,8 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 
 		req := ctrl.Request{
 			NamespacedName: types.NamespacedName{
-				Name:      tenant.Name,
-				Namespace: tenant.Namespace,
+				Name:      node.Name,
+				Namespace: node.Namespace,
 			},
 		}
 
@@ -233,21 +233,21 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 		}
 
 		// Verify controller logic executed
-		updatedTenant := &tenantsv1.Tenant{}
-		err = fakeClient.Get(ctx, req.NamespacedName, updatedTenant)
+		updatedLynqNode := &lynqv1.LynqNode{}
+		err = fakeClient.Get(ctx, req.NamespacedName, updatedLynqNode)
 		require.NoError(t, err)
 
 		// Verify finalizer was added
-		assert.Contains(t, updatedTenant.Finalizers, TenantFinalizer)
+		assert.Contains(t, updatedLynqNode.Finalizers, LynqNodeFinalizer)
 
 		// Verify status shows 2 desired resources (ConfigMap + Deployment)
-		t.Logf("Status - Desired: %d resources", updatedTenant.Status.DesiredResources)
+		t.Logf("Status - Desired: %d resources", updatedLynqNode.Status.DesiredResources)
 
 		// Test passes if dependency graph was built and reconciliation attempted
 		t.Log("Dependency ordering logic executed successfully")
 	})
 
-	t.Run("Tenant controller - orphan cleanup", func(t *testing.T) {
+	t.Run("LynqNode controller - orphan cleanup", func(t *testing.T) {
 		ctx := context.Background()
 		scheme := setupTestScheme(t)
 
@@ -257,33 +257,33 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 				Name:      "old-config",
 				Namespace: "default",
 				Labels: map[string]string{
-					"app.kubernetes.io/managed-by": "tenant-operator",
+					"app.kubernetes.io/managed-by": "lynq-operator",
 				},
 				Annotations: map[string]string{
 					// Store deletion policy for orphan handling
-					"kubernetes-tenants.org/deletion-policy": string(tenantsv1.DeletionPolicyDelete),
+					"lynq.sh/deletion-policy": string(lynqv1.DeletionPolicyDelete),
 				},
 			},
 		}
 
-		// Create tenant with AppliedResources including the orphan
-		tenant := &tenantsv1.Tenant{
+		// Create node with AppliedResources including the orphan
+		node := &lynqv1.LynqNode{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:       "tenant3-app",
+				Name:       "node3-app",
 				Namespace:  "default",
 				Generation: 1, // Set generation to force spec reconcile
-				Finalizers: []string{TenantFinalizer},
+				Finalizers: []string{LynqNodeFinalizer},
 				Annotations: map[string]string{
-					"kubernetes-tenants.org/hostOrUrl": "https://tenant3.example.com",
-					"kubernetes-tenants.org/activate":  "true",
+					"lynq.sh/hostOrUrl": "https://tenant3.example.com",
+					"lynq.sh/activate":  "true",
 				},
 			},
-			Spec: tenantsv1.TenantSpec{
-				UID:         "tenant3",
+			Spec: lynqv1.LynqNodeSpec{
+				UID:         "node3",
 				TemplateRef: "app",
 				// No resources in current spec - this makes old-config an orphan
 			},
-			Status: tenantsv1.TenantStatus{
+			Status: lynqv1.LynqNodeStatus{
 				// Previous reconciliation had this resource
 				ObservedGeneration: 0, // ObservedGeneration != Generation forces full reconcile
 				AppliedResources: []string{
@@ -294,13 +294,13 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithObjects(tenant, orphanCM).
-			WithStatusSubresource(tenant).
+			WithObjects(node, orphanCM).
+			WithStatusSubresource(node).
 			Build()
 
 		recorder := record.NewFakeRecorder(100)
 
-		r := &TenantReconciler{
+		r := &LynqNodeReconciler{
 			Client:        fakeClient,
 			Scheme:        scheme,
 			Recorder:      recorder,
@@ -309,8 +309,8 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 
 		req := ctrl.Request{
 			NamespacedName: types.NamespacedName{
-				Name:      tenant.Name,
-				Namespace: tenant.Namespace,
+				Name:      node.Name,
+				Namespace: node.Namespace,
 			},
 		}
 
@@ -322,12 +322,12 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 		}
 
 		// Verify orphan handling was attempted
-		updatedTenant := &tenantsv1.Tenant{}
-		err = fakeClient.Get(ctx, req.NamespacedName, updatedTenant)
+		updatedLynqNode := &lynqv1.LynqNode{}
+		err = fakeClient.Get(ctx, req.NamespacedName, updatedLynqNode)
 		require.NoError(t, err)
 
 		// AppliedResources should be empty now (no current resources in spec)
-		assert.Empty(t, updatedTenant.Status.AppliedResources,
+		assert.Empty(t, updatedLynqNode.Status.AppliedResources,
 			"AppliedResources should be cleared since spec has no resources")
 
 		// Note: Verifying actual orphan deletion requires integration test with real API server
@@ -336,14 +336,14 @@ func TestMainReconciliationWorkflow(t *testing.T) {
 	})
 }
 
-// TestTenantTemplateValidation tests TenantTemplate controller validation
-func TestTenantTemplateValidation(t *testing.T) {
+// TestLynqFormValidation tests LynqForm controller validation
+func TestLynqFormValidation(t *testing.T) {
 	t.Run("validate registry exists", func(t *testing.T) {
 		ctx := context.Background()
 		scheme := setupTestScheme(t)
 
 		// Create registry
-		registry := &tenantsv1.TenantRegistry{
+		registry := &lynqv1.LynqHub{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-registry",
 				Namespace: "default",
@@ -351,12 +351,12 @@ func TestTenantTemplateValidation(t *testing.T) {
 		}
 
 		// Create template referencing the registry
-		template := &tenantsv1.TenantTemplate{
+		template := &lynqv1.LynqForm{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-template",
 				Namespace: "default",
 			},
-			Spec: tenantsv1.TenantTemplateSpec{
+			Spec: lynqv1.LynqFormSpec{
 				RegistryID: "test-registry",
 			},
 		}
@@ -369,7 +369,7 @@ func TestTenantTemplateValidation(t *testing.T) {
 
 		recorder := record.NewFakeRecorder(100)
 
-		r := &TenantTemplateReconciler{
+		r := &LynqFormReconciler{
 			Client:   fakeClient,
 			Scheme:   scheme,
 			Recorder: recorder,
@@ -387,7 +387,7 @@ func TestTenantTemplateValidation(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify template is not degraded
-		updatedTemplate := &tenantsv1.TenantTemplate{}
+		updatedTemplate := &lynqv1.LynqForm{}
 		err = fakeClient.Get(ctx, req.NamespacedName, updatedTemplate)
 		require.NoError(t, err)
 
@@ -399,7 +399,7 @@ func TestTenantTemplateValidation(t *testing.T) {
 		ctx := context.Background()
 		scheme := setupTestScheme(t)
 
-		registry := &tenantsv1.TenantRegistry{
+		registry := &lynqv1.LynqHub{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-registry",
 				Namespace: "default",
@@ -407,14 +407,14 @@ func TestTenantTemplateValidation(t *testing.T) {
 		}
 
 		// Template with duplicate IDs
-		template := &tenantsv1.TenantTemplate{
+		template := &lynqv1.LynqForm{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "dup-template",
 				Namespace: "default",
 			},
-			Spec: tenantsv1.TenantTemplateSpec{
+			Spec: lynqv1.LynqFormSpec{
 				RegistryID: "test-registry",
-				ConfigMaps: []tenantsv1.TResource{
+				ConfigMaps: []lynqv1.TResource{
 					{
 						ID: "resource-1",
 						Spec: unstructured.Unstructured{
@@ -425,7 +425,7 @@ func TestTenantTemplateValidation(t *testing.T) {
 						},
 					},
 				},
-				Secrets: []tenantsv1.TResource{
+				Secrets: []lynqv1.TResource{
 					{
 						ID: "resource-1", // Duplicate!
 						Spec: unstructured.Unstructured{
@@ -447,7 +447,7 @@ func TestTenantTemplateValidation(t *testing.T) {
 
 		recorder := record.NewFakeRecorder(100)
 
-		r := &TenantTemplateReconciler{
+		r := &LynqFormReconciler{
 			Client:   fakeClient,
 			Scheme:   scheme,
 			Recorder: recorder,
@@ -465,7 +465,7 @@ func TestTenantTemplateValidation(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify template is marked as degraded
-		updatedTemplate := &tenantsv1.TenantTemplate{}
+		updatedTemplate := &lynqv1.LynqForm{}
 		err = fakeClient.Get(ctx, req.NamespacedName, updatedTemplate)
 		require.NoError(t, err)
 
@@ -485,34 +485,34 @@ func TestTenantTemplateValidation(t *testing.T) {
 	})
 }
 
-// TestTenantRegistryReconciliation tests TenantRegistry controller reconciliation
-func TestTenantRegistryReconciliation(t *testing.T) {
-	t.Run("TenantRegistry controller - finalizer handling", func(t *testing.T) {
+// TestLynqHubReconciliation tests LynqHub controller reconciliation
+func TestLynqHubReconciliation(t *testing.T) {
+	t.Run("LynqHub controller - finalizer handling", func(t *testing.T) {
 		ctx := context.Background()
 		scheme := setupTestScheme(t)
 
-		// Create a TenantRegistry without finalizer
-		registry := &tenantsv1.TenantRegistry{
+		// Create a LynqHub without finalizer
+		registry := &lynqv1.LynqHub{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-registry",
 				Namespace: "default",
 			},
-			Spec: tenantsv1.TenantRegistrySpec{
-				Source: tenantsv1.DataSource{
-					MySQL: &tenantsv1.MySQLSource{
+			Spec: lynqv1.LynqHubSpec{
+				Source: lynqv1.DataSource{
+					MySQL: &lynqv1.MySQLSource{
 						Host:     "localhost",
 						Port:     3306,
 						Database: "test",
 						Username: "root",
-						PasswordRef: &tenantsv1.SecretRef{
+						PasswordRef: &lynqv1.SecretRef{
 							Name: "mysql-secret",
 							Key:  "password",
 						},
 					},
 					SyncInterval: "30s",
 				},
-				ValueMappings: tenantsv1.ValueMappings{
-					UID:       "tenant_id",
+				ValueMappings: lynqv1.ValueMappings{
+					UID:       "node_id",
 					HostOrURL: "domain",
 					Activate:  "is_active",
 				},
@@ -538,7 +538,7 @@ func TestTenantRegistryReconciliation(t *testing.T) {
 
 		recorder := record.NewFakeRecorder(100)
 
-		r := &TenantRegistryReconciler{
+		r := &LynqHubReconciler{
 			Client:   fakeClient,
 			Scheme:   scheme,
 			Recorder: recorder,
@@ -556,40 +556,40 @@ func TestTenantRegistryReconciliation(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify finalizer was added
-		updatedRegistry := &tenantsv1.TenantRegistry{}
+		updatedRegistry := &lynqv1.LynqHub{}
 		err = fakeClient.Get(ctx, req.NamespacedName, updatedRegistry)
 		require.NoError(t, err)
-		assert.Contains(t, updatedRegistry.Finalizers, FinalizerTenantRegistry, "Finalizer should be added")
+		assert.Contains(t, updatedRegistry.Finalizers, FinalizerLynqHub, "Finalizer should be added")
 
-		t.Log("TenantRegistry finalizer handling verified")
+		t.Log("LynqHub finalizer handling verified")
 	})
 
-	t.Run("TenantRegistry controller - status initialization", func(t *testing.T) {
+	t.Run("LynqHub controller - status initialization", func(t *testing.T) {
 		ctx := context.Background()
 		scheme := setupTestScheme(t)
 
-		registry := &tenantsv1.TenantRegistry{
+		registry := &lynqv1.LynqHub{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "test-registry",
 				Namespace:  "default",
-				Finalizers: []string{FinalizerTenantRegistry},
+				Finalizers: []string{FinalizerLynqHub},
 			},
-			Spec: tenantsv1.TenantRegistrySpec{
-				Source: tenantsv1.DataSource{
-					MySQL: &tenantsv1.MySQLSource{
+			Spec: lynqv1.LynqHubSpec{
+				Source: lynqv1.DataSource{
+					MySQL: &lynqv1.MySQLSource{
 						Host:     "localhost",
 						Port:     3306,
 						Database: "test",
 						Username: "root",
-						PasswordRef: &tenantsv1.SecretRef{
+						PasswordRef: &lynqv1.SecretRef{
 							Name: "mysql-secret",
 							Key:  "password",
 						},
 					},
 					SyncInterval: "30s",
 				},
-				ValueMappings: tenantsv1.ValueMappings{
-					UID:       "tenant_id",
+				ValueMappings: lynqv1.ValueMappings{
+					UID:       "node_id",
 					HostOrURL: "domain",
 					Activate:  "is_active",
 				},
@@ -614,7 +614,7 @@ func TestTenantRegistryReconciliation(t *testing.T) {
 
 		recorder := record.NewFakeRecorder(100)
 
-		r := &TenantRegistryReconciler{
+		r := &LynqHubReconciler{
 			Client:   fakeClient,
 			Scheme:   scheme,
 			Recorder: recorder,
@@ -633,40 +633,40 @@ func TestTenantRegistryReconciliation(t *testing.T) {
 		// Note: Will return error due to database connection failure with fake client
 		// But the controller logic should execute without panicking
 		t.Logf("Reconcile result: %+v, err: %v", result, err)
-		t.Log("TenantRegistry reconciliation logic executed (DB connection expected to fail with fake client)")
+		t.Log("LynqHub reconciliation logic executed (DB connection expected to fail with fake client)")
 
 		// Verify the registry still exists
-		updatedRegistry := &tenantsv1.TenantRegistry{}
+		updatedRegistry := &lynqv1.LynqHub{}
 		err = fakeClient.Get(ctx, req.NamespacedName, updatedRegistry)
 		require.NoError(t, err)
 	})
 
-	t.Run("TenantRegistry controller - multi-template support", func(t *testing.T) {
+	t.Run("LynqHub controller - multi-template support", func(t *testing.T) {
 		ctx := context.Background()
 		scheme := setupTestScheme(t)
 
-		registry := &tenantsv1.TenantRegistry{
+		registry := &lynqv1.LynqHub{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "test-registry",
 				Namespace:  "default",
-				Finalizers: []string{FinalizerTenantRegistry},
+				Finalizers: []string{FinalizerLynqHub},
 			},
-			Spec: tenantsv1.TenantRegistrySpec{
-				Source: tenantsv1.DataSource{
-					MySQL: &tenantsv1.MySQLSource{
+			Spec: lynqv1.LynqHubSpec{
+				Source: lynqv1.DataSource{
+					MySQL: &lynqv1.MySQLSource{
 						Host:     "localhost",
 						Port:     3306,
 						Database: "test",
 						Username: "root",
-						PasswordRef: &tenantsv1.SecretRef{
+						PasswordRef: &lynqv1.SecretRef{
 							Name: "mysql-secret",
 							Key:  "password",
 						},
 					},
 					SyncInterval: "30s",
 				},
-				ValueMappings: tenantsv1.ValueMappings{
-					UID:       "tenant_id",
+				ValueMappings: lynqv1.ValueMappings{
+					UID:       "node_id",
 					HostOrURL: "domain",
 					Activate:  "is_active",
 				},
@@ -674,22 +674,22 @@ func TestTenantRegistryReconciliation(t *testing.T) {
 		}
 
 		// Create two templates referencing the same registry
-		template1 := &tenantsv1.TenantTemplate{
+		template1 := &lynqv1.LynqForm{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "web-app",
 				Namespace: "default",
 			},
-			Spec: tenantsv1.TenantTemplateSpec{
+			Spec: lynqv1.LynqFormSpec{
 				RegistryID: "test-registry",
 			},
 		}
 
-		template2 := &tenantsv1.TenantTemplate{
+		template2 := &lynqv1.LynqForm{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "worker",
 				Namespace: "default",
 			},
-			Spec: tenantsv1.TenantTemplateSpec{
+			Spec: lynqv1.LynqFormSpec{
 				RegistryID: "test-registry",
 			},
 		}
@@ -712,7 +712,7 @@ func TestTenantRegistryReconciliation(t *testing.T) {
 
 		recorder := record.NewFakeRecorder(100)
 
-		r := &TenantRegistryReconciler{
+		r := &LynqHubReconciler{
 			Client:   fakeClient,
 			Scheme:   scheme,
 			Recorder: recorder,
@@ -738,7 +738,7 @@ func TestTenantRegistryReconciliation(t *testing.T) {
 // Helper function to setup test scheme
 func setupTestScheme(t *testing.T) *runtime.Scheme {
 	scheme := runtime.NewScheme()
-	require.NoError(t, tenantsv1.AddToScheme(scheme))
+	require.NoError(t, lynqv1.AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, appsv1.AddToScheme(scheme))
 	return scheme

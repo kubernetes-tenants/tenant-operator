@@ -1,14 +1,22 @@
-# Database-per-Tenant with Crossplane
+# Database per Node with Crossplane
+
+::: warning Historical File Name
+This file name contains "tenant" for historical reasons. The content has been updated to use "node" terminology throughout.
+:::
+
+::: info Multi-Tenancy Example
+This guide uses **Multi-Tenancy** (SaaS application with multiple customers) as an example, which is the most common use case for Lynq. The pattern shown here can be adapted for any database-driven infrastructure automation scenario.
+:::
 
 ## Overview
 
-Provision isolated cloud databases (RDS, Cloud SQL) automatically for each tenant using Crossplane.
+Provision isolated cloud databases (RDS, Cloud SQL) automatically for each node using Crossplane.
 
 This pattern provides:
-- **True Data Isolation**: Each tenant gets a dedicated database instance
+- **True Data Isolation**: Each node gets a dedicated database instance
 - **Compliance**: Meets regulatory requirements for data separation
 - **Performance**: No noisy neighbor problems
-- **Scalability**: Independent database sizing per tenant
+- **Scalability**: Independent database sizing per node
 - **Automated Provisioning**: Cloud resources managed as Kubernetes objects
 
 ## Prerequisites
@@ -55,8 +63,8 @@ EOF
 ## Database Schema
 
 ```sql
-CREATE TABLE tenants (
-  tenant_id VARCHAR(63) PRIMARY KEY,
+CREATE TABLE nodes (
+  node_id VARCHAR(63) PRIMARY KEY,
   domain VARCHAR(255) NOT NULL,
   is_active BOOLEAN DEFAULT TRUE,
 
@@ -74,14 +82,14 @@ CREATE TABLE tenants (
 );
 ```
 
-## TenantRegistry
+## LynqHub
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: database-per-tenant
-  namespace: tenant-operator-system
+  name: database-per-node
+  namespace: lynq-system
 spec:
   source:
     type: mysql
@@ -89,15 +97,15 @@ spec:
     mysql:
       host: mysql.database.svc.cluster.local
       port: 3306
-      database: tenants_db
-      username: tenant_reader
+      database: nodes_db
+      username: node_reader
       passwordRef:
         name: mysql-credentials
         key: password
-      table: tenants
+      table: nodes
 
   valueMappings:
-    uid: tenant_id
+    uid: node_id
     hostOrUrl: domain
     activate: is_active
 
@@ -108,36 +116,36 @@ spec:
     planType: plan_type
 ```
 
-## TenantTemplate with Crossplane Resources
+## LynqForm with Crossplane Resources
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: database-provisioning
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: database-per-tenant
+  registryId: database-per-node
 
-  # Create tenant namespace
+  # Create node namespace
   manifests:
-    - id: tenant-namespace
+    - id: node-namespace
       spec:
         apiVersion: v1
         kind: Namespace
         metadata:
-          name: "tenant-{{ .uid }}"
+          name: "node-{{ .uid }}"
           labels:
-            tenant-id: "{{ .uid }}"
+            node-id: "{{ .uid }}"
 
   # Provision RDS instance via Crossplane
   manifests:
     - id: rds-instance
       nameTemplate: "{{ .uid }}-postgres"
-      targetNamespace: "tenant-{{ .uid }}"
-      dependIds: ["tenant-namespace"]
+      targetNamespace: "node-{{ .uid }}"
+      dependIds: ["node-namespace"]
       creationPolicy: Once  # Create database only once
-      deletionPolicy: Retain  # Retain database even if tenant deleted (backup first!)
+      deletionPolicy: Retain  # Retain database even if node deleted (backup first!)
       waitForReady: true
       timeoutSeconds: 1800  # RDS can take 15-30 minutes
       spec:
@@ -146,7 +154,7 @@ spec:
         metadata:
           name: "{{ .uid | trunc 40 }}-db"  # RDS naming limits
           labels:
-            tenant-id: "{{ .uid }}"
+            node-id: "{{ .uid }}"
         spec:
           forProvider:
             region: us-west-2
@@ -161,19 +169,19 @@ spec:
             publiclyAccessible: false
             vpcSecurityGroupIds:
               - sg-0123456789abcdef0  # Your VPC security group
-            dbSubnetGroupName: tenant-db-subnet-group
+            dbSubnetGroupName: node-db-subnet-group
             skipFinalSnapshot: false
             finalDBSnapshotIdentifier: "{{ .uid }}-final-snapshot-{{ now | date \"20060102150405\" }}"
             tags:
-              - key: tenant-id
+              - key: node-id
                 value: "{{ .uid }}"
               - key: plan-type
                 value: "{{ .planType }}"
               - key: managed-by
-                value: tenant-operator
+                value: lynq
           writeConnectionSecretToRef:
             name: "{{ .uid }}-db-conn"
-            namespace: "tenant-{{ .uid }}"
+            namespace: "node-{{ .uid }}"
           providerConfigRef:
             name: aws-provider-config
 
@@ -181,7 +189,7 @@ spec:
   deployments:
     - id: app
       nameTemplate: "{{ .uid }}-app"
-      targetNamespace: "tenant-{{ .uid }}"
+      targetNamespace: "node-{{ .uid }}"
       dependIds: ["rds-instance"]
       waitForReady: true
       spec:
@@ -196,9 +204,9 @@ spec:
           spec:
             containers:
               - name: app
-                image: registry.example.com/tenant-app:v1.0.0
+                image: registry.example.com/node-app:v1.0.0
                 env:
-                  - name: TENANT_ID
+                  - name: NODE_ID
                     value: "{{ .uid }}"
                   # Crossplane automatically creates connection secret
                   - name: DATABASE_HOST
@@ -244,7 +252,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: acme-corp-db-conn
-  namespace: tenant-acme-corp
+  namespace: node-acme-corp
 type: connection.crossplane.io/v1alpha1
 data:
   endpoint: <base64-encoded-rds-endpoint>
@@ -257,17 +265,17 @@ data:
 
 ```bash
 # Check RDS provisioning status
-kubectl get rdsinstance -l tenant-id=acme-corp
+kubectl get rdsinstance -l node-id=acme-corp
 
 # Expected output:
 # NAME              READY   SYNCED   EXTERNAL-NAME                    AGE
 # acme-corp-db      True    True     acme-corp-db-20231105123456      25m
 
 # Check connection secret
-kubectl get secret acme-corp-db-conn -n tenant-acme-corp -o yaml
+kubectl get secret acme-corp-db-conn -n node-acme-corp -o yaml
 
 # Verify application can connect
-kubectl logs -n tenant-acme-corp deployment/acme-corp-app
+kubectl logs -n node-acme-corp deployment/acme-corp-app
 ```
 
 ## Cost Optimization
@@ -281,22 +289,22 @@ db.t3.small   # Pro plan: $30/month
 db.m5.large   # Enterprise plan: $150/month
 ```
 
-Use database views to filter tenants by plan:
+Use database views to filter nodes by plan:
 
 ```sql
-CREATE VIEW enterprise_tenants AS
-SELECT * FROM tenants WHERE plan_type = 'enterprise' AND is_active = TRUE;
+CREATE VIEW enterprise_nodes AS
+SELECT * FROM nodes WHERE plan_type = 'enterprise' AND is_active = TRUE;
 ```
 
 Then create separate registries and templates per plan tier.
 
 ## Benefits
 
-1. **True Isolation**: Each tenant gets dedicated database instance
+1. **True Isolation**: Each node gets dedicated database instance
 2. **Cloud-Native**: Leverage managed database services (RDS, Cloud SQL)
 3. **Automatic Credentials**: Crossplane manages connection secrets
 4. **Declarative**: Database provisioning as code
-5. **Retention Policy**: Keep data even after tenant deletion
+5. **Retention Policy**: Keep data even after node deletion
 
 ## Limitations
 

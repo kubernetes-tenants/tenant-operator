@@ -1,7 +1,7 @@
 <template>
   <div class="comparison-section" ref="sectionRef">
     <p class="section-intro" :class="{ visible: isVisible }">
-      Managing hundreds or thousands of tenants in Kubernetes shouldn't require custom scripts, manual updates, or rebuilding Helm charts every time your data changes.
+      Managing hundreds or thousands of nodes in Kubernetes shouldn't require custom scripts, manual updates, or rebuilding Helm charts every time your data changes.
     </p>
 
     <div class="comparison-container">
@@ -55,7 +55,7 @@ const comparisonPairs = [
   {
     problem: {
       title: 'Helm Charts',
-      description: 'Static values files. Adding 10 new tenants? Manually create 10 new releases and track them separately.'
+      description: 'Static values files. Adding 10 new nodes? Manually create 10 new releases and track them separately.'
     },
     solution: {
       title: 'Database-Driven Automation',
@@ -69,7 +69,7 @@ const comparisonPairs = [
     },
     solution: {
       title: 'Real-Time Synchronization',
-      description: 'Add a tenant → resources created in 30 seconds. Deactivate a tenant → everything cleaned up automatically.'
+      description: 'Add a node → resources created in 30 seconds. Deactivate a node → everything cleaned up automatically.'
     }
   },
   {

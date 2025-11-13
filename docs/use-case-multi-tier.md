@@ -1,24 +1,28 @@
 # Multi-Tier Application Stack
 
+::: info Multi-Tenancy Example
+This guide uses **Multi-Tenancy** (SaaS application with multiple customers) as an example, which is the most common use case for Lynq. The pattern shown here can be adapted for any database-driven infrastructure automation scenario.
+:::
+
 ## Overview
 
-Deploy complex applications spanning multiple services (web, API, workers, caches) using multiple templates per tenant. Each template handles a specific tier of the stack.
+Deploy complex applications spanning multiple services (web, API, workers, caches) using multiple templates per node. Each template handles a specific tier of the stack.
 
 ## Architecture
 
 ```mermaid
 graph TB
-    Registry["TenantRegistry<br/>production-tenants"]
+    Registry["LynqHub<br/>production-nodes"]
 
-    WebTemplate["TenantTemplate<br/>web-tier"]
-    ApiTemplate["TenantTemplate<br/>api-tier"]
-    WorkerTemplate["TenantTemplate<br/>worker-tier"]
-    DataTemplate["TenantTemplate<br/>data-tier"]
+    WebTemplate["LynqForm<br/>web-tier"]
+    ApiTemplate["LynqForm<br/>api-tier"]
+    WorkerTemplate["LynqForm<br/>worker-tier"]
+    DataTemplate["LynqForm<br/>data-tier"]
 
-    WebTenant["Tenant<br/>acme-web-tier"]
-    ApiTenant["Tenant<br/>acme-api-tier"]
-    WorkerTenant["Tenant<br/>acme-worker-tier"]
-    DataTenant["Tenant<br/>acme-data-tier"]
+    WebTenant["LynqNode<br/>acme-web-tier"]
+    ApiTenant["LynqNode<br/>acme-api-tier"]
+    WorkerTenant["LynqNode<br/>acme-worker-tier"]
+    DataTenant["LynqNode<br/>acme-data-tier"]
 
     Registry --> WebTemplate
     Registry --> ApiTemplate
@@ -46,8 +50,8 @@ graph TB
 ## Database Schema
 
 ```sql
-CREATE TABLE tenants (
-  tenant_id VARCHAR(63) PRIMARY KEY,
+CREATE TABLE nodes (
+  node_id VARCHAR(63) PRIMARY KEY,
   domain VARCHAR(255) NOT NULL,
   is_active BOOLEAN DEFAULT TRUE,
 
@@ -68,14 +72,14 @@ CREATE TABLE tenants (
 );
 ```
 
-## TenantRegistry
+## LynqHub
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: multi-tier-tenants
-  namespace: tenant-operator-system
+  name: multi-tier-nodes
+  namespace: lynq-system
 spec:
   source:
     type: mysql
@@ -83,15 +87,15 @@ spec:
     mysql:
       host: mysql.database.svc.cluster.local
       port: 3306
-      database: tenants_db
-      username: tenant_reader
+      database: nodes_db
+      username: node_reader
       passwordRef:
         name: mysql-credentials
         key: password
-      table: tenants
+      table: nodes
 
   valueMappings:
-    uid: tenant_id
+    uid: node_id
     hostOrUrl: domain
     activate: is_active
 
@@ -107,34 +111,34 @@ spec:
 ## Template 1: Data Tier
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: data-tier
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: multi-tier-tenants
+  registryId: multi-tier-nodes
 
-  # Create tenant namespace
+  # Create node namespace
   manifests:
-    - id: tenant-namespace
+    - id: node-namespace
       spec:
         apiVersion: v1
         kind: Namespace
         metadata:
-          name: "tenant-{{ .uid }}"
+          name: "node-{{ .uid }}"
           labels:
-            tenant-id: "{{ .uid }}"
+            node-id: "{{ .uid }}"
             tier: data
 
   # PostgreSQL StatefulSet
   statefulSets:
     - id: postgres
       nameTemplate: "{{ .uid }}-postgres"
-      targetNamespace: "tenant-{{ .uid }}"
-      dependIds: ["tenant-namespace"]
+      targetNamespace: "node-{{ .uid }}"
+      dependIds: ["node-namespace"]
       creationPolicy: Once  # Database should be created once
-      deletionPolicy: Retain  # Keep data even if tenant deleted
+      deletionPolicy: Retain  # Keep data even if node deleted
       waitForReady: true
       timeoutSeconds: 600
       spec:
@@ -187,7 +191,7 @@ spec:
   services:
     - id: postgres-svc
       nameTemplate: "{{ .uid }}-postgres"
-      targetNamespace: "tenant-{{ .uid }}"
+      targetNamespace: "node-{{ .uid }}"
       dependIds: ["postgres"]
       spec:
         clusterIP: None  # Headless service for StatefulSet
@@ -201,8 +205,8 @@ spec:
   deployments:
     - id: redis
       nameTemplate: "{{ .uid }}-redis"
-      targetNamespace: "tenant-{{ .uid }}"
-      dependIds: ["tenant-namespace"]
+      targetNamespace: "node-{{ .uid }}"
+      dependIds: ["node-namespace"]
       waitForReady: true
       spec:
         replicas: 1
@@ -233,7 +237,7 @@ spec:
   services:
     - id: redis-svc
       nameTemplate: "{{ .uid }}-redis"
-      targetNamespace: "tenant-{{ .uid }}"
+      targetNamespace: "node-{{ .uid }}"
       dependIds: ["redis"]
       spec:
         selector:
@@ -246,8 +250,8 @@ spec:
   secrets:
     - id: db-credentials
       nameTemplate: "{{ .uid }}-db-credentials"
-      targetNamespace: "tenant-{{ .uid }}"
-      dependIds: ["tenant-namespace"]
+      targetNamespace: "node-{{ .uid }}"
+      dependIds: ["node-namespace"]
       creationPolicy: Once  # Generate password once
       spec:
         stringData:
@@ -262,18 +266,18 @@ The `randAlphaNum` function generates a random password. In production, consider
 ## Template 2: API Tier
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: api-tier
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: multi-tier-tenants
+  registryId: multi-tier-nodes
 
   deployments:
     - id: api
       nameTemplate: "{{ .uid }}-api"
-      targetNamespace: "tenant-{{ .uid }}"
+      targetNamespace: "node-{{ .uid }}"
       waitForReady: true
       timeoutSeconds: 600
       spec:
@@ -295,9 +299,9 @@ spec:
           spec:
             containers:
               - name: api
-                image: registry.example.com/tenant-api:v2.0.0
+                image: registry.example.com/node-api:v2.0.0
                 env:
-                  - name: TENANT_ID
+                  - name: NODE_ID
                     value: "{{ .uid }}"
                   - name: DATABASE_URL
                     valueFrom:
@@ -334,7 +338,7 @@ spec:
   services:
     - id: api-svc
       nameTemplate: "{{ .uid }}-api"
-      targetNamespace: "tenant-{{ .uid }}"
+      targetNamespace: "node-{{ .uid }}"
       dependIds: ["api"]
       spec:
         selector:
@@ -347,18 +351,18 @@ spec:
 ## Template 3: Web Tier
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: web-tier
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: multi-tier-tenants
+  registryId: multi-tier-nodes
 
   deployments:
     - id: web
       nameTemplate: "{{ .uid }}-web"
-      targetNamespace: "tenant-{{ .uid }}"
+      targetNamespace: "node-{{ .uid }}"
       waitForReady: true
       spec:
         replicas: {{ .webReplicas }}
@@ -374,9 +378,9 @@ spec:
           spec:
             containers:
               - name: web
-                image: registry.example.com/tenant-web:v2.0.0
+                image: registry.example.com/node-web:v2.0.0
                 env:
-                  - name: TENANT_ID
+                  - name: NODE_ID
                     value: "{{ .uid }}"
                   - name: API_URL
                     value: "http://{{ .uid }}-api:8080"
@@ -391,7 +395,7 @@ spec:
   services:
     - id: web-svc
       nameTemplate: "{{ .uid }}-web"
-      targetNamespace: "tenant-{{ .uid }}"
+      targetNamespace: "node-{{ .uid }}"
       dependIds: ["web"]
       spec:
         selector:
@@ -403,7 +407,7 @@ spec:
   ingresses:
     - id: web-ingress
       nameTemplate: "{{ .uid }}-ingress"
-      targetNamespace: "tenant-{{ .uid }}"
+      targetNamespace: "node-{{ .uid }}"
       dependIds: ["web-svc"]
       spec:
         ingressClassName: nginx
@@ -423,18 +427,18 @@ spec:
 ## Template 4: Worker Tier
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: worker-tier
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: multi-tier-tenants
+  registryId: multi-tier-nodes
 
   deployments:
     - id: worker
       nameTemplate: "{{ .uid }}-worker"
-      targetNamespace: "tenant-{{ .uid }}"
+      targetNamespace: "node-{{ .uid }}"
       waitForReady: true
       spec:
         replicas: {{ .workerReplicas }}
@@ -450,9 +454,9 @@ spec:
           spec:
             containers:
               - name: worker
-                image: registry.example.com/tenant-worker:v2.0.0
+                image: registry.example.com/node-worker:v2.0.0
                 env:
-                  - name: TENANT_ID
+                  - name: NODE_ID
                     value: "{{ .uid }}"
                   - name: DATABASE_URL
                     valueFrom:
@@ -479,8 +483,8 @@ spec:
 ## Deployment Verification
 
 ```bash
-# Check all tiers for a tenant
-kubectl get tenants -n tenant-operator-system | grep acme-corp
+# Check all tiers for a node
+kubectl get lynqnodes -n lynq-system | grep acme-corp
 
 # Expected output:
 # acme-corp-data-tier     True    5/5     0       10m
@@ -488,14 +492,14 @@ kubectl get tenants -n tenant-operator-system | grep acme-corp
 # acme-corp-web-tier      True    2/2     0       10m
 # acme-corp-worker-tier   True    2/2     0       10m
 
-# Verify resources in tenant namespace
-kubectl get all -n tenant-acme-corp
+# Verify resources in node namespace
+kubectl get all -n node-acme-corp
 ```
 
 ## Benefits
 
 1. **Separation of Concerns**: Each tier managed independently
-2. **Flexible Scaling**: Scale web, API, workers independently per tenant
+2. **Flexible Scaling**: Scale web, API, workers independently per node
 3. **Gradual Updates**: Update one tier at a time
 4. **Resource Policies**: Different creation/deletion policies per tier
 5. **Dependency Management**: Implicit via service discovery, explicit via health checks

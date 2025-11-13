@@ -19,22 +19,22 @@
       <div class="stage-item database-stage" :class="{ active: currentStage >= 1 }">
         <div class="stage-title">Your Database</div>
         <div class="database-table">
-          <div class="table-header">tenant_configs</div>
+          <div class="table-header">node_configs</div>
           <div class="table-body">
             <div
               class="table-row"
               :class="{
                 highlight: currentStage >= 1,
                 interactive: isCompleted,
-                inactive: !tenants.acme.active,
+                inactive: !nodes.acme.active,
                 'highlight-prompt': isCompleted && !hasInteracted
               }"
-              @click="isCompleted && toggleTenant('acme')"
+              @click="isCompleted && toggleNode('acme')"
             >
               <span class="row-id">acme-corp</span>
               <span class="row-domain">acme.com</span>
-              <span class="row-status" :class="{ active: tenants.acme.active }">
-                {{ tenants.acme.active ? '✓ active' : '✗ inactive' }}
+              <span class="row-status" :class="{ active: nodes.acme.active }">
+                {{ nodes.acme.active ? '✓ active' : '✗ inactive' }}
               </span>
             </div>
             <div
@@ -42,15 +42,15 @@
               :class="{
                 highlight: currentStage >= 1,
                 interactive: isCompleted,
-                inactive: !tenants.beta.active,
+                inactive: !nodes.beta.active,
                 'highlight-prompt': isCompleted && !hasInteracted
               }"
-              @click="isCompleted && toggleTenant('beta')"
+              @click="isCompleted && toggleNode('beta')"
             >
               <span class="row-id">beta-inc</span>
               <span class="row-domain">beta.io</span>
-              <span class="row-status" :class="{ active: tenants.beta.active }">
-                {{ tenants.beta.active ? '✓ active' : '✗ inactive' }}
+              <span class="row-status" :class="{ active: nodes.beta.active }">
+                {{ nodes.beta.active ? '✓ active' : '✗ inactive' }}
               </span>
             </div>
           </div>
@@ -73,12 +73,12 @@
         </circle>
       </svg>
 
-      <!-- Stage 2: TenantRegistry -->
+      <!-- Stage 2: LynqHub -->
       <div class="stage-item registry-stage" :class="{ active: currentStage >= 2 }">
         <div class="k8s-cluster-label">Kubernetes Cluster</div>
         <div class="registry-box clickable" @click="openModal('registry')">
           <div class="resource-icon">📋</div>
-          <div class="resource-title">TenantRegistry</div>
+          <div class="resource-title">LynqHub</div>
           <div class="resource-subtitle">Syncs every 30 seconds</div>
           <div class="click-overlay">
             <span class="click-overlay-text">Click to view YAML</span>
@@ -86,18 +86,18 @@
         </div>
       </div>
 
-      <!-- TenantTemplate (separate position) -->
+      <!-- LynqForm (separate position) -->
       <div class="stage-item template-stage" :class="{ active: currentStage >= 3 }">
         <div class="template-box clickable" @click="openModal('template')">
           <div class="resource-icon small">📄</div>
-          <div class="resource-title small">TenantTemplate</div>
+          <div class="resource-title small">LynqForm</div>
           <div class="click-overlay">
             <span class="click-overlay-text">Click to view YAML</span>
           </div>
         </div>
       </div>
 
-      <!-- Connection Line 2b: Template → Tenants -->
+      <!-- Connection Line 2b: Template → Nodes -->
       <svg class="connection-line line-2" :class="{ active: currentStage >= 3 }" viewBox="0 0 80 140">
         <defs>
           <linearGradient id="line-gradient-2b" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -113,23 +113,23 @@
         </circle>
       </svg>
 
-      <!-- Stage 3: Tenant CRs -->
-      <div class="stage-item tenants-stage" :class="{ active: currentStage >= 3 }">
-        <div class="stage-subtitle">Tenant CRs (Auto-created)</div>
-        <div class="tenant-crs">
+      <!-- Stage 3: LynqNode CRs -->
+      <div class="stage-item nodes-stage" :class="{ active: currentStage >= 3 }">
+        <div class="stage-subtitle">LynqNode CRs (Auto-created)</div>
+        <div class="node-crs">
           <div
-            v-if="tenants.acme.active"
-            class="tenant-cr"
-            :class="{ 'fade-out': isCompleted && !tenants.acme.active }"
+            v-if="nodes.acme.active"
+            class="node-cr"
+            :class="{ 'fade-out': isCompleted && !nodes.acme.active }"
             :style="{ animationDelay: '0s' }"
           >
             <div class="cr-icon">🏢</div>
             <div class="cr-name">acme-corp</div>
           </div>
           <div
-            v-if="tenants.beta.active"
-            class="tenant-cr"
-            :class="{ 'fade-out': isCompleted && !tenants.beta.active }"
+            v-if="nodes.beta.active"
+            class="node-cr"
+            :class="{ 'fade-out': isCompleted && !nodes.beta.active }"
             :style="{ animationDelay: '0.15s' }"
           >
             <div class="cr-icon">🏢</div>
@@ -138,7 +138,7 @@
         </div>
       </div>
 
-      <!-- Connection Lines 3: Tenants → Resources -->
+      <!-- Connection Lines 3: Nodes → Resources -->
       <svg class="connection-line line-3" :class="{ active: currentStage >= 4 }" viewBox="0 0 200 200">
         <defs>
           <linearGradient id="line-gradient-3" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -161,27 +161,27 @@
       <div class="stage-item resources-stage" :class="{ active: currentStage >= 4 }">
         <div class="stage-subtitle">Kubernetes Resources</div>
         <div class="resources-grid">
-          <div v-if="tenants.acme.active" class="resource-item" :style="{ animationDelay: '0s' }">
+          <div v-if="nodes.acme.active" class="resource-item" :style="{ animationDelay: '0s' }">
             <span class="resource-kind">Deploy</span>
             <span class="resource-name">acme-corp-api</span>
           </div>
-          <div v-if="tenants.acme.active" class="resource-item" :style="{ animationDelay: '0.1s' }">
+          <div v-if="nodes.acme.active" class="resource-item" :style="{ animationDelay: '0.1s' }">
             <span class="resource-kind">Svc</span>
             <span class="resource-name">acme-corp-svc</span>
           </div>
-          <div v-if="tenants.acme.active" class="resource-item" :style="{ animationDelay: '0.2s' }">
+          <div v-if="nodes.acme.active" class="resource-item" :style="{ animationDelay: '0.2s' }">
             <span class="resource-kind">Ingress</span>
             <span class="resource-name">acme-corp-ing</span>
           </div>
-          <div v-if="tenants.beta.active" class="resource-item" :style="{ animationDelay: '0.3s' }">
+          <div v-if="nodes.beta.active" class="resource-item" :style="{ animationDelay: '0.3s' }">
             <span class="resource-kind">Deploy</span>
             <span class="resource-name">beta-inc-api</span>
           </div>
-          <div v-if="tenants.beta.active" class="resource-item" :style="{ animationDelay: '0.4s' }">
+          <div v-if="nodes.beta.active" class="resource-item" :style="{ animationDelay: '0.4s' }">
             <span class="resource-kind">Svc</span>
             <span class="resource-name">beta-inc-svc</span>
           </div>
-          <div v-if="tenants.beta.active" class="resource-item" :style="{ animationDelay: '0.5s' }">
+          <div v-if="nodes.beta.active" class="resource-item" :style="{ animationDelay: '0.5s' }">
             <span class="resource-kind">Ingress</span>
             <span class="resource-name">beta-inc-ing</span>
           </div>
@@ -236,8 +236,8 @@ const isCompleted = ref(false);
 const hasInteracted = ref(false);
 let timeoutIds = [];
 
-// Tenant active states
-const tenants = ref({
+// Node active states
+const nodes = ref({
   acme: { active: true },
   beta: { active: true }
 });
@@ -246,11 +246,11 @@ const tenants = ref({
 const showModal = ref(false);
 const modalContent = ref(null);
 
-const registryYaml = `# Connect to your tenant database
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+const registryYaml = `# Connect to your node database
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: production-tenants
+  name: production-nodes
 spec:
   source:
     type: mysql
@@ -258,26 +258,26 @@ spec:
     mysql:
       host: mysql.default.svc.cluster.local
       port: 3306
-      database: tenants
-      table: tenant_configs
+      database: nodes
+      table: node_configs
       passwordRef:
         name: mysql-credentials
         key: password
   valueMappings:
-    uid: tenant_id
+    uid: node_id
     hostOrUrl: domain
     activate: is_active
     extraValueMappings:
       planId: plan_id
       deployImage: deploy_image`;
 
-const templateYaml = `# Define what to create per tenant
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+const templateYaml = `# Define what to create per node
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: saas-stack
 spec:
-  registryId: production-tenants
+  registryId: production-nodes
   deployments:
     - id: api-deployment
       nameTemplate: "{{ .uid }}-api"
@@ -295,9 +295,9 @@ spec:
               - name: api
                 image: "{{ .deployImage | default \\"myapp:latest\\" }}"
                 env:
-                  - name: TENANT_ID
+                  - name: NODE_ID
                     value: "{{ .uid }}"
-                  - name: TENANT_HOST
+                  - name: NODE_HOST
                     value: "{{ .host }}"
   services:
     - id: api-service
@@ -328,12 +328,12 @@ spec:
 
 const openModal = (type) => {
   modalContent.value = type === 'registry' ? {
-    title: 'TenantRegistry',
-    subtitle: 'Connect to your tenant database',
+    title: 'LynqHub',
+    subtitle: 'Connect to your node database',
     code: registryYaml
   } : {
-    title: 'TenantTemplate',
-    subtitle: 'Define what to create per tenant',
+    title: 'LynqForm',
+    subtitle: 'Define what to create per node',
     code: templateYaml
   };
   showModal.value = true;
@@ -364,9 +364,9 @@ const playAnimation = () => {
   isCompleted.value = false;
   currentStage.value = 0;
 
-  // Reset all tenants to active when replaying
-  tenants.value.acme.active = true;
-  tenants.value.beta.active = true;
+  // Reset all nodes to active when replaying
+  nodes.value.acme.active = true;
+  nodes.value.beta.active = true;
 
   // Clear any existing timeouts
   timeoutIds.forEach(id => clearTimeout(id));
@@ -392,7 +392,7 @@ const restartAnimation = () => {
   playAnimation();
 };
 
-const toggleTenant = (tenantKey) => {
+const toggleNode = (nodeKey) => {
   if (!isCompleted.value) return;
 
   // Mark as interacted on first click
@@ -400,7 +400,7 @@ const toggleTenant = (tenantKey) => {
     hasInteracted.value = true;
   }
 
-  tenants.value[tenantKey].active = !tenants.value[tenantKey].active;
+  nodes.value[nodeKey].active = !nodes.value[nodeKey].active;
 };
 
 onMounted(() => {
@@ -890,21 +890,21 @@ const handleEscapeKey = (e) => {
   position: relative;
 }
 
-/* Tenants Stage */
-.tenants-stage {
+/* Nodes Stage */
+.nodes-stage {
   grid-column: 3;
   grid-row: 3;
   align-self: start;
   padding-top: 120px;
 }
 
-.tenant-crs {
+.node-crs {
   display: flex;
   gap: 1rem;
   justify-content: center;
 }
 
-.tenant-cr {
+.node-cr {
   background: linear-gradient(135deg, rgba(65, 209, 255, 0.1) 0%, rgba(65, 209, 255, 0.05) 100%);
   border: 2px solid rgba(65, 209, 255, 0.3);
   border-radius: 10px;
@@ -918,7 +918,7 @@ const handleEscapeKey = (e) => {
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.tenant-cr.fade-out {
+.node-cr.fade-out {
   opacity: 0;
   transform: translateY(20px);
 }
@@ -1084,7 +1084,7 @@ const handleEscapeKey = (e) => {
     top: 0;
   }
 
-  .tenants-stage {
+  .nodes-stage {
     grid-column: 1;
     grid-row: 7;
     padding-top: 0;
@@ -1142,12 +1142,12 @@ const handleEscapeKey = (e) => {
     font-size: 0.85rem;
   }
 
-  .tenant-crs {
+  .node-crs {
     flex-direction: column;
     gap: 0.75rem;
   }
 
-  .tenant-cr {
+  .node-cr {
     width: 100%;
   }
 

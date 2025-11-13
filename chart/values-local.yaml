@@ -59,7 +59,7 @@ readinessProbe:
 # Use default namespace for simpler setup
 namespace:
   create: false
-  name: "tenant-operator-system"
+  name: "lynq-system"
 
 # Local development annotations
 commonAnnotations:

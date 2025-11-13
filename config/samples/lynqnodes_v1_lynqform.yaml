@@ -1,0 +1,224 @@
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
+metadata:
+  labels:
+    app.kubernetes.io/name: lynq
+    app.kubernetes.io/managed-by: kustomize
+  name: webapp-template
+  namespace: default
+spec:
+  registryId: sample-registry
+
+  # Create ServiceAccount
+  serviceAccounts:
+    - id: sa
+      nameTemplate: "{{ .uid }}-sa"
+      spec:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          labels:
+            lynq.sh/uid: "{{ .uid }}"
+
+  # Create Deployment
+  deployments:
+    - id: api
+      nameTemplate: "{{ .uid }}-api"
+      dependIds: [sa]
+      waitForReady: true
+      timeoutSeconds: 300
+      spec:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          labels:
+            app: "{{ .uid }}"
+            lynq.sh/uid: "{{ .uid }}"
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
+              app: "{{ .uid }}"
+          template:
+            metadata:
+              labels:
+                app: "{{ .uid }}"
+            spec:
+              serviceAccountName: "{{ .uid }}-sa"
+              containers:
+                - name: api
+                  image: "{{ default \"nginx:stable\" .deployImage }}"
+                  ports:
+                    - containerPort: 8080
+                      name: http
+                      protocol: TCP
+                  env:
+                    - name: NODE_UID
+                      value: "{{ .uid }}"
+                    - name: NODE_HOST
+                      value: "{{ .host }}"
+                  resources:
+                    requests:
+                      cpu: 100m
+                      memory: 128Mi
+                    limits:
+                      cpu: 500m
+                      memory: 512Mi
+                  livenessProbe:
+                    httpGet:
+                      path: /healthz
+                      port: http
+                    initialDelaySeconds: 30
+                    periodSeconds: 10
+                  readinessProbe:
+                    httpGet:
+                      path: /ready
+                      port: http
+                    initialDelaySeconds: 5
+                    periodSeconds: 5
+
+  # Create Service
+  services:
+    - id: svc
+      nameTemplate: "{{ .uid }}-api"
+      dependIds: [api]
+      waitForReady: false
+      spec:
+        apiVersion: v1
+        kind: Service
+        metadata:
+          labels:
+            app: "{{ .uid }}"
+            lynq.sh/uid: "{{ .uid }}"
+        spec:
+          type: ClusterIP
+          selector:
+            app: "{{ .uid }}"
+          ports:
+            - port: 80
+              targetPort: 8080
+              protocol: TCP
+              name: http
+
+  # Create Ingress
+  ingresses:
+    - id: ing
+      nameTemplate: "{{ .uid }}"
+      dependIds: [svc]
+      spec:
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          labels:
+            lynq.sh/uid: "{{ .uid }}"
+          annotations:
+            nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        spec:
+          ingressClassName: nginx
+          rules:
+            - host: "{{ .host }}"
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: "{{ .uid }}-api"
+                        port:
+                          number: 80
+
+  # Create PodDisruptionBudget for HA
+  podDisruptionBudgets:
+    - id: pdb
+      nameTemplate: "{{ .uid }}-api"
+      dependIds: [api]
+      spec:
+        apiVersion: policy/v1
+        kind: PodDisruptionBudget
+        metadata:
+          labels:
+            app: "{{ .uid }}"
+            lynq.sh/uid: "{{ .uid }}"
+        spec:
+          minAvailable: 1
+          selector:
+            matchLabels:
+              app: "{{ .uid }}"
+
+  # Create NetworkPolicy for node isolation
+  networkPolicies:
+    - id: netpol
+      nameTemplate: "{{ .uid }}-isolation"
+      dependIds: [api]
+      spec:
+        apiVersion: networking.k8s.io/v1
+        kind: NetworkPolicy
+        metadata:
+          labels:
+            lynq.sh/uid: "{{ .uid }}"
+        spec:
+          podSelector:
+            matchLabels:
+              app: "{{ .uid }}"
+          policyTypes:
+            - Ingress
+            - Egress
+          ingress:
+            # Allow traffic from Ingress controller
+            - from:
+              - namespaceSelector:
+                  matchLabels:
+                    name: ingress-nginx
+              ports:
+              - protocol: TCP
+                port: 8080
+          egress:
+            # Allow DNS
+            - to:
+              - namespaceSelector: {}
+                podSelector:
+                  matchLabels:
+                    k8s-app: kube-dns
+              ports:
+              - protocol: UDP
+                port: 53
+            # Allow external HTTPS (for API calls)
+            - to:
+              - namespaceSelector: {}
+              ports:
+              - protocol: TCP
+                port: 443
+
+  # Create HorizontalPodAutoscaler for auto-scaling
+  horizontalPodAutoscalers:
+    - id: hpa
+      nameTemplate: "{{ .uid }}-api"
+      dependIds: [api]
+      spec:
+        apiVersion: autoscaling/v2
+        kind: HorizontalPodAutoscaler
+        metadata:
+          labels:
+            app: "{{ .uid }}"
+            lynq.sh/uid: "{{ .uid }}"
+        spec:
+          scaleTargetRef:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: "{{ .uid }}-api"
+          minReplicas: 2
+          maxReplicas: 10
+          metrics:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 70
+            - type: Resource
+              resource:
+                name: memory
+                target:
+                  type: Utilization
+                  averageUtilization: 80

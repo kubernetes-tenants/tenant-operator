@@ -1,6 +1,6 @@
 # Configuration Guide
 
-Configure Tenant Operator consistently across environments.
+Configure Lynq consistently across environments.
 
 [[toc]]
 
@@ -66,8 +66,8 @@ Requests ensure the controller can start on smaller nodes, while the higher limi
 ### MySQL Data Source
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
   name: my-registry
 spec:
@@ -106,23 +106,23 @@ Grant the registry user read-only credentials and limit network access between t
 
 ```mermaid
 flowchart TB
-    Template["TenantTemplate<br/>Spec"]
+    Template["LynqForm<br/>Spec"]
     Policies["Policies<br/>(Creation/Deletion/Conflict/Patch)"]
     Renderer["Template Renderer"]
-    Tenant["Tenant CR"]
+    Node["LynqNode CR"]
     Resources["Applied Resources"]
 
-    Template --> Policies --> Renderer --> Tenant --> Resources
+    Template --> Policies --> Renderer --> Node --> Resources
 
     classDef block fill:#fff8e1,stroke:#ffca28,stroke-width:2px;
-    class Template,Policies,Renderer,Tenant,Resources block;
+    class Template,Policies,Renderer,Node,Resources block;
 ```
 
 ### Default Policies
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: my-template
 spec:
@@ -161,7 +161,7 @@ spec:
 ### RBAC
 
 Default RBAC is automatically created during installation and includes:
-- Full access to TenantRegistry, TenantTemplate, Tenant CRDs
+- Full access to LynqHub, LynqForm, LynqNode CRDs
 - Management of workload resources (Deployments, Services, etc.)
 - Read-only access to Secrets (for database credentials)
 - Events and lease management for leader election

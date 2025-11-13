@@ -4,8 +4,8 @@ import { withMermaid } from "vitepress-plugin-mermaid";
 // https://vitepress.dev/reference/site-config
 export default withMermaid(
   defineConfig({
-    title: "Tenant Operator",
-    description: "Database-Driven Kubernetes Automation / Multi-Tenant Kubernetes Automation Platform",
+    title: "Lynq",
+    description: "Database-Driven Kubernetes Automation Platform",
     base: "/",
     srcDir: ".",
     ignoreDeadLinks: false,
@@ -134,7 +134,7 @@ export default withMermaid(
       socialLinks: [
         {
           icon: "github",
-          link: "https://github.com/kubernetes-tenants/tenant-operator",
+          link: "https://github.com/k8s-lynq/lynq",
         },
       ],
 
@@ -145,12 +145,12 @@ export default withMermaid(
       footer: {
         message:
           '<p style="margin-bottom: 12px">Released under the Apache 2.0 License.<br />Built with ❤️ using Kubebuilder, Controller-Runtime, and VitePress.</p>',
-        copyright: "Copyright © 2025 Tenant Operator",
+        copyright: "Copyright © 2025 Lynq",
       },
 
       editLink: {
         pattern:
-          "https://github.com/kubernetes-tenants/tenant-operator/edit/main/docs/:path",
+          "https://github.com/k8s-lynq/lynq/edit/main/docs/:path",
         text: "Edit this page on GitHub",
       },
 

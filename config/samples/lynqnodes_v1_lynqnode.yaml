@@ -1,0 +1,9 @@
+apiVersion: operator.lynq.sh/v1
+kind: LynqNode
+metadata:
+  labels:
+    app.kubernetes.io/name: lynq
+    app.kubernetes.io/managed-by: kustomize
+  name: lynqnode-sample
+spec:
+  # TODO(user): Add fields here

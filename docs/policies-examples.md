@@ -21,7 +21,7 @@ This guide demonstrates how policies work together through four common scenarios
 
 ## Example 1: Stateful Data (PVC)
 
-**Use Case:** Persistent storage that must survive tenant lifecycle changes and never lose data.
+**Use Case:** Persistent storage that must survive node lifecycle changes and never lose data.
 
 ### Configuration
 
@@ -47,18 +47,18 @@ persistentVolumeClaims:
 
 ```mermaid
 flowchart TD
-    Start([Tenant Created])
+    Start([Node Created])
     CheckExists{PVC Exists?}
     HasAnnotation{Has created-once<br/>annotation?}
     CreatePVC[Create PVC<br/>+ Add annotation<br/>+ Label tracking only<br/>NO ownerReference]
     SkipCreate[Skip Creation<br/>Count as Ready]
     TemplateChange[Template Updated]
     SkipUpdate[Skip Update<br/>CreationPolicy=Once]
-    TenantDelete[Tenant Deleted]
+    NodeDelete[Node Deleted]
     RemoveLabels[Remove Tracking Labels<br/>Add Orphan Labels]
     PVCRetained[PVC Retained in Cluster<br/>Data Preserved]
     ConflictDetect{PVC owned by<br/>another controller?}
-    MarkDegraded[Mark Tenant Degraded<br/>Emit ResourceConflict Event]
+    MarkDegraded[Mark Node Degraded<br/>Emit ResourceConflict Event]
 
     Start --> CheckExists
     CheckExists -->|No| ConflictDetect
@@ -74,8 +74,8 @@ flowchart TD
     SkipCreate --> TemplateChange
     TemplateChange --> SkipUpdate
 
-    SkipUpdate --> TenantDelete
-    TenantDelete --> RemoveLabels
+    SkipUpdate --> NodeDelete
+    NodeDelete --> RemoveLabels
     RemoveLabels --> PVCRetained
 
     classDef createStyle fill:#e8f5e9,stroke:#4caf50,stroke-width:2px;
@@ -92,14 +92,14 @@ flowchart TD
 ### Rationale
 
 - **`Once`**: PVC spec shouldn't change (size immutable in many storage classes)
-- **`Retain`**: Data survives tenant deletion - **NO ownerReference** set to prevent automatic deletion
+- **`Retain`**: Data survives node deletion - **NO ownerReference** set to prevent automatic deletion
 - **`Stuck`**: Safety - don't overwrite someone else's PVC on initial creation
 - **`apply`**: Standard SSA for declarative management
 
 ### Key Behaviors
 
 - ✅ Created once, never updated (even if template changes)
-- ✅ Survives tenant deletion (label-based tracking)
+- ✅ Survives node deletion (label-based tracking)
 - ✅ Safe conflict detection on initial creation
 - 📊 Data persists indefinitely
 - ⚠️ **Important**: Once `created-once` annotation is set, `ApplyResource` is never called again
@@ -107,7 +107,7 @@ flowchart TD
 ### Delete and Recreate Scenario
 
 ::: warning CreationPolicy=Once Limitation
-With `CreationPolicy: Once`, the operator **SKIPS** resources that have the `created-once` annotation. This means on Tenant recreation:
+With `CreationPolicy: Once`, the operator **SKIPS** resources that have the `created-once` annotation. This means on Node recreation:
 - **NO re-adoption** occurs
 - **Orphan markers remain** on the resource
 - **NO conflict detection** (ApplyResource is not called)
@@ -119,25 +119,25 @@ With `CreationPolicy: Once`, the operator **SKIPS** resources that have the `cre
 ```mermaid
 sequenceDiagram
     participant User
-    participant Tenant as Tenant CR
+    participant Node as LynqNode CR
     participant Operator
     participant PVC as PVC (acme-data)
 
-    Note over Tenant,PVC: Phase 1: Initial State
-    User->>Tenant: Create Tenant (uid: acme)
-    Tenant->>Operator: Reconcile
+    Note over Node,PVC: Phase 1: Initial State
+    User->>Node: Create Node (uid: acme)
+    Node->>Operator: Reconcile
     Operator->>PVC: Create PVC<br/>+ created-once: true<br/>+ NO ownerReference
     Note over PVC: Active & Managed Once
 
-    Note over Tenant,PVC: Phase 2: Deletion
-    User->>Tenant: Delete Tenant
-    Tenant->>Operator: Finalizer runs
+    Note over Node,PVC: Phase 2: Deletion
+    User->>Node: Delete Node
+    Node->>Operator: Finalizer runs
     Operator->>PVC: Add orphan labels<br/>(created-once: true REMAINS)
     Note over PVC: Orphaned but exists<br/>orphaned: true<br/>created-once: true
 
-    Note over Tenant,PVC: Phase 3: Recreation (Same UID)
-    User->>Tenant: Create Tenant (uid: acme)
-    Tenant->>Operator: Reconcile
+    Note over Node,PVC: Phase 3: Recreation (Same UID)
+    User->>Node: Create Node (uid: acme)
+    Node->>Operator: Reconcile
     Operator->>PVC: Check exists & has created-once?
     PVC-->>Operator: Yes, has created-once
     Operator->>Operator: SKIP (continue)<br/>Count as Ready<br/>NO ApplyResource call
@@ -148,7 +148,7 @@ sequenceDiagram
 
 ```bash
 # Remove the created-once annotation to allow re-adoption
-kubectl annotate pvc acme-data kubernetes-tenants.org/created-once-
+kubectl annotate pvc acme-data lynq.sh/created-once-
 
 # Next reconciliation will call ApplyResource and remove orphan markers
 ```
@@ -157,7 +157,7 @@ kubectl annotate pvc acme-data kubernetes-tenants.org/created-once-
 
 ## Example 2: Init Job
 
-**Use Case:** One-time initialization task that runs once per tenant and cleans up after tenant deletion.
+**Use Case:** One-time initialization task that runs once per node and cleans up after node deletion.
 
 ### Configuration
 
@@ -186,7 +186,7 @@ jobs:
 
 ```mermaid
 flowchart TD
-    Start([Tenant Created])
+    Start([Node Created])
     CheckExists{Job Exists?}
     HasAnnotation{Has created-once<br/>annotation?}
     CheckConflict{Job owned by<br/>another controller?}
@@ -198,7 +198,7 @@ flowchart TD
     SkipUpdate[Skip Update<br/>CreationPolicy=Once<br/>Job keeps running]
     ManualDelete[User Manually<br/>Deletes Job]
     RecreateJob[Recreate Job<br/>on Next Reconcile]
-    TenantDelete[Tenant Deleted]
+    NodeDelete[Node Deleted]
     AutoDelete[Kubernetes GC<br/>Deletes Job<br/>via ownerReference]
     Cleanup[Cleanup Complete]
 
@@ -220,10 +220,10 @@ flowchart TD
     TemplateChange --> SkipUpdate
     SkipUpdate --> ManualDelete
     ManualDelete --> RecreateJob
-    RecreateJob --> TenantDelete
+    RecreateJob --> NodeDelete
 
-    SkipUpdate --> TenantDelete
-    TenantDelete --> AutoDelete
+    SkipUpdate --> NodeDelete
+    NodeDelete --> AutoDelete
     AutoDelete --> Cleanup
 
     classDef createStyle fill:#e8f5e9,stroke:#4caf50,stroke-width:2px;
@@ -240,14 +240,14 @@ flowchart TD
 ### Rationale
 
 - **`Once`**: Initialization runs only once - even if template changes, job won't re-run
-- **`Delete`**: No need to keep job history after tenant deletion
+- **`Delete`**: No need to keep job history after node deletion
 - **`Force`**: Operator owns this resource exclusively - takes ownership if conflict
 - **`replace`**: Ensures exact job spec match
 
 ### Key Behaviors
 
-- ✅ Runs once per tenant lifetime
-- ✅ Automatically cleaned up on tenant deletion
+- ✅ Runs once per node lifetime
+- ✅ Automatically cleaned up on node deletion
 - ✅ Force takes ownership from conflicts
 - 🔄 Re-creates if manually deleted (but still runs only once due to created-once annotation)
 
@@ -289,17 +289,17 @@ deployments:
 
 ```mermaid
 flowchart TD
-    Start([Tenant Created])
+    Start([Node Created])
     CheckExists{Deployment<br/>Exists?}
     CheckConflict{Owned by another<br/>controller?}
-    MarkDegraded[Mark Tenant Degraded<br/>Stop Reconciliation<br/>Emit ResourceConflict]
+    MarkDegraded[Mark Node Degraded<br/>Stop Reconciliation<br/>Emit ResourceConflict]
     CreateDeploy[Create Deployment<br/>SSA with fieldManager<br/>+ ownerReference]
     DeployRunning[Deployment Running]
     TemplateChange[Template Updated<br/>DB Data Changed]
     ApplyUpdate[Apply Changes<br/>SSA updates only<br/>managed fields]
     DriftDetect[Manual Change<br/>Detected]
     AutoCorrect[Auto-Correct Drift<br/>Revert to desired state]
-    TenantDelete[Tenant Deleted]
+    NodeDelete[Node Deleted]
     AutoDelete[Kubernetes GC<br/>Deletes Deployment<br/>+ Pods + ReplicaSets]
     Cleanup[Complete Cleanup]
 
@@ -319,8 +319,8 @@ flowchart TD
     DriftDetect --> AutoCorrect
     AutoCorrect --> DeployRunning
 
-    DeployRunning --> TenantDelete
-    TenantDelete --> AutoDelete
+    DeployRunning --> NodeDelete
+    NodeDelete --> AutoDelete
     AutoDelete --> Cleanup
 
     classDef createStyle fill:#e8f5e9,stroke:#4caf50,stroke-width:2px;
@@ -353,7 +353,7 @@ flowchart TD
 
 ## Example 4: Shared Infrastructure
 
-**Use Case:** Configuration data that should stay updated but survive tenant deletion for debugging or shared resource references.
+**Use Case:** Configuration data that should stay updated but survive node deletion for debugging or shared resource references.
 
 ### Configuration
 
@@ -381,7 +381,7 @@ configMaps:
 
 ```mermaid
 flowchart TD
-    Start([Tenant Created])
+    Start([Node Created])
     CheckExists{ConfigMap<br/>Exists?}
     CheckConflict{Owned by another<br/>controller?}
     ForceTake[Force Take Ownership<br/>SSA with force=true<br/>+ Label tracking only<br/>NO ownerReference]
@@ -390,7 +390,7 @@ flowchart TD
     TemplateChange[Template Updated<br/>DB Data Changed]
     ApplyUpdate[Apply Changes<br/>SSA updates config data<br/>Force if conflict]
     OtherPodRef[Other Pods/Services<br/>Reference ConfigMap]
-    TenantDelete[Tenant Deleted]
+    NodeDelete[Node Deleted]
     RemoveLabels[Remove Tracking Labels<br/>Add Orphan Labels<br/>+ Timestamp + Reason]
     CMRetained[ConfigMap Retained<br/>Available for Investigation<br/>or Shared Use]
 
@@ -411,8 +411,8 @@ flowchart TD
     CMActive --> OtherPodRef
     OtherPodRef --> CMActive
 
-    CMActive --> TenantDelete
-    TenantDelete --> RemoveLabels
+    CMActive --> NodeDelete
+    NodeDelete --> RemoveLabels
     RemoveLabels --> CMRetained
 
     classDef createStyle fill:#e8f5e9,stroke:#4caf50,stroke-width:2px;
@@ -437,9 +437,9 @@ flowchart TD
 
 - ✅ Continuously synchronized with changes
 - ✅ Force takes ownership from conflicts
-- ✅ Survives tenant deletion (label-based tracking)
+- ✅ Survives node deletion (label-based tracking)
 - 📊 Available for investigation post-deletion
-- 🔗 Can be referenced by non-tenant resources
+- 🔗 Can be referenced by non-node resources
 
 ### Delete and Recreate with WhenNeeded
 
@@ -448,37 +448,37 @@ Unlike Example 1 (PVC with `Once`), resources with `WhenNeeded` automatically re
 ```mermaid
 sequenceDiagram
     participant User
-    participant Tenant as Tenant CR
+    participant Node as LynqNode CR
     participant Operator
     participant ConfigMap as ConfigMap<br/>(acme-shared-config)
 
-    Note over Tenant,ConfigMap: Phase 1: Active Updates
-    User->>Tenant: Create Tenant (uid: acme)
-    Tenant->>Operator: Reconcile
-    Operator->>ConfigMap: Create ConfigMap<br/>Labels: tenant=acme-web<br/>NO ownerReference
+    Note over Node,ConfigMap: Phase 1: Active Updates
+    User->>Node: Create Node (uid: acme)
+    Node->>Operator: Reconcile
+    Operator->>ConfigMap: Create ConfigMap<br/>Labels: lynqnode=acme-web<br/>NO ownerReference
     Note over ConfigMap: Active & Managed<br/>Syncs with template
 
-    User->>Tenant: Update Template<br/>(change config data)
-    Tenant->>Operator: Reconcile
+    User->>Node: Update Template<br/>(change config data)
+    Node->>Operator: Reconcile
     Operator->>ConfigMap: Apply Updates<br/>Force if conflict
     Note over ConfigMap: Updated with new data
 
-    Note over Tenant,ConfigMap: Phase 2: Deletion & Retention
-    User->>Tenant: Delete Tenant
-    Tenant->>Operator: Finalizer runs
+    Note over Node,ConfigMap: Phase 2: Deletion & Retention
+    User->>Node: Delete Node
+    Node->>Operator: Finalizer runs
     Operator->>ConfigMap: Remove tracking labels<br/>Add orphan labels
     Note over ConfigMap: Orphaned but exists<br/>Last data preserved
 
-    Note over Tenant,ConfigMap: Phase 3: Re-adoption & Resume Updates
-    User->>Tenant: Create Tenant (uid: acme)
-    Tenant->>Operator: Reconcile
+    Note over Node,ConfigMap: Phase 3: Re-adoption & Resume Updates
+    User->>Node: Create Node (uid: acme)
+    Node->>Operator: Reconcile
     Operator->>ConfigMap: Check exists & orphan?
     ConfigMap-->>Operator: Yes, found orphan
     Operator->>ConfigMap: Re-adopt + Apply Updates
     Note over ConfigMap: Active & Managed again<br/>Updates resume
 
-    User->>Tenant: Update Template<br/>(more changes)
-    Tenant->>Operator: Reconcile
+    User->>Node: Update Template<br/>(more changes)
+    Node->>Operator: Reconcile
     Operator->>ConfigMap: Apply Updates
     Note over ConfigMap: Syncs continuously
 ```
@@ -529,7 +529,7 @@ flowchart TD
     Q1{Resource holds<br/>persistent data?}
     Q2{Needs continuous<br/>updates?}
     Q3{Runs only once?}
-    Q4{Should survive<br/>tenant deletion?}
+    Q4{Should survive<br/>node deletion?}
     Q5{Conflict<br/>tolerance?}
 
     Result1[Example 1: PVC<br/>Once + Retain + Stuck]

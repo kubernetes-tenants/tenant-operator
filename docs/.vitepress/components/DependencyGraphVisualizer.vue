@@ -19,7 +19,7 @@
       <!-- Left: YAML Editor -->
       <div class="editor-panel">
         <div class="panel-header">
-          <h4>TenantTemplate YAML</h4>
+          <h4>LynqForm YAML</h4>
           <button @click="analyzeYaml" class="analyze-btn">
             🔍 Analyze Dependencies
           </button>
@@ -27,7 +27,7 @@
         <textarea
           v-model="yamlInput"
           class="yaml-editor"
-          placeholder="Paste your TenantTemplate YAML here..."
+          placeholder="Paste your LynqForm YAML here..."
           spellcheck="false"
         ></textarea>
         <div v-if="parseError" class="parse-error">
@@ -46,7 +46,7 @@
 
         <div v-if="nodes.length === 0" class="empty-state">
           <div class="empty-icon">📊</div>
-          <p>Paste a TenantTemplate YAML and click "Analyze Dependencies"</p>
+          <p>Paste a LynqForm YAML and click "Analyze Dependencies"</p>
           <p class="hint">or load an example from the buttons above</p>
         </div>
 
@@ -277,8 +277,8 @@ const presetList = [
 ];
 
 const presets = {
-  simple: `apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+  simple: `apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: simple-app
 spec:
@@ -314,8 +314,8 @@ spec:
         ports:
         - port: 80`,
 
-  'multi-tier': `apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+  'multi-tier': `apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: multi-tier-app
 spec:
@@ -323,17 +323,17 @@ spec:
 
   # Level 1: Namespace
   manifests:
-    - id: tenant-namespace
+    - id: node-namespace
       spec:
         apiVersion: v1
         kind: Namespace
         metadata:
-          name: "tenant-{{ .uid }}"
+          name: "node-{{ .uid }}"
 
   # Level 2: Secrets and PVC (parallel)
   secrets:
     - id: db-credentials
-      dependIds: ["tenant-namespace"]
+      dependIds: ["node-namespace"]
       nameTemplate: "{{ .uid }}-db-secret"
       spec:
         stringData:
@@ -341,7 +341,7 @@ spec:
 
   persistentVolumeClaims:
     - id: data-pvc
-      dependIds: ["tenant-namespace"]
+      dependIds: ["node-namespace"]
       nameTemplate: "{{ .uid }}-data"
       spec:
         accessModes: ["ReadWriteOnce"]
@@ -403,8 +403,8 @@ spec:
                   port:
                     number: 8080`,
 
-  parallel: `apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+  parallel: `apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: parallel-app
 spec:
@@ -474,8 +474,8 @@ spec:
         ports:
         - port: 8080`,
 
-  cycle: `apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+  cycle: `apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: invalid-cycle
 spec:
@@ -543,7 +543,7 @@ const analyzeYaml = () => {
     const parsed = yaml.load(yamlInput.value);
 
     if (!parsed || !parsed.spec) {
-      parseError.value = 'Invalid TenantTemplate: missing spec field';
+      parseError.value = 'Invalid LynqForm: missing spec field';
       return;
     }
 

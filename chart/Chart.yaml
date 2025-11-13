@@ -1,8 +1,8 @@
 apiVersion: v2
-name: tenant-operator
+name: lynq
 description: |
-  Kubernetes-Native Multi-Tenant Application Provisioning Operator.
-  Automates tenant lifecycle from database to production with template-based resource generation.
+  Lynq - Kubernetes-Native Database-Driven Automation.
+  Automates infrastructure provisioning from database to production with template-based resource generation.
 
   IMPORTANT: Requires cert-manager for ALL installations (including local development).
   Install cert-manager before installing this chart. See chart/CERT-MANAGER.md for details.
@@ -21,19 +21,20 @@ appVersion: "0.0.1"
 keywords:
   - kubernetes
   - operator
-  - multi-tenant
+  - database-driven
+  - automation
   - saas
   - provisioning
 
-home: https://github.com/kubernetes-tenants/tenant-operator
+home: https://github.com/k8s-lynq/lynq
 sources:
-  - https://github.com/kubernetes-tenants/tenant-operator
+  - https://github.com/k8s-lynq/lynq
 
 maintainers:
   - name: Tim Kang
     url: https://github.com/selenehyun
 
-icon: https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/docs/public/logo.png
+icon: https://raw.githubusercontent.com/k8s-lynq/lynq/main/docs/public/logo.png
 
 # Annotations for Artifact Hub
 annotations:
@@ -56,7 +57,7 @@ annotations:
     - kind: added
       description: Initial Helm chart release with full operator support
     - kind: added
-      description: Support for TenantRegistry, TenantTemplate, and Tenant CRDs
+      description: Support for LynqHub, LynqForm, and LynqNode CRDs
     - kind: added
       description: Webhook validation and defaulting
     - kind: added
@@ -69,13 +70,13 @@ annotations:
   # Links
   artifacthub.io/links: |
     - name: Documentation
-      url: https://docs.kubernetes-tenants.org/
+      url: https://lynq.sh/
     - name: GitHub Repository
-      url: https://github.com/kubernetes-tenants/tenant-operator
+      url: https://github.com/k8s-lynq/lynq
     - name: Issues
-      url: https://github.com/kubernetes-tenants/tenant-operator/issues
+      url: https://github.com/k8s-lynq/lynq/issues
     - name: Discussions
-      url: https://github.com/kubernetes-tenants/tenant-operator/discussions
+      url: https://github.com/k8s-lynq/lynq/discussions
 
   # Maintainers (additional to Chart maintainers)
   artifacthub.io/maintainers: |
@@ -97,12 +98,12 @@ annotations:
     ## Installation
 
     ```bash
-    helm repo add tenant-operator https://kubernetes-tenants.github.io/tenant-operator
+    helm repo add lynq-operator https://k8s-lynq.github.io/lynq
     helm repo update
-    helm install tenant-operator tenant-operator/tenant-operator
+    helm install lynq-operator k8s-lynq/lynq
     ```
 
-    See the [installation guide](https://docs.kubernetes-tenants.org/installation.html#installation-methods) for more details.
+    See the [installation guide](https://lynq.sh/installation.html#installation-methods) for more details.
 
   # Screenshots (optional - add if available)
   # artifacthub.io/screenshots: |
@@ -113,20 +114,20 @@ annotations:
   # cert-manager must be installed BEFORE installing this chart
   # Installation: kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
   artifacthub.io/crds: |
-    - kind: TenantRegistry
+    - kind: LynqHub
       version: v1
-      name: tenantregistries.operator.kubernetes-tenants.org
-      displayName: Tenant Registry
+      name: lynqhubs.operator.lynq.sh
+      displayName: LynqHub
       description: Defines external datasource configuration for tenant data
-    - kind: TenantTemplate
+    - kind: LynqForm
       version: v1
-      name: tenanttemplates.operator.kubernetes-tenants.org
-      displayName: Tenant Template
+      name: lynqforms.operator.lynq.sh
+      displayName: LynqForm
       description: Blueprint for Kubernetes resources to create per tenant
-    - kind: Tenant
+    - kind: LynqNode
       version: v1
-      name: tenants.operator.kubernetes-tenants.org
-      displayName: Tenant
+      name: lynqnodes.operator.lynq.sh
+      displayName: Lynq Node
       description: Represents a single tenant instance with its resources
 
 # Dependencies (optional)

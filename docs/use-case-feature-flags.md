@@ -1,8 +1,12 @@
 # Dynamic Feature Flags
 
+::: info Multi-Tenancy Example
+This guide uses **Multi-Tenancy** (SaaS application with multiple customers) as an example, which is the most common use case for Lynq. The pattern shown here can be adapted for any database-driven infrastructure automation scenario.
+:::
+
 ## Overview
 
-Enable/disable features per tenant using environment variables and separate templates for optional components.
+Enable/disable features per node using environment variables and separate templates for optional components.
 
 This pattern enables:
 - **A/B Testing**: Test new features with subset of users
@@ -24,8 +28,8 @@ Use database views and separate templates for expensive features (GPU, workers, 
 ## Database Schema
 
 ```sql
-CREATE TABLE tenants (
-  tenant_id VARCHAR(63) PRIMARY KEY,
+CREATE TABLE nodes (
+  node_id VARCHAR(63) PRIMARY KEY,
   domain VARCHAR(255) NOT NULL,
   is_active BOOLEAN DEFAULT TRUE,
 
@@ -57,13 +61,13 @@ CREATE TABLE tenants (
 Pass feature flags as environment variables and let the application enable/disable features:
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: base-app
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: production-tenants
+  registryId: production-nodes
 
   deployments:
     - id: main-app
@@ -80,9 +84,9 @@ spec:
           spec:
             containers:
               - name: app
-                image: registry.example.com/tenant-app:v1.5.0
+                image: registry.example.com/node-app:v1.5.0
                 env:
-                  - name: TENANT_ID
+                  - name: NODE_ID
                     value: "{{ .uid }}"
 
                   # Feature flags as environment variables
@@ -119,7 +123,7 @@ spec:
 
 **Benefits:**
 - Simple and efficient
-- All tenants get same deployment
+- All nodes get same deployment
 - Features enabled/disabled at application level
 - No infrastructure changes needed
 
@@ -132,27 +136,27 @@ For expensive features (like AI assistants with GPU), use database views and sep
 ### Database Views
 
 ```sql
--- Base view for all active tenants
-CREATE OR REPLACE VIEW tenants_active AS
-SELECT * FROM tenants WHERE is_active = TRUE;
+-- Base view for all active nodes
+CREATE OR REPLACE VIEW nodes_active AS
+SELECT * FROM nodes WHERE is_active = TRUE;
 
--- View for tenants with AI assistant enabled
-CREATE OR REPLACE VIEW tenants_with_ai AS
-SELECT * FROM tenants WHERE is_active = TRUE AND feature_ai_assistant = TRUE;
+-- View for nodes with AI assistant enabled
+CREATE OR REPLACE VIEW nodes_with_ai AS
+SELECT * FROM nodes WHERE is_active = TRUE AND feature_ai_assistant = TRUE;
 
--- View for tenants with webhook workers
-CREATE OR REPLACE VIEW tenants_with_webhooks AS
-SELECT * FROM tenants WHERE is_active = TRUE AND feature_webhooks = TRUE;
+-- View for nodes with webhook workers
+CREATE OR REPLACE VIEW nodes_with_webhooks AS
+SELECT * FROM nodes WHERE is_active = TRUE AND feature_webhooks = TRUE;
 ```
 
-### TenantRegistry for AI Assistant
+### LynqHub for AI Assistant
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: tenants-with-ai
-  namespace: tenant-operator-system
+  name: nodes-with-ai
+  namespace: lynq-system
 spec:
   source:
     type: mysql
@@ -160,15 +164,15 @@ spec:
     mysql:
       host: mysql.database.svc.cluster.local
       port: 3306
-      database: tenants_db
-      username: tenant_reader
+      database: nodes_db
+      username: node_reader
       passwordRef:
         name: mysql-credentials
         key: password
-      table: tenants_with_ai  # View that filters AI-enabled tenants
+      table: nodes_with_ai  # View that filters AI-enabled nodes
 
   valueMappings:
-    uid: tenant_id
+    uid: node_id
     hostOrUrl: domain
     activate: is_active
 
@@ -176,16 +180,16 @@ spec:
     featureConfig: feature_config
 ```
 
-### TenantTemplate for AI Assistant
+### LynqForm for AI Assistant
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
   name: ai-assistant
-  namespace: tenant-operator-system
+  namespace: lynq-system
 spec:
-  registryId: tenants-with-ai  # References filtered registry
+  registryId: nodes-with-ai  # References filtered registry
 
   deployments:
     - id: ai-assistant
@@ -207,7 +211,7 @@ spec:
               - name: ai-assistant
                 image: registry.example.com/ai-assistant:v2.0.0
                 env:
-                  - name: TENANT_ID
+                  - name: NODE_ID
                     value: "{{ .uid }}"
                   - name: OPENAI_API_KEY
                     valueFrom:
@@ -240,7 +244,7 @@ spec:
 ```
 
 **Benefits:**
-- Resource efficiency: Only tenants with enabled features consume resources
+- Resource efficiency: Only nodes with enabled features consume resources
 - Cost optimization: GPU/expensive resources only allocated when needed
 - Automatic cleanup: Disabling feature in DB automatically removes infrastructure
 - Independent scaling: Feature-specific resources scaled separately
@@ -253,13 +257,13 @@ spec:
 
 ```sql
 -- Enable SSO for premium customer
-UPDATE tenants
+UPDATE nodes
 SET feature_sso = TRUE,
     feature_config = JSON_SET(feature_config, '$.sso_provider', 'okta')
-WHERE tenant_id = 'acme-corp';
+WHERE node_id = 'acme-corp';
 ```
 
-Tenant Operator:
+Lynq:
 1. Updates main-app Deployment with new environment variables
 2. Kubernetes rolls out the updated pods automatically
 3. Application detects `FEATURE_SSO=true` and enables SSO
@@ -268,23 +272,23 @@ Tenant Operator:
 
 ```sql
 -- Enable AI assistant for premium customer
-UPDATE tenants
+UPDATE nodes
 SET feature_ai_assistant = TRUE,
     feature_config = JSON_SET(feature_config, '$.ai_model', 'gpt-4')
-WHERE tenant_id = 'acme-corp';
+WHERE node_id = 'acme-corp';
 ```
 
-Since the database view `tenants_with_ai` filters on `feature_ai_assistant = TRUE`:
-1. Registry `tenants-with-ai` syncs and detects new tenant
-2. Creates Tenant CR `acme-corp-ai-assistant`
+Since the database view `nodes_with_ai` filters on `feature_ai_assistant = TRUE`:
+1. Registry nodes-with-ai syncs and detects new node
+2. Creates LynqNode CR `acme-corp-ai-assistant`
 3. Deploys AI assistant Deployment + Service with GPU
-4. Marks Tenant as Ready once all resources are up
+4. Marks LynqNode as Ready once all resources are up
 
 ### Gradual Rollout by Plan
 
 ```sql
 -- Enable advanced reports for all pro/enterprise customers
-UPDATE tenants
+UPDATE nodes
 SET feature_advanced_reports = TRUE
 WHERE plan_type IN ('pro', 'enterprise');
 ```
@@ -293,19 +297,19 @@ WHERE plan_type IN ('pro', 'enterprise');
 
 ```sql
 -- Enable webhooks for 10% of users (random sampling)
-UPDATE tenants
+UPDATE nodes
 SET feature_webhooks = TRUE
 WHERE RAND() < 0.1 AND plan_type = 'pro';
 ```
 
-This triggers creation of webhook worker deployments only for those 10% of tenants.
+This triggers creation of webhook worker deployments only for those 10% of nodes.
 
 ## Automatic Cleanup on Feature Disable
 
 ### Pattern 1 (Application-Level)
 
 ```sql
-UPDATE tenants SET feature_sso = FALSE WHERE tenant_id = 'acme-corp';
+UPDATE nodes SET feature_sso = FALSE WHERE node_id = 'acme-corp';
 ```
 
 - Environment variable updated in Deployment
@@ -315,12 +319,12 @@ UPDATE tenants SET feature_sso = FALSE WHERE tenant_id = 'acme-corp';
 ### Pattern 2 (Infrastructure-Level)
 
 ```sql
-UPDATE tenants SET feature_ai_assistant = FALSE WHERE tenant_id = 'acme-corp';
+UPDATE nodes SET feature_ai_assistant = FALSE WHERE node_id = 'acme-corp';
 ```
 
-- Tenant `acme-corp` no longer appears in `tenants_with_ai` view
-- Registry `tenants-with-ai` syncs and detects tenant removal
-- Tenant Operator deletes Tenant CR `acme-corp-ai-assistant`
+- Node `acme-corp` no longer appears in `nodes_with_ai` view
+- Registry nodes-with-ai syncs and detects node removal
+- Lynq deletes LynqNode CR `acme-corp-ai-assistant`
 - AI assistant Deployment + Service automatically garbage collected
 - GPU resources freed
 

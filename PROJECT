@@ -2,40 +2,40 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: kubernetes-tenants.org
+domain: lynq.sh
 layout:
 - go.kubebuilder.io/v4
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
-projectName: tenant-operator
-repo: github.com/kubernetes-tenants/tenant-operator
+projectName: lynq-operator
+repo: github.com/k8s-lynq/lynq
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: kubernetes-tenants.org
+  domain: lynq.sh
   group: operator
-  kind: TenantRegistry
-  path: github.com/kubernetes-tenants/tenant-operator/api/v1
+  kind: LynqHub
+  path: github.com/k8s-lynq/lynq/api/v1
   version: v1
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: kubernetes-tenants.org
+  domain: lynq.sh
   group: operator
-  kind: TenantTemplate
-  path: github.com/kubernetes-tenants/tenant-operator/api/v1
+  kind: LynqForm
+  path: github.com/k8s-lynq/lynq/api/v1
   version: v1
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: kubernetes-tenants.org
+  domain: lynq.sh
   group: operator
-  kind: Tenant
-  path: github.com/kubernetes-tenants/tenant-operator/api/v1
+  kind: LynqNode
+  path: github.com/k8s-lynq/lynq/api/v1
   version: v1
 version: "3"

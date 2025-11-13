@@ -37,9 +37,9 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
-	"github.com/kubernetes-tenants/tenant-operator/internal/controller"
-	"github.com/kubernetes-tenants/tenant-operator/internal/status"
+	lynqv1 "github.com/k8s-lynq/lynq/api/v1"
+	"github.com/k8s-lynq/lynq/internal/controller"
+	"github.com/k8s-lynq/lynq/internal/status"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -51,7 +51,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(tenantsv1.AddToScheme(scheme))
+	utilruntime.Must(lynqv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -64,9 +64,9 @@ func main() {
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
-	var registryConcurrency int
-	var templateConcurrency int
-	var tenantConcurrency int
+	var hubConcurrency int
+	var formConcurrency int
+	var nodeConcurrency int
 	var tlsOpts []func(*tls.Config)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
@@ -85,12 +85,12 @@ func main() {
 	flag.StringVar(&metricsCertKey, "metrics-cert-key", "tls.key", "The name of the metrics server key file.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
-	flag.IntVar(&registryConcurrency, "registry-concurrency", 3,
-		"Number of concurrent reconciliations for TenantRegistry controller")
-	flag.IntVar(&templateConcurrency, "template-concurrency", 5,
-		"Number of concurrent reconciliations for TenantTemplate controller")
-	flag.IntVar(&tenantConcurrency, "tenant-concurrency", 10,
-		"Number of concurrent reconciliations for Tenant controller")
+	flag.IntVar(&hubConcurrency, "hub-concurrency", 3,
+		"Number of concurrent reconciliations for LynqHub controller")
+	flag.IntVar(&formConcurrency, "form-concurrency", 5,
+		"Number of concurrent reconciliations for LynqForm controller")
+	flag.IntVar(&nodeConcurrency, "node-concurrency", 10,
+		"Number of concurrent reconciliations for LynqNode controller")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -196,7 +196,7 @@ func main() {
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "f2130106.kubernetes-tenants.org",
+		LeaderElectionID:       "f2130106.lynq.sh",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -214,34 +214,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&controller.TenantRegistryReconciler{
+	if err := (&controller.LynqHubReconciler{
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
-		Recorder: mgr.GetEventRecorderFor("tenantregistry-controller"),
-	}).SetupWithManager(mgr, registryConcurrency); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "TenantRegistry")
+		Recorder: mgr.GetEventRecorderFor("lynqhub-controller"),
+	}).SetupWithManager(mgr, hubConcurrency); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LynqHub")
 		os.Exit(1)
 	}
-	if err := (&controller.TenantTemplateReconciler{
+	if err := (&controller.LynqFormReconciler{
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
-		Recorder: mgr.GetEventRecorderFor("tenanttemplate-controller"),
-	}).SetupWithManager(mgr, templateConcurrency); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "TenantTemplate")
+		Recorder: mgr.GetEventRecorderFor("lynqform-controller"),
+	}).SetupWithManager(mgr, formConcurrency); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LynqForm")
 		os.Exit(1)
 	}
-	// Create StatusManager for Tenant controller
+	// Create StatusManager for LynqNode controller
 	statusManager := status.NewManager(mgr.GetClient())
 
-	tenantReconciler := &controller.TenantReconciler{
+	lynqnodeReconciler := &controller.LynqNodeReconciler{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
-		Recorder:      mgr.GetEventRecorderFor("tenant-controller"),
+		Recorder:      mgr.GetEventRecorderFor("lynqnode-controller"),
 		StatusManager: statusManager,
 	}
 
-	if err := tenantReconciler.SetupWithManager(mgr, tenantConcurrency); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Tenant")
+	if err := lynqnodeReconciler.SetupWithManager(mgr, nodeConcurrency); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LynqNode")
 		os.Exit(1)
 	}
 
@@ -254,12 +254,12 @@ func main() {
 
 	// Setup webhooks (always enabled for validation/defaulting with TLS)
 	setupLog.Info("Setting up webhooks with TLS")
-	if err := (&tenantsv1.TenantRegistry{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "TenantRegistry")
+	if err := (&lynqv1.LynqHub{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "LynqHub")
 		os.Exit(1)
 	}
-	if err := (&tenantsv1.TenantTemplate{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "TenantTemplate")
+	if err := (&lynqv1.LynqForm{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "LynqForm")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
