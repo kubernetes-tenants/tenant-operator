@@ -77,7 +77,7 @@ type TResource struct {
 	// +kubebuilder:default=WhenNeeded
 	CreationPolicy CreationPolicy `json:"creationPolicy,omitempty"`
 
-	// DeletionPolicy determines what happens to the resource when the Tenant is deleted
+	// DeletionPolicy determines what happens to the resource when the LynqNode is deleted
 	// Default: Delete
 	// +optional
 	// +kubebuilder:default=Delete
@@ -95,7 +95,7 @@ type TResource struct {
 	NameTemplate string `json:"nameTemplate,omitempty"`
 
 	// TargetNamespace specifies the namespace where the resource should be created
-	// If empty, defaults to the same namespace as the Tenant CR
+	// If empty, defaults to the same namespace as the LynqNode CR
 	// For cross-namespace resources, label-based tracking is used instead of ownerReferences
 	// Supports Go template syntax (e.g., "{{ .uid }}-namespace")
 	// +optional

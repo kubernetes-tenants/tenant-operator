@@ -1,6 +1,6 @@
 # GitHub Actions Workflows
 
-This directory contains automated workflows for the Tenant Operator project.
+This directory contains automated workflows for the Lynq Operator project.
 
 ## Workflows
 
@@ -41,8 +41,8 @@ gh-pages/
 ├── api/                    # VitePress API docs
 ├── index.yaml              # Helm repository index (from helm-release.yml)
 ├── artifacthub-repo.yml    # Artifact Hub metadata (from helm-release.yml)
-├── tenant-operator-*.tgz   # Helm chart packages (from helm-release.yml)
-└── CNAME                   # Custom domain: docs.kubernetes-tenants.org
+├── lynq-operator-*.tgz   # Helm chart packages (from helm-release.yml)
+└── CNAME                   # Custom domain: lynq.sh
 ```
 
 ## Concurrency Control

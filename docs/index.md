@@ -255,7 +255,7 @@ Automatically.
 
 <div class="hero-actions">
 <a href="/quickstart" class="hero-action brand">Get Started</a>
-<a href="https://github.com/kubernetes-tenants/tenant-operator" class="hero-action alt" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+<a href="https://github.com/k8s-lynq/lynq" class="hero-action alt" target="_blank" rel="noopener noreferrer">View on GitHub</a>
 </div>
 
 <div class="hero-diagram">
@@ -264,14 +264,14 @@ Automatically.
 </div>
 </div>
 
-## Why Tenant Operator?
+## Why Lynq?
 
 <ComparisonSection />
 
 <div style="margin: 3rem 0; padding: 2.5rem 2rem; background: var(--vp-c-bg-soft); border-radius: 16px; border: 1px solid var(--vp-c-divider);">
 
 <h3 style="margin: 0 0 0.5rem; text-align: center; font-size: 1.75rem; color: var(--vp-c-text-1);">Perfect For</h3>
-<p style="text-align: center; color: var(--vp-c-text-2); margin: 0 0 2rem; font-size: 0.95rem;">Build multi-tenant infrastructure for any scale</p>
+<p style="text-align: center; color: var(--vp-c-text-2); margin: 0 0 2rem; font-size: 0.95rem;">Automate infrastructure provisioning at any scale</p>
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
 <div style="text-align: center; padding: 1.5rem; background: var(--vp-c-bg); border-radius: 12px; border: 1px solid var(--vp-c-divider); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
@@ -301,26 +301,12 @@ Self-service infrastructure for teams without manual ticket workflows
 
 </div>
 
-<div style="text-align: center; padding: 2.5rem 2rem; background: linear-gradient(135deg, rgba(66, 184, 131, 0.08) 0%, rgba(102, 126, 234, 0.08) 100%); border-radius: 16px; margin: 2.5rem 0; border: 1px solid rgba(102, 126, 234, 0.15); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 4px 24px rgba(102, 126, 234, 0.08);">
-<div>
-<div style="font-size: clamp(1.25rem, 3vw, 1.75rem); font-weight: 700; margin-bottom: 0.75rem; color: var(--vp-c-text-1);">
-Stop Managing Tenants Manually
-</div>
-<p style="font-size: clamp(0.9rem, 2vw, 1.05rem); margin: 0 0 1.5rem; line-height: 1.6; color: var(--vp-c-text-2); max-width: 600px; margin-left: auto; margin-right: auto;">
-Let your database drive your infrastructure. Focus on your product, not kubectl commands.
-</p>
-<a href="/quickstart" style="display: inline-block; padding: 0.75rem 2rem; background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%); color: var(--vp-c-brand); border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; border: 1.5px solid rgba(102, 126, 234, 0.25); box-shadow: 0 2px 12px rgba(102, 126, 234, 0.15);">
-Get Started in 5 Minutes →
-</a>
-</div>
-</div>
-
 ## How It Works
 
 <HowItWorksDiagram />
 
 ::: tip 💡 Interactive
-Click **TenantRegistry** and **TenantTemplate** to see the YAML, or click database rows to toggle tenants
+Click **LynqHub** and **LynqForm** to see the YAML, or click database rows to toggle nodes
 :::
 
 
@@ -329,7 +315,7 @@ Click **TenantRegistry** and **TenantTemplate** to see the YAML, or click databa
     <div style="font-size: 2.5rem; margin-bottom: 0.75rem">1️⃣</div>
     <h3 style="margin: 0.5rem 0 0.75rem">Connect Your Data</h3>
     <p style="margin: 0; color: var(--vp-c-text-2); font-size: 0.95rem; line-height: 1.6">
-      Point to your MySQL database where tenant information lives. The operator reads active tenants automatically.
+      Point to your MySQL database where node information lives. The operator reads active nodes automatically.
     </p>
   </div>
 
@@ -337,7 +323,7 @@ Click **TenantRegistry** and **TenantTemplate** to see the YAML, or click databa
     <div style="font-size: 2.5rem; margin-bottom: 0.75rem">2️⃣</div>
     <h3 style="margin: 0.5rem 0 0.75rem">Define Your Template</h3>
     <p style="margin: 0; color: var(--vp-c-text-2); font-size: 0.95rem; line-height: 1.6">
-      Write one template describing what each tenant needs: deployments, services, ingresses, and any custom resources.
+      Write one template describing what each node needs: deployments, services, ingresses, and any custom resources.
     </p>
   </div>
 
@@ -345,7 +331,7 @@ Click **TenantRegistry** and **TenantTemplate** to see the YAML, or click databa
     <div style="font-size: 2.5rem; margin-bottom: 0.75rem">3️⃣</div>
     <h3 style="margin: 0.5rem 0 0.75rem">Deploy Automatically</h3>
     <p style="margin: 0; color: var(--vp-c-text-2); font-size: 0.95rem; line-height: 1.6">
-      Every active tenant gets isolated infrastructure. Resources are created, updated, and cleaned up automatically as your data changes.
+      Every active node gets isolated infrastructure. Resources are created, updated, and cleaned up automatically as your data changes.
     </p>
   </div>
 </div>
@@ -356,7 +342,7 @@ Click **TenantRegistry** and **TenantTemplate** to see the YAML, or click databa
       1 Database Row = 1 Complete Stack
     </div>
     <p style="font-size: clamp(0.95rem, 2vw, 1.1rem); margin: 0; line-height: 1.6; color: var(--vp-c-text-2); max-width: 700px; margin-left: auto; margin-right: auto;">
-      Add a tenant to your database → Get Deployment + Service + Ingress + DNS + whatever you need
+      Add a node to your database → Get Deployment + Service + Ingress + DNS + whatever you need
     </p>
   </div>
 </div>
@@ -455,7 +441,7 @@ Follow the [Quick Start Guide](/quickstart) to see this in action with a working
       </li>
       <li style="margin: 0.75rem 0">
         <a href="/integration-external-dns"><strong>External DNS</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Automatic DNS per tenant</span>
+        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Automatic DNS per node</span>
       </li>
       <li style="margin: 0.75rem 0">
         <a href="/integration-terraform-operator"><strong>Terraform Operator</strong></a><br/>
@@ -475,7 +461,7 @@ Follow the [Quick Start Guide](/quickstart) to see this in action with a working
   <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px">
     <h3 style="margin: 0 0 0.75rem">📦 GitHub Repository</h3>
     <p style="margin: 0 0 0.5rem">
-      <a href="https://github.com/kubernetes-tenants/tenant-operator" target="_blank" rel="noopener noreferrer">kubernetes-tenants/tenant-operator</a>
+      <a href="https://github.com/k8s-lynq/lynq" target="_blank" rel="noopener noreferrer">k8s-lynq/lynq</a>
     </p>
     <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2)">
       Source code, releases, and project roadmap
@@ -485,7 +471,7 @@ Follow the [Quick Start Guide](/quickstart) to see this in action with a working
   <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px">
     <h3 style="margin: 0 0 0.75rem">🐛 Issue Tracker</h3>
     <p style="margin: 0 0 0.5rem">
-      <a href="https://github.com/kubernetes-tenants/tenant-operator/issues" target="_blank" rel="noopener noreferrer">Report Issues</a>
+      <a href="https://github.com/k8s-lynq/lynq/issues" target="_blank" rel="noopener noreferrer">Report Issues</a>
     </p>
     <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2)">
       Bug reports, feature requests, and discussions

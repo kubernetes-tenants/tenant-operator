@@ -39,7 +39,7 @@ func TestNewMySQLAdapter(t *testing.T) {
 				Port:     3306,
 				Username: "root",
 				Password: "password",
-				Database: "tenants",
+				Database: "nodes",
 			},
 			wantErr: true, // Will fail without real MySQL, but tests config parsing
 		},
@@ -50,7 +50,7 @@ func TestNewMySQLAdapter(t *testing.T) {
 				Port:            3306,
 				Username:        "root",
 				Password:        "password",
-				Database:        "tenants",
+				Database:        "nodes",
 				MaxOpenConns:    50,
 				MaxIdleConns:    10,
 				ConnMaxLifetime: "10m",
@@ -71,19 +71,19 @@ func TestNewMySQLAdapter(t *testing.T) {
 	}
 }
 
-func TestMySQLAdapter_QueryTenants(t *testing.T) {
+func TestMySQLAdapter_QueryNodes(t *testing.T) {
 	tests := []struct {
 		name          string
 		queryConfig   QueryConfig
 		setupMock     func(sqlmock.Sqlmock)
-		want          []TenantRow
+		want          []NodeRow
 		wantErr       bool
 		errorContains string
 	}{
 		{
-			name: "successful query with active tenants",
+			name: "successful query with active nodes",
 			queryConfig: QueryConfig{
-				Table: "tenants",
+				Table: "nodes",
 				ValueMappings: ValueMappings{
 					UID:       "id",
 					HostOrURL: "url",
@@ -96,17 +96,17 @@ func TestMySQLAdapter_QueryTenants(t *testing.T) {
 			},
 			setupMock: func(mock sqlmock.Sqlmock) {
 				rows := sqlmock.NewRows([]string{"id", "url", "active", "subscription_plan", "deployment_region"}).
-					AddRow("tenant1", "https://tenant1.example.com", "1", "premium", "us-east-1").
-					AddRow("tenant2", "https://tenant2.example.com", "true", "basic", "us-west-2").
-					AddRow("tenant3", "https://tenant3.example.com", "0", "premium", "eu-west-1"). // Inactive
-					AddRow("tenant4", "", "1", "basic", "ap-south-1")                              // Empty URL, should be filtered
+					AddRow("node1", "https://node1.example.com", "1", "premium", "us-east-1").
+					AddRow("node2", "https://node2.example.com", "true", "basic", "us-west-2").
+					AddRow("node3", "https://node3.example.com", "0", "premium", "eu-west-1"). // Inactive
+					AddRow("node4", "", "1", "basic", "ap-south-1")                            // Empty URL, should be filtered
 				mock.ExpectQuery("SELECT .* FROM .*").
 					WillReturnRows(rows)
 			},
-			want: []TenantRow{
+			want: []NodeRow{
 				{
-					UID:       "tenant1",
-					HostOrURL: "https://tenant1.example.com",
+					UID:       "node1",
+					HostOrURL: "https://node1.example.com",
 					Activate:  "1",
 					Extra: map[string]string{
 						"planId": "premium",
@@ -114,8 +114,8 @@ func TestMySQLAdapter_QueryTenants(t *testing.T) {
 					},
 				},
 				{
-					UID:       "tenant2",
-					HostOrURL: "https://tenant2.example.com",
+					UID:       "node2",
+					HostOrURL: "https://node2.example.com",
 					Activate:  "true",
 					Extra: map[string]string{
 						"planId": "basic",
@@ -128,7 +128,7 @@ func TestMySQLAdapter_QueryTenants(t *testing.T) {
 		{
 			name: "query with NULL values",
 			queryConfig: QueryConfig{
-				Table: "tenants",
+				Table: "nodes",
 				ValueMappings: ValueMappings{
 					UID:       "id",
 					HostOrURL: "url",
@@ -140,17 +140,17 @@ func TestMySQLAdapter_QueryTenants(t *testing.T) {
 			},
 			setupMock: func(mock sqlmock.Sqlmock) {
 				rows := sqlmock.NewRows([]string{"id", "url", "active", "json_config"}).
-					AddRow("tenant1", "https://tenant1.example.com", "1", sql.NullString{Valid: false}). // NULL config
-					AddRow(sql.NullString{Valid: false}, "https://tenant2.example.com", "1", "{}").      // NULL id
-					AddRow("tenant3", sql.NullString{Valid: false}, "1", "{}").                          // NULL URL
-					AddRow("tenant4", "https://tenant4.example.com", sql.NullString{Valid: false}, "{}") // NULL activate
+					AddRow("node1", "https://node1.example.com", "1", sql.NullString{Valid: false}). // NULL config
+					AddRow(sql.NullString{Valid: false}, "https://node2.example.com", "1", "{}").    // NULL id
+					AddRow("node3", sql.NullString{Valid: false}, "1", "{}").                        // NULL URL
+					AddRow("node4", "https://node4.example.com", sql.NullString{Valid: false}, "{}") // NULL activate
 				mock.ExpectQuery("SELECT .* FROM .*").
 					WillReturnRows(rows)
 			},
-			want: []TenantRow{
+			want: []NodeRow{
 				{
-					UID:       "tenant1",
-					HostOrURL: "https://tenant1.example.com",
+					UID:       "node1",
+					HostOrURL: "https://node1.example.com",
 					Activate:  "1",
 					Extra: map[string]string{
 						"config": "",
@@ -158,7 +158,7 @@ func TestMySQLAdapter_QueryTenants(t *testing.T) {
 				},
 				{
 					UID:       "", // NULL UID is converted to empty string but still included
-					HostOrURL: "https://tenant2.example.com",
+					HostOrURL: "https://node2.example.com",
 					Activate:  "1",
 					Extra: map[string]string{
 						"config": "{}",
@@ -170,22 +170,22 @@ func TestMySQLAdapter_QueryTenants(t *testing.T) {
 		{
 			name: "query with no extra mappings",
 			queryConfig: QueryConfig{
-				Table: "tenants",
+				Table: "nodes",
 				ValueMappings: ValueMappings{
-					UID:       "tenant_id",
-					HostOrURL: "tenant_url",
+					UID:       "node_id",
+					HostOrURL: "node_url",
 					Activate:  "is_active",
 				},
 				ExtraMappings: nil,
 			},
 			setupMock: func(mock sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"tenant_id", "tenant_url", "is_active"}).
+				rows := sqlmock.NewRows([]string{"node_id", "node_url", "is_active"}).
 					AddRow("t1", "https://t1.example.com", "yes").
 					AddRow("t2", "https://t2.example.com", "YES")
 				mock.ExpectQuery("SELECT .* FROM .*").
 					WillReturnRows(rows)
 			},
-			want: []TenantRow{
+			want: []NodeRow{
 				{
 					UID:       "t1",
 					HostOrURL: "https://t1.example.com",
@@ -204,7 +204,7 @@ func TestMySQLAdapter_QueryTenants(t *testing.T) {
 		{
 			name: "database query error",
 			queryConfig: QueryConfig{
-				Table: "tenants",
+				Table: "nodes",
 				ValueMappings: ValueMappings{
 					UID:       "id",
 					HostOrURL: "url",
@@ -216,12 +216,12 @@ func TestMySQLAdapter_QueryTenants(t *testing.T) {
 					WillReturnError(sql.ErrConnDone)
 			},
 			wantErr:       true,
-			errorContains: "failed to query tenants",
+			errorContains: "failed to query nodes",
 		},
 		{
 			name: "scan error",
 			queryConfig: QueryConfig{
-				Table: "tenants",
+				Table: "nodes",
 				ValueMappings: ValueMappings{
 					UID:       "id",
 					HostOrURL: "url",
@@ -231,7 +231,7 @@ func TestMySQLAdapter_QueryTenants(t *testing.T) {
 			setupMock: func(mock sqlmock.Sqlmock) {
 				// Return fewer columns than expected (will cause scan error)
 				rows := sqlmock.NewRows([]string{"id", "url"}).
-					AddRow("tenant1", "https://tenant1.example.com")
+					AddRow("node1", "https://node1.example.com")
 				mock.ExpectQuery("SELECT .* FROM .*").
 					WillReturnRows(rows)
 			},
@@ -257,7 +257,7 @@ func TestMySQLAdapter_QueryTenants(t *testing.T) {
 
 			// Execute query
 			ctx := context.Background()
-			got, err := adapter.QueryTenants(ctx, tt.queryConfig)
+			got, err := adapter.QueryNodes(ctx, tt.queryConfig)
 
 			// Check error
 			if tt.wantErr {
@@ -299,8 +299,8 @@ func TestJoinColumns(t *testing.T) {
 		},
 		{
 			name:    "columns with special characters",
-			columns: []string{"user.id", "tenant-name"},
-			want:    "`user.id`, `tenant-name`",
+			columns: []string{"user.id", "node-name"},
+			want:    "`user.id`, `node-name`",
 		},
 	}
 

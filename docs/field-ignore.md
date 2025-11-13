@@ -18,8 +18,8 @@ Standard `CreationPolicy` options are too coarse-grained:
 The `ignoreFields` array accepts **standard JSONPath expressions** to specify which fields should be excluded from synchronization.
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 spec:
   deployments:
     - id: web-app
@@ -304,7 +304,7 @@ deployments:
     ignoreFields: ["$.spec.replicas"]
 ```
 
-When Tenant is deleted, deletion policy is still respected (resources retained).
+When LynqNode is deleted, deletion policy is still respected (resources retained).
 
 ## Best Practices
 
@@ -359,7 +359,7 @@ abs(
 
 ```bash
 # Verify JSONPath
-kubectl get tenant mytenant -o yaml
+kubectl get lynqnode -o yaml
 # Check ignoreFields syntax
 ```
 
@@ -401,7 +401,7 @@ ignoreFields: ["spec.replicas"]    ❌
 
 ### Large-Scale Deployments
 
-For 1000+ tenants with ignored fields:
+For 1000+ nodes with ignored fields:
 - **CPU impact**: < 1% overhead
 - **Reconciliation time**: < 10ms additional latency
 
@@ -428,7 +428,7 @@ deployments:
 **Step 3**: Apply template
 
 ```bash
-kubectl apply -f tenant-template.yaml
+kubectl apply -f lynqnode-template.yaml
 ```
 
 **Step 4**: Verify

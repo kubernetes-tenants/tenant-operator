@@ -24,22 +24,22 @@ import (
 
 // Datasource defines the interface that all datasource adapters must implement
 type Datasource interface {
-	// QueryTenants retrieves active tenant rows from the datasource
-	QueryTenants(ctx context.Context, config QueryConfig) ([]TenantRow, error)
+	// QueryNodes retrieves active node rows from the datasource
+	QueryNodes(ctx context.Context, config QueryConfig) ([]NodeRow, error)
 
 	// Close closes the datasource connection
 	io.Closer
 }
 
-// TenantRow represents a row from the tenant datasource
-type TenantRow struct {
+// NodeRow represents a row from the node datasource
+type NodeRow struct {
 	UID       string
 	HostOrURL string
 	Activate  string
 	Extra     map[string]string
 }
 
-// QueryConfig holds configuration for querying tenants
+// QueryConfig holds configuration for querying nodes
 type QueryConfig struct {
 	// Table/Collection name
 	Table string

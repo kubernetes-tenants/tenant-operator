@@ -5,7 +5,7 @@ aside: false
 
 # Template Builder
 
-Build TenantTemplate YAML configurations using an intuitive UI. Create resources, manage dependencies, and export production-ready templates.
+Build LynqForm YAML configurations using an intuitive UI. Create resources, manage dependencies, and export production-ready templates.
 
 <TemplateBuilder />
 
@@ -13,7 +13,7 @@ Build TenantTemplate YAML configurations using an intuitive UI. Create resources
 
 ### Building from Scratch
 
-1. **Set Registry ID**: Enter your TenantRegistry name
+1. **Set Registry ID**: Enter your LynqHub name
 2. **Add Resources**: Click "+ Add Resource" to create new resources
    - Select resource type (Deployment, Service, ConfigMap, etc.)
    - Set unique ID and name template
@@ -24,7 +24,7 @@ Build TenantTemplate YAML configurations using an intuitive UI. Create resources
 ### Importing Existing YAML
 
 1. **Switch to Editor Tab**: Click "Editor" in the right panel
-2. **Paste YAML**: Paste your existing TenantTemplate
+2. **Paste YAML**: Paste your existing LynqForm
 3. **Import**: Click "⬅️ Import to UI" button
 4. **Edit**: Modify resources using the form UI
 5. **Export**: Generate updated YAML
@@ -48,7 +48,7 @@ Build TenantTemplate YAML configurations using an intuitive UI. Create resources
 ::: v-pre
 Available variables for use in templates:
 
-- `{{ .uid }}` - Tenant unique identifier
+- `{{ .uid }}` - Node unique identifier
 - `{{ .host }}` - Extracted host from URL
 - `{{ .hostOrUrl }}` - Original URL/host value
 - `{{ .activate }}` - Activation status
@@ -109,8 +109,8 @@ For each resource, configure:
 
 **Namespace First:**
 ```
-1. Add Namespace (id: tenant-ns)
-2. Add all other resources depending on tenant-ns
+1. Add Namespace (id: node-ns)
+2. Add all other resources depending on node-ns
 ```
 
 ## Next Steps

@@ -1,24 +1,28 @@
 # Terraform Operator Integration Guide
 
-This guide shows how to integrate Tenant Operator with Terraform Operator for provisioning external cloud resources (AWS, GCP, Azure) per tenant.
+::: info Multi-Tenancy Example
+This guide uses **Multi-Tenancy** (SaaS application with multiple customers/nodes) as an example, which is the most common use case for Lynq. The pattern shown here can be adapted for any database-driven infrastructure automation scenario.
+:::
+
+This guide shows how to integrate Lynq with Terraform Operator for provisioning external cloud resources (AWS, GCP, Azure) per node.
 
 [[toc]]
 
 ## Overview
 
-**Terraform Operator** allows you to manage Terraform resources as Kubernetes Custom Resources. When integrated with Tenant Operator, each tenant can automatically provision **any infrastructure resource** that Terraform supports - from cloud services to on-premises systems.
+**Terraform Operator** allows you to manage Terraform resources as Kubernetes Custom Resources. When integrated with Lynq, each node can automatically provision **any infrastructure resource** that Terraform supports - from cloud services to on-premises systems.
 
 ```mermaid
 flowchart LR
-    Tenant["Tenant CR"]
+    Node["LynqNode CR"]
     Template["Terraform<br/>manifest"]
     Tofu["tofu-controller<br/>Terraform CR"]
     Cloud["Cloud / On-Prem Resources"]
 
-    Tenant --> Template --> Tofu --> Cloud
+    Node --> Template --> Tofu --> Cloud
 
-    classDef tenant fill:#e3f2fd,stroke:#64b5f6,stroke-width:2px;
-    class Tenant tenant;
+    classDef node fill:#e3f2fd,stroke:#64b5f6,stroke-width:2px;
+    class Node node;
     classDef terraform fill:#e8f5e9,stroke:#81c784,stroke-width:2px;
     class Template,Tofu terraform;
     classDef cloud fill:#fff8e1,stroke:#ffca28,stroke-width:2px;
@@ -39,47 +43,47 @@ flowchart LR
 - 🏢 **On-Premises**: VMware vSphere, Proxmox, Bare Metal
 
 **Automatic Lifecycle Management**:
-- ✅ **Provisioning**: Resources created when tenant is activated (`activate=1`)
+- ✅ **Provisioning**: Resources created when node is activated (`activate=1`)
 - 🔄 **Drift Detection**: Terraform ensures desired state matches actual state
-- 🗑️ **Cleanup**: Resources automatically destroyed when tenant is deleted
-- 📦 **Consistent State**: All tenant infrastructure managed declaratively
+- 🗑️ **Cleanup**: Resources automatically destroyed when node is deleted
+- 📦 **Consistent State**: All node infrastructure managed declaratively
 
 ### Use Cases
 
 #### Cloud Services (AWS, GCP, Azure)
-- **S3/GCS/Blob Storage**: Isolated storage per tenant
-- **RDS/Cloud SQL**: Dedicated databases per tenant
-- **CloudFront/Cloud CDN**: Tenant-specific CDN distributions
-- **IAM Roles/Policies**: Tenant-specific access control
+- **S3/GCS/Blob Storage**: Isolated storage per node
+- **RDS/Cloud SQL**: Dedicated databases per node
+- **CloudFront/Cloud CDN**: Node-specific CDN distributions
+- **IAM Roles/Policies**: Node-specific access control
 - **VPCs/Subnets**: Network isolation
-- **ElastiCache/Memorystore**: Per-tenant caching layers
-- **Lambda/Cloud Functions**: Serverless functions per tenant
+- **ElastiCache/Memorystore**: Per-node caching layers
+- **Lambda/Cloud Functions**: Serverless functions per node
 
 #### Messaging & Streaming
-- **Kafka Topics**: Dedicated topics and ACLs per tenant
-- **RabbitMQ VHosts**: Virtual hosts and users per tenant
+- **Kafka Topics**: Dedicated topics and ACLs per node
+- **RabbitMQ VHosts**: Virtual hosts and users per node
 - **AWS SQS/SNS**: Queue and topic isolation
-- **Pulsar Namespaces**: Tenant-isolated messaging
-- **NATS Accounts**: Multi-tenant streaming
+- **Pulsar Namespaces**: Node-isolated messaging
+- **NATS Accounts**: Multi-node streaming
 
 #### Databases (Self-Managed & Managed)
 - **PostgreSQL Schemas**: Isolated schemas in shared cluster
 - **MongoDB Databases**: Dedicated databases with authentication
-- **Redis Databases**: Separate database indexes per tenant
-- **Elasticsearch Indices**: Tenant-specific indices with ILM policies
+- **Redis Databases**: Separate database indexes per node
+- **Elasticsearch Indices**: Node-specific indices with ILM policies
 - **InfluxDB Organizations**: Time-series data isolation
 
 #### On-Premises & Hybrid
-- **VMware VMs**: Provision VMs per tenant
-- **Proxmox Containers**: Lightweight tenant isolation
-- **F5 Load Balancer**: Per-tenant virtual servers
-- **NetBox IPAM**: IP address allocation per tenant
+- **VMware VMs**: Provision VMs per node
+- **Proxmox Containers**: Lightweight node isolation
+- **F5 Load Balancer**: Per-node virtual servers
+- **NetBox IPAM**: IP address allocation per node
 
 ## Prerequisites
 
 ::: info Requirements
 - Kubernetes cluster v1.16+
-- Tenant Operator installed
+- Lynq installed
 - Cloud provider account (AWS, GCP, or Azure)
 - Terraform ≥ 1.0
 - Cloud provider credentials (stored as Secrets)
@@ -171,18 +175,18 @@ kubectl create secret generic azure-credentials \
   --from-literal=ARM_SUBSCRIPTION_ID=your-subscription-id
 ```
 
-## Basic Example: S3 Bucket per Tenant
+## Basic Example: S3 Bucket per Node
 
-Here's a complete example showing how to provision an S3 bucket for each tenant:
+Here's a complete example showing how to provision an S3 bucket for each node:
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
-  name: tenant-with-s3
+  name: node-with-s3
   namespace: default
 spec:
-  registryId: my-registry
+  hubId: my-hub
 
   # Terraform resource for S3 bucket
   manifests:
@@ -193,7 +197,7 @@ spec:
       kind: Terraform
       metadata:
         annotations:
-          tenant-operator.kubernetes-tenants.org/tenant-id: "{{ .uid }}"
+          lynq.lynq.sh/node-id: "{{ .uid }}"
       spec:
         interval: 5m
         retryInterval: 30s
@@ -218,23 +222,23 @@ spec:
               region = var.aws_region
             }
 
-            variable "tenant_id" { type = string }
+            variable "node_id" { type = string }
             variable "aws_region" { type = string default = "us-east-1" }
 
-            resource "aws_s3_bucket" "tenant_bucket" {
-              bucket = "tenant-${var.tenant_id}-bucket"
+            resource "aws_s3_bucket" "node_bucket" {
+              bucket = "node-${var.node_id}-bucket"
               tags = {
-                TenantId = var.tenant_id
-                ManagedBy = "tenant-operator"
+                NodeId = var.node_id
+                ManagedBy = "lynq"
               }
             }
 
-            output "bucket_name" { value = aws_s3_bucket.tenant_bucket.id }
-            output "bucket_arn" { value = aws_s3_bucket.tenant_bucket.arn }
+            output "bucket_name" { value = aws_s3_bucket.node_bucket.id }
+            output "bucket_arn" { value = aws_s3_bucket.node_bucket.arn }
 
         # Variables passed to Terraform
         vars:
-        - name: tenant_id
+        - name: node_id
           value: "{{ .uid }}"
         - name: aws_region
           value: "us-east-1"
@@ -272,7 +276,7 @@ spec:
             - name: app
               image: mycompany/app:latest
               env:
-              - name: TENANT_ID
+              - name: NODE_ID
                 value: "{{ .uid }}"
               # S3 bucket name from Terraform output
               - name: S3_BUCKET_NAME
@@ -286,11 +290,11 @@ spec:
 ```
 
 **What happens:**
-1. Tenant Operator creates Terraform CR for each active tenant
+1. Lynq creates Terraform CR for each active node
 2. Tofu controller runs `terraform apply` to provision S3 bucket
 3. Outputs (bucket name, ARN) written to Secret
 4. Application Deployment references outputs via Secret
-5. When tenant is deleted, `terraform destroy` runs automatically
+5. When node is deleted, `terraform destroy` runs automatically
 
 ::: tip More Examples
 Additional examples including RDS databases, CloudFront CDN, Kafka topics, RabbitMQ, and Redis are provided throughout this guide below.
@@ -300,20 +304,20 @@ Additional examples including RDS databases, CloudFront CDN, Kafka topics, Rabbi
 
 ### Workflow
 
-1. **Tenant Created**: TenantRegistry creates Tenant CR from database
-2. **Terraform Applied**: Tenant controller creates Terraform CR
+1. **Node Created**: LynqHub creates LynqNode CR from database
+2. **Terraform Applied**: LynqNode controller creates Terraform CR
 3. **tf-controller Processes**: Runs terraform init/plan/apply
 4. **Resources Provisioned**: Cloud resources created (S3, RDS, etc.)
 5. **Outputs Saved**: Terraform outputs written to Kubernetes Secret
 6. **App Deployed**: Application uses infrastructure via Secret references
-7. **Tenant Deleted**: Terraform runs destroy (if deletionPolicy=Delete)
+7. **Node Deleted**: Terraform runs destroy (if deletionPolicy=Delete)
 
 ### State Management
 
 Terraform state is stored in Kubernetes Secrets by default:
 
 ```
-Secret: tfstate-default-{tenant-id}-{resource-name}
+Secret: tfstate-default-{node-id}-{resource-name}
 Namespace: default
 Data: tfstate (gzipped)
 ```
@@ -326,7 +330,7 @@ Data: tfstate (gzipped)
 manifests:
 - id: rds-database
   creationPolicy: Once  # Create once, never update
-  deletionPolicy: Retain  # Keep on tenant deletion
+  deletionPolicy: Retain  # Keep on node deletion
 ```
 
 ### 2. Set Appropriate Timeouts
@@ -348,7 +352,7 @@ For production, use S3 backend instead of Kubernetes:
 terraform {
   backend "s3" {
     bucket = "my-terraform-state"
-    key    = "tenants/${var.tenant_id}/terraform.tfstate"
+    key    = "nodes/${var.node_id}/terraform.tfstate"
     region = "us-east-1"
     encrypt = true
     dynamodb_table = "terraform-locks"
@@ -374,7 +378,7 @@ Ensure proper resource creation order:
 ```yaml
 deployments:
 - id: app
-  dependIds: ["tenant-infrastructure"]  # Wait for Terraform
+  dependIds: ["node-infrastructure"]  # Wait for Terraform
   waitForReady: true
 ```
 
@@ -384,14 +388,14 @@ deployments:
 # Check Terraform resources
 kubectl get terraform -n default
 
-# Check specific tenant's Terraform
-kubectl get terraform -n default -l tenant-operator.kubernetes-tenants.org/tenant-id=tenant-alpha
+# Check specific node's Terraform
+kubectl get terraform -n default -l lynq.lynq.sh/node-id=node-alpha
 
 # View Terraform plan
-kubectl describe terraform tenant-alpha-infrastructure
+kubectl describe terraform node-alpha-infrastructure
 
 # View Terraform outputs
-kubectl get secret tenant-alpha-infrastructure -o yaml
+kubectl get secret node-alpha-infrastructure -o yaml
 ```
 
 ## Troubleshooting
@@ -409,12 +413,12 @@ kubectl get secret tenant-alpha-infrastructure -o yaml
 
 2. **Check Terraform CR status:**
    ```bash
-   kubectl describe terraform tenant-alpha-infrastructure
+   kubectl describe terraform node-alpha-infrastructure
    ```
 
 3. **View Terraform plan output:**
    ```bash
-   kubectl get terraform tenant-alpha-infrastructure -o jsonpath='{.status.plan.pending}'
+   kubectl get terraform node-alpha-infrastructure -o jsonpath='{.status.plan.pending}'
    ```
 
 4. **Check credentials:**
@@ -449,12 +453,12 @@ terraform force-unlock <lock-id>
 
 2. **Check if Terraform apply completed:**
    ```bash
-   kubectl get terraform tenant-alpha-infra -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+   kubectl get terraform node-alpha-infra -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
    ```
 
 3. **Check secret exists:**
    ```bash
-   kubectl get secret tenant-alpha-outputs
+   kubectl get secret node-alpha-outputs
    ```
 
 ### Resource Already Exists
@@ -466,8 +470,8 @@ terraform force-unlock <lock-id>
 Use `terraform import` or recreate with different name:
 
 ```hcl
-resource "aws_s3_bucket" "tenant_bucket" {
-  bucket = "tenant-${var.tenant_id}-bucket-v2"  # Add suffix
+resource "aws_s3_bucket" "node_bucket" {
+  bucket = "node-${var.node_id}-bucket-v2"  # Add suffix
 }
 ```
 
@@ -488,7 +492,7 @@ variable "db_instance_class" {
 resource "aws_appautoscaling_target" "rds_target" {
   max_capacity       = 10
   min_capacity       = 1
-  resource_id        = "cluster:${aws_rds_cluster.tenant_db.cluster_identifier}"
+  resource_id        = "cluster:${aws_rds_cluster.node_db.cluster_identifier}"
   scalable_dimension = "rds:cluster:ReadReplicaCount"
   service_namespace  = "rds"
 }
@@ -497,8 +501,8 @@ resource "aws_appautoscaling_target" "rds_target" {
 ### 3. Use Lifecycle Policies
 
 ```hcl
-resource "aws_s3_bucket_lifecycle_configuration" "tenant_bucket_lifecycle" {
-  bucket = aws_s3_bucket.tenant_bucket.id
+resource "aws_s3_bucket_lifecycle_configuration" "node_bucket_lifecycle" {
+  bucket = aws_s3_bucket.node_bucket.id
 
   rule {
     id     = "archive-old-data"
@@ -522,4 +526,4 @@ resource "aws_s3_bucket_lifecycle_configuration" "tenant_bucket_lifecycle" {
 - [Flux Documentation](https://fluxcd.io/docs/)
 - [Terraform Registry - All Providers](https://registry.terraform.io/browse/providers)
 - [ExternalDNS Integration](integration-external-dns.md)
-- [Tenant Operator Templates Guide](templates.md)
+- [Lynq Templates Guide](templates.md)

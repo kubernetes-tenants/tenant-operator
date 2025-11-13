@@ -14,12 +14,12 @@
           <div class="form-group">
             <label>Registry ID *</label>
             <input
-              v-model="registryId"
+              v-model="hubId"
               type="text"
               placeholder="my-registry"
               class="form-input"
             />
-            <span class="hint">Reference to your TenantRegistry</span>
+            <span class="hint">Reference to your LynqHub</span>
           </div>
         </section>
 
@@ -32,7 +32,7 @@
           <div v-show="sectionsExpanded.variables" class="variables-info">
             <div class="variable-item">
               <code>.uid</code>
-              <span>Tenant unique identifier</span>
+              <span>Node unique identifier</span>
             </div>
             <div class="variable-item">
               <code>.host</code>
@@ -119,7 +119,7 @@
           <textarea
             v-model="yamlEditorContent"
             class="yaml-editor"
-            placeholder="Paste your TenantTemplate YAML here..."
+            placeholder="Paste your LynqForm YAML here..."
             spellcheck="false"
           ></textarea>
           <div v-if="parseError" class="parse-error">
@@ -227,10 +227,10 @@
           <div class="form-group">
             <label>Deletion Policy</label>
             <select v-model="currentResource.deletionPolicy" class="form-input">
-              <option value="Delete">Delete (default) - Remove on tenant deletion</option>
+              <option value="Delete">Delete (default) - Remove on node deletion</option>
               <option value="Retain">Retain - Keep resource after deletion</option>
             </select>
-            <span class="hint">What happens when tenant is deleted</span>
+            <span class="hint">What happens when node is deleted</span>
           </div>
 
           <!-- Conflict Policy -->
@@ -293,7 +293,7 @@ import { ref, computed, watch } from 'vue';
 import yaml from 'js-yaml';
 
 // State
-const registryId = ref('my-registry');
+const hubId = ref('my-registry');
 const resources = ref([]);
 const showAddResource = ref(false);
 const editingIndex = ref(null);
@@ -342,18 +342,18 @@ const isResourceValid = computed(() => {
 });
 
 const generatedYaml = computed(() => {
-  if (!registryId.value) {
+  if (!hubId.value) {
     return '# Set Registry ID to start building your template';
   }
 
   const template = {
-    apiVersion: 'operator.kubernetes-tenants.org/v1',
-    kind: 'TenantTemplate',
+    apiVersion: 'operator.lynq.sh/v1',
+    kind: 'LynqForm',
     metadata: {
       name: 'my-template'
     },
     spec: {
-      registryId: registryId.value
+      hubId: hubId.value
     }
   };
 
@@ -419,7 +419,7 @@ const toggleSection = (section) => {
 
 const resetBuilder = () => {
   if (confirm('Are you sure you want to reset? All resources will be removed.')) {
-    registryId.value = 'my-registry';
+    hubId.value = 'my-registry';
     resources.value = [];
   }
 };
@@ -495,7 +495,7 @@ const downloadYaml = () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'tenant-template.yaml';
+  a.download = 'lynqform-template.yaml';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -509,13 +509,13 @@ const importFromYaml = () => {
     const parsed = yaml.load(yamlEditorContent.value);
 
     if (!parsed || !parsed.spec) {
-      parseError.value = 'Invalid TenantTemplate: missing spec field';
+      parseError.value = 'Invalid LynqForm: missing spec field';
       return;
     }
 
     // Extract registry ID
-    if (parsed.spec.registryId) {
-      registryId.value = parsed.spec.registryId;
+    if (parsed.spec.hubId) {
+      hubId.value = parsed.spec.hubId;
     }
 
     // Resource type mapping (API field name to internal type)

@@ -79,8 +79,8 @@ func NewMySQLAdapter(config Config) (*MySQLAdapter, error) {
 	return &MySQLAdapter{db: db}, nil
 }
 
-// QueryTenants queries active tenants from the MySQL database
-func (a *MySQLAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]TenantRow, error) {
+// QueryNodes queries active nodes from the MySQL database
+func (a *MySQLAdapter) QueryNodes(ctx context.Context, config QueryConfig) ([]NodeRow, error) {
 	// Build column list
 	columns := []string{
 		config.ValueMappings.UID,
@@ -109,16 +109,16 @@ func (a *MySQLAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]
 	// Execute query
 	rows, err := a.db.QueryContext(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query tenants: %w", err)
+		return nil, fmt.Errorf("failed to query nodes: %w", err)
 	}
 	defer func() {
 		_ = rows.Close() // Best effort close
 	}()
 
 	// Scan results
-	var tenants []TenantRow
+	var nodes []NodeRow
 	for rows.Next() {
-		row := TenantRow{
+		row := NodeRow{
 			Extra: make(map[string]string),
 		}
 
@@ -170,9 +170,9 @@ func (a *MySQLAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]
 			}
 		}
 
-		// Filter: only include active tenants
+		// Filter: only include active nodes
 		if isActive(row.Activate) && row.HostOrURL != "" {
-			tenants = append(tenants, row)
+			nodes = append(nodes, row)
 		}
 	}
 
@@ -180,7 +180,7 @@ func (a *MySQLAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]
 		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
-	return tenants, nil
+	return nodes, nil
 }
 
 // Close closes the database connection

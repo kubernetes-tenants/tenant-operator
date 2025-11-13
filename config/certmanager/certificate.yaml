@@ -5,7 +5,7 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   labels:
-    app.kubernetes.io/name: tenant-operator
+    app.kubernetes.io/name: lynq
     app.kubernetes.io/managed-by: kustomize
   name: selfsigned-issuer
   namespace: system
@@ -16,7 +16,7 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   labels:
-    app.kubernetes.io/name: tenant-operator
+    app.kubernetes.io/name: lynq
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/component: webhook
   name: serving-cert  # this name should match the one appeared in kustomizeconfig.yaml

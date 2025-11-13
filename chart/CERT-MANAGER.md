@@ -2,12 +2,12 @@
 
 ## Why is cert-manager Required?
 
-The Tenant Operator uses **Kubernetes Admission Webhooks** to provide:
+The Lynq Operator uses **Kubernetes Admission Webhooks** to provide:
 
 1. **Validation Webhooks**
-   - Prevents invalid TenantRegistry/TenantTemplate configurations
+   - Prevents invalid LynqHub/LynqForm configurations
    - Validates template syntax at admission time (before reconciliation)
-   - Ensures referential integrity (TenantTemplate references valid TenantRegistry)
+   - Ensures referential integrity (LynqForm references valid LynqHub)
    - Validates value mappings (uid, hostOrUrl, activate are required)
 
 2. **Mutating Webhooks (Defaulting)**
@@ -46,9 +46,9 @@ kubectl wait --for=condition=Available --timeout=300s -n cert-manager \
 # Step 3: Verify
 kubectl get pods -n cert-manager
 
-# Step 4: Install tenant-operator
-helm install tenant-operator tenant-operator/tenant-operator \
-  --namespace tenant-operator-system \
+# Step 4: Install lynq
+helm install lynq k8s-lynq/lynq \
+  --namespace lynq-system \
   --create-namespace
 ```
 
@@ -64,9 +64,9 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 kubectl wait --for=condition=Available --timeout=300s -n cert-manager deployment/cert-manager-webhook
 
 # Install with local development values
-helm install tenant-operator tenant-operator/tenant-operator \
-  -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/chart/values-local.yaml \
-  --namespace tenant-operator-system \
+helm install lynq k8s-lynq/lynq \
+  -f https://raw.githubusercontent.com/k8s-lynq/lynq/main/chart/values-local.yaml \
+  --namespace lynq-system \
   --create-namespace
 ```
 
@@ -84,7 +84,7 @@ helm install tenant-operator tenant-operator/tenant-operator \
 
 ```bash
 # This configuration will FAIL
-helm install tenant-operator tenant-operator/tenant-operator \
+helm install lynq k8s-lynq/lynq \
   --set webhook.enabled=true \
   --set certManager.enabled=true
 # (but cert-manager is not actually installed in the cluster)
@@ -99,7 +99,7 @@ helm install tenant-operator tenant-operator/tenant-operator \
 
 **Error logs**:
 ```
-Error: secret "tenant-operator-serving-cert" not found
+Error: secret "lynq-serving-cert" not found
 ```
 
 **Fix**:
@@ -109,11 +109,11 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 kubectl wait --for=condition=Available --timeout=300s -n cert-manager deployment/cert-manager-webhook
 
 # Wait for certificate to be issued
-kubectl wait --for=condition=Ready --timeout=60s -n tenant-operator-system \
-  certificate/tenant-operator-serving-cert
+kubectl wait --for=condition=Ready --timeout=60s -n lynq-system \
+  certificate/lynq-serving-cert
 
 # Restart operator pod to pick up certificate
-kubectl rollout restart deployment -n tenant-operator-system
+kubectl rollout restart deployment -n lynq-system
 ```
 
 ---
@@ -134,8 +134,8 @@ Previously, we allowed disabling webhooks for local development. **We no longer 
 
 ```yaml
 # This INVALID config would be accepted (missing required fields)
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
   name: broken-registry
 spec:
@@ -148,7 +148,7 @@ spec:
 **With webhooks (properly rejected):**
 ```
 Error from server (Forbidden): error when creating "broken-registry.yaml":
-admission webhook "vtenantregistry.kb.io" denied the request:
+admission webhook "vlynqhub.kb.io" denied the request:
 spec.source.mysql: Required value
 spec.valueMappings: Required value
 ```
@@ -167,13 +167,13 @@ spec.valueMappings: Required value
 
 ```bash
 # Create secret manually
-kubectl create secret tls tenant-operator-serving-cert \
+kubectl create secret tls lynq-serving-cert \
   --cert=path/to/cert.pem \
   --key=path/to/key.pem \
-  -n tenant-operator-system
+  -n lynq-system
 
 # Install without cert-manager resources
-helm install tenant-operator tenant-operator/tenant-operator \
+helm install lynq k8s-lynq/lynq \
   --set webhook.enabled=true \
   --set certManager.enabled=false
 ```
@@ -210,8 +210,8 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 # Verify cert-manager is present
 kubectl get pods -n cert-manager
 
-# Install tenant-operator (will use existing cert-manager)
-helm install tenant-operator tenant-operator/tenant-operator
+# Install lynq (will use existing cert-manager)
+helm install lynq k8s-lynq/lynq
 ```
 
 The chart **does not install cert-manager** as a dependency (by design). It assumes cert-manager is pre-installed.
@@ -233,7 +233,7 @@ The operator's Certificate resource uses `cert-manager.io/v1` API.
 **A: You need to**:
 1. Pre-load cert-manager images into your private registry
 2. Install cert-manager from your registry
-3. Install tenant-operator
+3. Install lynq
 
 ```bash
 # Example for air-gapped environments
@@ -242,7 +242,7 @@ helm install cert-manager jetstack/cert-manager \
   --set webhook.image.repository=my-registry.com/cert-manager-webhook \
   --set cainjector.image.repository=my-registry.com/cert-manager-cainjector
 
-helm install tenant-operator tenant-operator/tenant-operator \
+helm install lynq k8s-lynq/lynq \
   --set image.registry=my-registry.com
 ```
 
@@ -258,22 +258,22 @@ kubectl get pods -n cert-manager
 # Expected: cert-manager, cert-manager-webhook, cert-manager-cainjector (all Running)
 
 # 2. Check certificate is issued
-kubectl get certificate -n tenant-operator-system
-# Expected: tenant-operator-serving-cert (Ready=True)
+kubectl get certificate -n lynq-system
+# Expected: lynq-serving-cert (Ready=True)
 
 # 3. Check secret is created
-kubectl get secret tenant-operator-serving-cert -n tenant-operator-system
+kubectl get secret lynq-serving-cert -n lynq-system
 # Expected: Type=kubernetes.io/tls
 
 # 4. Check webhook configurations
-kubectl get validatingwebhookconfiguration | grep tenant-operator
-kubectl get mutatingwebhookconfiguration | grep tenant-operator
+kubectl get validatingwebhookconfiguration | grep lynq
+kubectl get mutatingwebhookconfiguration | grep lynq
 # Expected: CA bundle is populated (not empty)
 
 # 5. Test webhook validation
 kubectl apply -f - <<EOF
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
   name: test-invalid
 spec:

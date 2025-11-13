@@ -9,18 +9,18 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}=== Deploy Tenant Operator to Minikube ===${NC}"
+echo -e "${BLUE}=== Deploy Lynq to Minikube ===${NC}"
 echo ""
 
 # Configuration
-PROFILE="${MINIKUBE_PROFILE:-tenant-operator}"
-NAMESPACE="${OPERATOR_NAMESPACE:-tenant-operator-system}"
+PROFILE="${MINIKUBE_PROFILE:-lynq}"
+NAMESPACE="${OPERATOR_NAMESPACE:-lynq-system}"
 
 # Generate timestamp-based image tag for development
 # This ensures each build is treated as a new image by Kubernetes
 if [ -z "$IMG" ]; then
     TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-    IMG="tenant-operator:dev-$TIMESTAMP"
+    IMG="lynq:dev-$TIMESTAMP"
     echo -e "${BLUE}Generated development image tag: $IMG${NC}"
 else
     echo -e "${BLUE}Using provided image tag: $IMG${NC}"
@@ -78,7 +78,7 @@ echo ""
 # Clean up old development images in minikube (keep last 3)
 echo ""
 echo -e "${YELLOW}Cleaning up old development images in minikube...${NC}"
-OLD_IMAGES=$(minikube -p "$PROFILE" image ls 2>/dev/null | grep "tenant-operator:dev-" | sort -r | tail -n +4 || echo "")
+OLD_IMAGES=$(minikube -p "$PROFILE" image ls 2>/dev/null | grep "lynq:dev-" | sort -r | tail -n +4 || echo "")
 if [ -n "$OLD_IMAGES" ]; then
     echo "$OLD_IMAGES" | while read -r old_img; do
         echo "  Removing: $old_img"
@@ -223,12 +223,12 @@ echo ""
 echo -e "${BLUE}Useful Commands:${NC}"
 echo "  Watch pods:              kubectl get pods -n $NAMESPACE -w"
 echo "  View logs:               kubectl logs -n $NAMESPACE -l control-plane=controller-manager -f --all-containers"
-echo "  Check CRDs:              kubectl get crd | grep tenant"
-echo "  List registries:         kubectl get tenantregistries -A"
-echo "  List templates:          kubectl get tenanttemplates -A"
-echo "  List tenants:            kubectl get tenants -A"
+echo "  Check CRDs:              kubectl get crd | grep lynq"
+echo "  List registries:         kubectl get lynqhubs -A"
+echo "  List templates:          kubectl get lynqforms -A"
+echo "  List nodes:              kubectl get lynqnodes -A"
 echo "  Describe operator:       kubectl describe deployment -n $NAMESPACE -l control-plane=controller-manager"
-echo "  List images:             minikube -p $PROFILE image ls | grep tenant-operator"
+echo "  List images:             minikube -p $PROFILE image ls | grep lynq"
 echo ""
 echo -e "${BLUE}Apply samples:${NC}"
 echo "  kubectl apply -f config/samples/"

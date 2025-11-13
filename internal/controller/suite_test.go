@@ -33,7 +33,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	tenantsv1 "github.com/kubernetes-tenants/tenant-operator/api/v1"
+	lynqv1 "github.com/k8s-lynq/lynq/api/v1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -69,7 +69,7 @@ var _ = BeforeSuite(func() {
 	ctx, cancel = context.WithCancel(context.TODO())
 
 	var err error
-	err = tenantsv1.AddToScheme(scheme.Scheme)
+	err = lynqv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme
