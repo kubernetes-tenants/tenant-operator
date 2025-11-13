@@ -55,6 +55,8 @@ flowchart TD
 
 Controls when a resource is created or re-applied.
 
+<CreationPolicyVisualizer />
+
 ### `WhenNeeded` (Default)
 
 Resource is created and updated whenever the spec changes.
@@ -131,6 +133,8 @@ metadata:
 ## DeletionPolicy
 
 Controls what happens to resources when a LynqNode CR is deleted.
+
+<DeletionPolicyVisualizer />
 
 ### `Delete` (Default)
 
@@ -343,6 +347,8 @@ kubectl apply -f updated-hub.yaml
 
 Controls what happens when a resource already exists with a different owner or field manager.
 
+<ConflictPolicyVisualizer />
+
 ### `Stuck` (Default)
 
 Reconciliation stops if ownership conflict is detected.
@@ -402,6 +408,8 @@ deployments:
 ## PatchStrategy
 
 Controls how resources are updated.
+
+<PatchStrategyVisualizer />
 
 ### `apply` (Default - Server-Side Apply)
 

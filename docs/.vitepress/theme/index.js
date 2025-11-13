@@ -7,6 +7,10 @@ import DependencyGraphVisualizer from '../components/DependencyGraphVisualizer.v
 import TemplateBuilder from '../components/TemplateBuilder.vue';
 import AnnouncementBanner from '../components/AnnouncementBanner.vue';
 import QuickstartStep from '../components/QuickstartStep.vue';
+import CreationPolicyVisualizer from '../components/CreationPolicyVisualizer.vue';
+import DeletionPolicyVisualizer from '../components/DeletionPolicyVisualizer.vue';
+import ConflictPolicyVisualizer from '../components/ConflictPolicyVisualizer.vue';
+import PatchStrategyVisualizer from '../components/PatchStrategyVisualizer.vue';
 import './custom.css';
 
 export default {
@@ -21,5 +25,9 @@ export default {
     app.component('TemplateBuilder', TemplateBuilder);
     app.component('AnnouncementBanner', AnnouncementBanner);
     app.component('QuickstartStep', QuickstartStep);
+    app.component('CreationPolicyVisualizer', CreationPolicyVisualizer);
+    app.component('DeletionPolicyVisualizer', DeletionPolicyVisualizer);
+    app.component('ConflictPolicyVisualizer', ConflictPolicyVisualizer);
+    app.component('PatchStrategyVisualizer', PatchStrategyVisualizer);
   }
 };
