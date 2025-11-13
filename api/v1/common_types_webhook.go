@@ -19,7 +19,7 @@ package v1
 import (
 	"fmt"
 
-	"github.com/kubernetes-tenants/tenant-operator/internal/fieldfilter"
+	"github.com/k8s-lynq/lynq/internal/fieldfilter"
 )
 
 // SetDefaultsForTResource sets default values for a TResource

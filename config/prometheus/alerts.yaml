@@ -1,5 +1,5 @@
-# Prometheus Alert Rules for Tenant Operator
-# These alerts monitor tenant health, conflicts, and failures
+# Prometheus Alert Rules for Lynq
+# These alerts monitor node health, conflicts, and failures
 #
 # To deploy these alerts:
 # 1. Install prometheus-operator in your cluster
@@ -9,144 +9,144 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: tenant-operator-alerts
-  namespace: tenant-operator-system
+  name: lynq-alerts
+  namespace: lynq-system
   labels:
-    app: tenant-operator
+    app: lynq
     prometheus: kube-prometheus
 spec:
   groups:
     # ========================================
     # Critical Alerts - Immediate Action Required
     # ========================================
-    - name: tenant-operator.critical
+    - name: lynq.critical
       interval: 30s
       rules:
-        # Critical: Tenant is in degraded state
-        - alert: TenantDegraded
-          expr: max(tenant_degraded_status) by (tenant, namespace, reason) > 0
+        # Critical: LynqNode is in degraded state
+        - alert: LynqNodeDegraded
+          expr: max(lynqnode_degraded_status) by (lynqnode, namespace, reason) > 0
           for: 5m
           labels:
             severity: critical
-            component: tenant-operator
+            component: lynq
           annotations:
-            summary: "Tenant {{ $labels.tenant }} is degraded ({{ $labels.reason }})"
-            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has been in degraded state for 5+ minutes. Reason: {{ $labels.reason }}. This may indicate template errors, conflicts, or dependency issues."
-            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantdegraded"
+            summary: "LynqNode {{ $labels.lynqnode }} is degraded ({{ $labels.reason }})"
+            description: "LynqNode {{ $labels.lynqnode }} in namespace {{ $labels.namespace }} has been in degraded state for 5+ minutes. Reason: {{ $labels.reason }}. This may indicate template errors, conflicts, or dependency issues."
+            dashboard: "https://grafana.example.com/d/lynq/node-details?var-lynqnode={{ $labels.lynqnode }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://lynq.sh/alert-runbooks#lynqnodedegraded"
 
-        # Critical: Tenant has failed resources
-        - alert: TenantResourcesFailed
-          expr: tenant_resources_failed > 0
+        # Critical: LynqNode has failed resources
+        - alert: LynqNodeResourcesFailed
+          expr: lynqnode_resources_failed > 0
           for: 5m
           labels:
             severity: critical
-            component: tenant-operator
+            component: lynq
           annotations:
-            summary: "Tenant {{ $labels.tenant }} has {{ $value }} failed resource(s)"
-            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $value }} failed resources for 5+ minutes. This indicates critical provisioning failure."
-            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantresourcesfailed"
+            summary: "LynqNode {{ $labels.lynqnode }} has {{ $value }} failed resource(s)"
+            description: "LynqNode {{ $labels.lynqnode }} in namespace {{ $labels.namespace }} has {{ $value }} failed resources for 5+ minutes. This indicates critical provisioning failure."
+            dashboard: "https://grafana.example.com/d/lynq/node-details?var-lynqnode={{ $labels.lynqnode }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://lynq.sh/alert-runbooks#lynqnoderesourcesfailed"
 
-        # Critical: Tenant not ready for extended period
-        - alert: TenantNotReady
-          expr: tenant_condition_status{type="Ready"} == 0
+        # Critical: LynqNode not ready for extended period
+        - alert: LynqNodeNotReady
+          expr: lynqnode_condition_status{type="Ready"} == 0
           for: 15m
           labels:
             severity: critical
-            component: tenant-operator
+            component: lynq
           annotations:
-            summary: "Tenant {{ $labels.tenant }} not ready for 15+ minutes"
-            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has been not ready for more than 15 minutes. Immediate investigation required."
-            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantnotready"
+            summary: "LynqNode {{ $labels.lynqnode }} not ready for 15+ minutes"
+            description: "LynqNode {{ $labels.lynqnode }} in namespace {{ $labels.namespace }} has been not ready for more than 15 minutes. Immediate investigation required."
+            dashboard: "https://grafana.example.com/d/lynq/node-details?var-lynqnode={{ $labels.lynqnode }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://lynq.sh/alert-runbooks#lynqnodenotready"
 
-        # Critical: Tenant in unknown state
-        - alert: TenantStatusUnknown
-          expr: tenant_condition_status{type="Ready"} == 2
+        # Critical: LynqNode in unknown state
+        - alert: LynqNodeStatusUnknown
+          expr: lynqnode_condition_status{type="Ready"} == 2
           for: 10m
           labels:
             severity: critical
-            component: tenant-operator
+            component: lynq
           annotations:
-            summary: "Tenant {{ $labels.tenant }} status unknown"
-            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has been in unknown state for 10+ minutes. This indicates potential controller or API server issues."
-            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantstatusunknown"
+            summary: "LynqNode {{ $labels.lynqnode }} status unknown"
+            description: "LynqNode {{ $labels.lynqnode }} in namespace {{ $labels.namespace }} has been in unknown state for 10+ minutes. This indicates potential controller or API server issues."
+            dashboard: "https://grafana.example.com/d/lynq/node-details?var-lynqnode={{ $labels.lynqnode }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://lynq.sh/alert-runbooks#lynqnodestatusunknown"
 
-        # Critical: Registry has widespread tenant failures
-        - alert: RegistryManyTenantsFailure
+        # Critical: Registry has widespread node failures
+        - alert: RegistryManyNodesFailure
           expr: registry_failed > 5 or (registry_failed / registry_desired > 0.5 and registry_desired > 0)
           for: 5m
           labels:
             severity: critical
-            component: tenant-operator
+            component: lynq
           annotations:
             summary: "Registry {{ $labels.registry }} has widespread failures"
-            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $value }} failed tenants (>5 or >50% of desired). This indicates a systemic issue requiring immediate attention."
-            dashboard: "https://grafana.example.com/d/tenant-operator/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#registrymanytenantsfailure"
+            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $value }} failed nodes (>5 or >50% of desired). This indicates a systemic issue requiring immediate attention."
+            dashboard: "https://grafana.example.com/d/lynq/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://lynq.sh/alert-runbooks#registrymanynodesfailure"
 
     # ========================================
     # Warning Alerts - Attention Required
     # ========================================
-    - name: tenant-operator.warning
+    - name: lynq.warning
       interval: 30s
       rules:
-        # Warning: Tenant resources not matching desired state
-        - alert: TenantResourcesMismatch
+        # Warning: LynqNode resources not matching desired state
+        - alert: LynqNodeResourcesMismatch
           expr: |
-            (tenant_resources_ready != tenant_resources_desired)
-            and (tenant_resources_desired > 0)
-            and (tenant_resources_failed == 0)
+            (lynqnode_resources_ready != lynqnode_resources_desired)
+            and (lynqnode_resources_desired > 0)
+            and (lynqnode_resources_failed == 0)
           for: 15m
           labels:
             severity: warning
-            component: tenant-operator
+            component: lynq
           annotations:
-            summary: "Tenant {{ $labels.tenant }} has resource count mismatch"
-            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $labels.tenant_resources_ready }} ready resources but desires {{ $labels.tenant_resources_desired }}. No failures detected but reconciliation may be stuck."
-            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantresourcesmismatch"
+            summary: "LynqNode {{ $labels.lynqnode }} has resource count mismatch"
+            description: "LynqNode {{ $labels.lynqnode }} in namespace {{ $labels.namespace }} has {{ $labels.lynqnode_resources_ready }} ready resources but desires {{ $labels.lynqnode_resources_desired }}. No failures detected but reconciliation may be stuck."
+            dashboard: "https://grafana.example.com/d/lynq/node-details?var-lynqnode={{ $labels.lynqnode }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://lynq.sh/alert-runbooks#lynqnoderesourcesmismatch"
 
-        # Warning: Tenant has conflicted resources
-        - alert: TenantResourcesConflicted
-          expr: tenant_resources_conflicted > 0
+        # Warning: LynqNode has conflicted resources
+        - alert: LynqNodeResourcesConflicted
+          expr: lynqnode_resources_conflicted > 0
           for: 10m
           labels:
             severity: warning
-            component: tenant-operator
+            component: lynq
           annotations:
-            summary: "Tenant {{ $labels.tenant }} has {{ $value }} conflicted resource(s)"
-            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} has {{ $value }} resources in conflict state. This usually indicates ownership conflicts with existing resources."
-            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantresourcesconflicted"
+            summary: "LynqNode {{ $labels.lynqnode }} has {{ $value }} conflicted resource(s)"
+            description: "LynqNode {{ $labels.lynqnode }} in namespace {{ $labels.namespace }} has {{ $value }} resources in conflict state. This usually indicates ownership conflicts with existing resources."
+            dashboard: "https://grafana.example.com/d/lynq/node-details?var-lynqnode={{ $labels.lynqnode }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://lynq.sh/alert-runbooks#lynqnoderesourcesconflicted"
 
         # Warning: High rate of conflicts
-        - alert: TenantHighConflictRate
-          expr: rate(tenant_conflicts_total[5m]) > 0.1
+        - alert: LynqNodeHighConflictRate
+          expr: rate(lynqnode_conflicts_total[5m]) > 0.1
           for: 10m
           labels:
             severity: warning
-            component: tenant-operator
+            component: lynq
           annotations:
-            summary: "High conflict rate for tenant {{ $labels.tenant }}"
-            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} is experiencing {{ printf \"%.2f\" $value }} conflicts/sec for {{ $labels.resource_kind }}. Policy: {{ $labels.conflict_policy }}. Review naming templates or conflict policies."
-            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenanthighconflictrate"
+            summary: "High conflict rate for node {{ $labels.lynqnode }}"
+            description: "LynqNode {{ $labels.lynqnode }} in namespace {{ $labels.namespace }} is experiencing {{ printf \"%.2f\" $value }} conflicts/sec for {{ $labels.resource_kind }}. Policy: {{ $labels.conflict_policy }}. Review naming templates or conflict policies."
+            dashboard: "https://grafana.example.com/d/lynq/node-details?var-lynqnode={{ $labels.lynqnode }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://lynq.sh/alert-runbooks#lynqnodehighconflictrate"
 
-        # Warning: Registry has failed tenants
-        - alert: RegistryTenantsFailure
+        # Warning: Registry has failed nodes
+        - alert: RegistryNodesFailure
           expr: registry_failed > 0 and registry_failed <= 5
           for: 10m
           labels:
             severity: warning
-            component: tenant-operator
+            component: lynq
           annotations:
-            summary: "Registry {{ $labels.registry }} has {{ $value }} failed tenant(s)"
-            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $value }} failed tenants for 10+ minutes. This may indicate provisioning issues affecting some tenants."
-            dashboard: "https://grafana.example.com/d/tenant-operator/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#registrytenantsfailure"
+            summary: "Registry {{ $labels.registry }} has {{ $value }} failed node(s)"
+            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $value }} failed nodes for 10+ minutes. This may indicate provisioning issues affecting some nodes."
+            dashboard: "https://grafana.example.com/d/lynq/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://lynq.sh/alert-runbooks#registrynodesfailure"
 
         # Warning: Registry sync issues
         - alert: RegistryDesiredCountMismatch
@@ -157,45 +157,45 @@ spec:
           for: 20m
           labels:
             severity: warning
-            component: tenant-operator
+            component: lynq
           annotations:
-            summary: "Registry {{ $labels.registry }} has tenant count mismatch"
-            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $labels.registry_ready }} ready tenants but desires {{ $labels.registry_desired }}. No failures detected but sync may be delayed."
-            dashboard: "https://grafana.example.com/d/tenant-operator/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#registrydesiredcountmismatch"
+            summary: "Registry {{ $labels.registry }} has node count mismatch"
+            description: "Registry {{ $labels.registry }} in namespace {{ $labels.namespace }} has {{ $labels.registry_ready }} ready nodes but desires {{ $labels.registry_desired }}. No failures detected but sync may be delayed."
+            dashboard: "https://grafana.example.com/d/lynq/registry-overview?var-registry={{ $labels.registry }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://lynq.sh/alert-runbooks#registrydesiredcountmismatch"
 
         # Warning: High reconciliation error rate
-        - alert: TenantReconciliationErrors
+        - alert: LynqNodeReconciliationErrors
           expr: |
-            sum(rate(tenant_reconcile_duration_seconds_count{result="error"}[5m]))
+            sum(rate(lynqnode_reconcile_duration_seconds_count{result="error"}[5m]))
             /
-            sum(rate(tenant_reconcile_duration_seconds_count[5m]))
+            sum(rate(lynqnode_reconcile_duration_seconds_count[5m]))
             > 0.1
           for: 10m
           labels:
             severity: warning
-            component: tenant-operator
+            component: lynq
           annotations:
-            summary: "High tenant reconciliation error rate"
-            description: "Tenant operator is experiencing {{ printf \"%.1f\" (mul $value 100) }}% error rate in reconciliations. This may indicate controller issues, API server problems, or resource contention."
-            dashboard: "https://grafana.example.com/d/tenant-operator/controller-health"
-            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantreconciliationerrors"
+            summary: "High node reconciliation error rate"
+            description: "LynqNode operator is experiencing {{ printf \"%.1f\" (mul $value 100) }}% error rate in reconciliations. This may indicate controller issues, API server problems, or resource contention."
+            dashboard: "https://grafana.example.com/d/lynq/controller-health"
+            runbook_url: "https://lynq.sh/alert-runbooks#lynqnodereconciliationerrors"
 
         # Warning: Slow reconciliation (P95)
-        - alert: TenantReconciliationSlow
+        - alert: LynqNodeReconciliationSlow
           expr: |
             histogram_quantile(0.95,
-              sum(rate(tenant_reconcile_duration_seconds_bucket{result="success"}[5m])) by (le)
+              sum(rate(lynqnode_reconcile_duration_seconds_bucket{result="success"}[5m])) by (le)
             ) > 30
           for: 15m
           labels:
             severity: warning
-            component: tenant-operator
+            component: lynq
           annotations:
-            summary: "Slow tenant reconciliation detected"
-            description: "95th percentile of successful tenant reconciliation duration is {{ printf \"%.1f\" $value }}s (threshold: 30s). This may indicate performance issues, resource contention, or complex tenant configurations."
-            dashboard: "https://grafana.example.com/d/tenant-operator/controller-health"
-            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantreconciliationslow"
+            summary: "Slow node reconciliation detected"
+            description: "95th percentile of successful node reconciliation duration is {{ printf \"%.1f\" $value }}s (threshold: 30s). This may indicate performance issues, resource contention, or complex node configurations."
+            dashboard: "https://grafana.example.com/d/lynq/controller-health"
+            runbook_url: "https://lynq.sh/alert-runbooks#lynqnodereconciliationslow"
 
         # Warning: High apply failure rate
         - alert: HighApplyFailureRate
@@ -207,28 +207,28 @@ spec:
           for: 10m
           labels:
             severity: warning
-            component: tenant-operator
+            component: lynq
           annotations:
             summary: "High apply failure rate for {{ $labels.kind }}"
             description: "Resource kind {{ $labels.kind }} is experiencing {{ printf \"%.1f\" (mul $value 100) }}% apply failure rate. Review resource templates and RBAC permissions."
-            dashboard: "https://grafana.example.com/d/tenant-operator/controller-health"
-            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#highapplyfailurerate"
+            dashboard: "https://grafana.example.com/d/lynq/controller-health"
+            runbook_url: "https://lynq.sh/alert-runbooks#highapplyfailurerate"
 
     # ========================================
     # Info Alerts - Informational
     # ========================================
-    - name: tenant-operator.info
+    - name: lynq.info
       interval: 1m
       rules:
         # Info: New conflicts detected
-        - alert: TenantNewConflictsDetected
-          expr: increase(tenant_conflicts_total[5m]) > 0
+        - alert: LynqNodeNewConflictsDetected
+          expr: increase(lynqnode_conflicts_total[5m]) > 0
           for: 2m
           labels:
             severity: info
-            component: tenant-operator
+            component: lynq
           annotations:
-            summary: "New conflicts detected for tenant {{ $labels.tenant }}"
-            description: "Tenant {{ $labels.tenant }} in namespace {{ $labels.namespace }} encountered {{ printf \"%.0f\" $value }} new conflict(s) in the last 5 minutes for {{ $labels.resource_kind }}. Conflict policy: {{ $labels.conflict_policy }}."
-            dashboard: "https://grafana.example.com/d/tenant-operator/tenant-details?var-tenant={{ $labels.tenant }}&var-namespace={{ $labels.namespace }}"
-            runbook_url: "https://docs.kubernetes-tenants.org/alert-runbooks#tenantresourcesconflicted"
+            summary: "New conflicts detected for node {{ $labels.lynqnode }}"
+            description: "LynqNode {{ $labels.lynqnode }} in namespace {{ $labels.namespace }} encountered {{ printf \"%.0f\" $value }} new conflict(s) in the last 5 minutes for {{ $labels.resource_kind }}. Conflict policy: {{ $labels.conflict_policy }}."
+            dashboard: "https://grafana.example.com/d/lynq/node-details?var-lynqnode={{ $labels.lynqnode }}&var-namespace={{ $labels.namespace }}"
+            runbook_url: "https://lynq.sh/alert-runbooks#lynqnoderesourcesconflicted"

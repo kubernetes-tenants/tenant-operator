@@ -5,9 +5,9 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: {{ .Values.webhook.certificate.issuerName }}
-  namespace: {{ include "tenant-operator.namespace" . }}
+  namespace: {{ include "lynq-operator.namespace" . }}
   labels:
-    {{- include "tenant-operator.labels" . | nindent 4 }}
+    {{- include "lynq-operator.labels" . | nindent 4 }}
 spec:
   selfSigned: {}
 ---
@@ -15,19 +15,19 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: {{ include "tenant-operator.webhookCertificateName" . }}
-  namespace: {{ include "tenant-operator.namespace" . }}
+  name: {{ include "lynq-operator.webhookCertificateName" . }}
+  namespace: {{ include "lynq-operator.namespace" . }}
   labels:
-    {{- include "tenant-operator.labels" . | nindent 4 }}
+    {{- include "lynq-operator.labels" . | nindent 4 }}
     app.kubernetes.io/component: webhook
 spec:
   dnsNames:
-  - {{ include "tenant-operator.webhookServiceName" . }}.{{ include "tenant-operator.namespace" . }}.svc
-  - {{ include "tenant-operator.webhookServiceName" . }}.{{ include "tenant-operator.namespace" . }}.svc.cluster.local
+  - {{ include "lynq-operator.webhookServiceName" . }}.{{ include "lynq-operator.namespace" . }}.svc
+  - {{ include "lynq-operator.webhookServiceName" . }}.{{ include "lynq-operator.namespace" . }}.svc.cluster.local
   issuerRef:
     kind: {{ .Values.webhook.certificate.issuerKind }}
     name: {{ .Values.webhook.certificate.issuerName }}
-  secretName: {{ include "tenant-operator.webhookCertificateName" . }}
+  secretName: {{ include "lynq-operator.webhookCertificateName" . }}
   {{- if .Values.webhook.certificate.duration }}
   duration: {{ .Values.webhook.certificate.duration }}
   {{- end }}

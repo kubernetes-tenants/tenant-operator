@@ -22,66 +22,66 @@ import (
 )
 
 var (
-	// TenantReconcileDuration measures the duration of tenant reconciliation
-	TenantReconcileDuration = prometheus.NewHistogramVec(
+	// LynqNodeReconcileDuration measures the duration of LynqNode reconciliation
+	LynqNodeReconcileDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "tenant_reconcile_duration_seconds",
-			Help:    "Duration of tenant reconciliation in seconds",
+			Name:    "lynqnode_reconcile_duration_seconds",
+			Help:    "Duration of LynqNode reconciliation in seconds",
 			Buckets: []float64{0.1, 0.5, 1, 2, 5, 10, 30, 60},
 		},
 		[]string{"result"}, // success or error
 	)
 
-	// TenantResourcesReady tracks the number of ready resources per tenant
-	TenantResourcesReady = prometheus.NewGaugeVec(
+	// LynqNodeResourcesReady tracks the number of ready resources per LynqNode
+	LynqNodeResourcesReady = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "tenant_resources_ready",
-			Help: "Number of ready resources for a tenant",
+			Name: "lynqnode_resources_ready",
+			Help: "Number of ready resources for a LynqNode",
 		},
-		[]string{"tenant", "namespace"},
+		[]string{"lynqnode", "namespace"},
 	)
 
-	// TenantResourcesDesired tracks the total number of desired resources per tenant
-	TenantResourcesDesired = prometheus.NewGaugeVec(
+	// LynqNodeResourcesDesired tracks the total number of desired resources per LynqNode
+	LynqNodeResourcesDesired = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "tenant_resources_desired",
-			Help: "Total number of desired resources for a tenant",
+			Name: "lynqnode_resources_desired",
+			Help: "Total number of desired resources for a LynqNode",
 		},
-		[]string{"tenant", "namespace"},
+		[]string{"lynqnode", "namespace"},
 	)
 
-	// TenantResourcesFailed tracks the number of failed resources per tenant
-	TenantResourcesFailed = prometheus.NewGaugeVec(
+	// LynqNodeResourcesFailed tracks the number of failed resources per LynqNode
+	LynqNodeResourcesFailed = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "tenant_resources_failed",
-			Help: "Number of failed resources for a tenant",
+			Name: "lynqnode_resources_failed",
+			Help: "Number of failed resources for a LynqNode",
 		},
-		[]string{"tenant", "namespace"},
+		[]string{"lynqnode", "namespace"},
 	)
 
-	// RegistryDesired tracks the desired tenant count per registry
+	// RegistryDesired tracks the desired LynqNode count per registry
 	RegistryDesired = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "registry_desired",
-			Help: "Number of desired tenants from the registry data source",
+			Help: "Number of desired LynqNodes from the registry data source",
 		},
 		[]string{"registry", "namespace"},
 	)
 
-	// RegistryReady tracks the ready tenant count per registry
+	// RegistryReady tracks the ready LynqNode count per registry
 	RegistryReady = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "registry_ready",
-			Help: "Number of ready tenants for a registry",
+			Help: "Number of ready LynqNodes for a registry",
 		},
 		[]string{"registry", "namespace"},
 	)
 
-	// RegistryFailed tracks the failed tenant count per registry
+	// RegistryFailed tracks the failed LynqNode count per registry
 	RegistryFailed = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "registry_failed",
-			Help: "Number of failed tenants for a registry",
+			Help: "Number of failed LynqNodes for a registry",
 		},
 		[]string{"registry", "namespace"},
 	)
@@ -95,58 +95,58 @@ var (
 		[]string{"kind", "result", "conflict_policy"},
 	)
 
-	// TenantConditionStatus tracks the status of tenant conditions
+	// LynqNodeConditionStatus tracks the status of LynqNode conditions
 	// status: 0=False, 1=True, 2=Unknown
-	TenantConditionStatus = prometheus.NewGaugeVec(
+	LynqNodeConditionStatus = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "tenant_condition_status",
-			Help: "Status of tenant conditions (0=False, 1=True, 2=Unknown)",
+			Name: "lynqnode_condition_status",
+			Help: "Status of LynqNode conditions (0=False, 1=True, 2=Unknown)",
 		},
-		[]string{"tenant", "namespace", "type"},
+		[]string{"lynqnode", "namespace", "type"},
 	)
 
-	// TenantConflictsTotal counts the total number of conflicts encountered
-	TenantConflictsTotal = prometheus.NewCounterVec(
+	// LynqNodeConflictsTotal counts the total number of conflicts encountered
+	LynqNodeConflictsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "tenant_conflicts_total",
+			Name: "lynqnode_conflicts_total",
 			Help: "Total number of resource conflicts encountered during reconciliation",
 		},
-		[]string{"tenant", "namespace", "resource_kind", "conflict_policy"},
+		[]string{"lynqnode", "namespace", "resource_kind", "conflict_policy"},
 	)
 
-	// TenantResourcesConflicted tracks the current number of resources in conflict state
-	TenantResourcesConflicted = prometheus.NewGaugeVec(
+	// LynqNodeResourcesConflicted tracks the current number of resources in conflict state
+	LynqNodeResourcesConflicted = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "tenant_resources_conflicted",
-			Help: "Number of resources currently in conflict state for a tenant",
+			Name: "lynqnode_resources_conflicted",
+			Help: "Number of resources currently in conflict state for a LynqNode",
 		},
-		[]string{"tenant", "namespace"},
+		[]string{"lynqnode", "namespace"},
 	)
 
-	// TenantDegradedStatus indicates if a tenant is in degraded state (1=degraded, 0=not degraded)
-	TenantDegradedStatus = prometheus.NewGaugeVec(
+	// LynqNodeDegradedStatus indicates if a LynqNode is in degraded state (1=degraded, 0=not degraded)
+	LynqNodeDegradedStatus = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "tenant_degraded_status",
-			Help: "Indicates if a tenant is in degraded state (1=degraded, 0=not degraded)",
+			Name: "lynqnode_degraded_status",
+			Help: "Indicates if a LynqNode is in degraded state (1=degraded, 0=not degraded)",
 		},
-		[]string{"tenant", "namespace", "reason"},
+		[]string{"lynqnode", "namespace", "reason"},
 	)
 )
 
 func init() {
 	// Register custom metrics with the global prometheus registry
 	metrics.Registry.MustRegister(
-		TenantReconcileDuration,
-		TenantResourcesReady,
-		TenantResourcesDesired,
-		TenantResourcesFailed,
+		LynqNodeReconcileDuration,
+		LynqNodeResourcesReady,
+		LynqNodeResourcesDesired,
+		LynqNodeResourcesFailed,
 		RegistryDesired,
 		RegistryReady,
 		RegistryFailed,
 		ApplyAttemptsTotal,
-		TenantConditionStatus,
-		TenantConflictsTotal,
-		TenantResourcesConflicted,
-		TenantDegradedStatus,
+		LynqNodeConditionStatus,
+		LynqNodeConflictsTotal,
+		LynqNodeResourcesConflicted,
+		LynqNodeDegradedStatus,
 	)
 }

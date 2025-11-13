@@ -1,16 +1,16 @@
 # Contributing a New Datasource
 
-This guide walks you through implementing a new datasource adapter for Tenant Operator. The operator uses an adapter pattern to support multiple data sources, making it easy to add support for new databases or data sources.
+This guide walks you through implementing a new datasource adapter for Lynq. The operator uses an adapter pattern to support multiple data sources, making it easy to add support for new databases or data sources.
 
 [[toc]]
 
 ## Overview
 
-Tenant Operator uses a pluggable datasource architecture:
+Lynq uses a pluggable datasource architecture:
 
 ```mermaid
 flowchart LR
-    Controller[Registry Controller]
+    Controller[LynqHub Controller]
     Interface[Datasource Interface]
     MySQL[MySQL Adapter]
     Postgres[PostgreSQL Adapter]
@@ -54,8 +54,8 @@ The `Datasource` interface is defined in `internal/datasource/interface.go`:
 ```go
 // Datasource defines the interface that all datasource adapters must implement
 type Datasource interface {
-    // QueryTenants retrieves active tenant rows from the datasource
-    QueryTenants(ctx context.Context, config QueryConfig) ([]TenantRow, error)
+    // QueryNodes retrieves active node rows from the datasource
+    QueryNodes(ctx context.Context, config QueryConfig) ([]NodeRow, error)
 
     // Close closes the datasource connection
     io.Closer
@@ -64,7 +64,7 @@ type Datasource interface {
 
 **You need to implement:**
 
-1. **`QueryTenants()`** - Query tenant data from your datasource
+1. **`QueryNodes()`** - Query node data from your datasource
 2. **`Close()`** - Clean up resources (connections, files, etc.)
 
 ### Step 2: Study the MySQL Reference Implementation
@@ -98,8 +98,8 @@ func NewMySQLAdapter(config Config) (*MySQLAdapter, error) {
     return &MySQLAdapter{db: db}, nil
 }
 
-// QueryTenants - query and map data
-func (a *MySQLAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]TenantRow, error) {
+// QueryNodes - query and map data
+func (a *MySQLAdapter) QueryNodes(ctx context.Context, config QueryConfig) ([]NodeRow, error) {
     // 1. Build query
     query := fmt.Sprintf("SELECT %s FROM %s", columns, table)
 
@@ -107,13 +107,13 @@ func (a *MySQLAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]
     rows, err := a.db.QueryContext(ctx, query)
 
     // 3. Scan results
-    var tenants []TenantRow
+    var nodes []NodeRow
     for rows.Next() {
-        // Map columns to TenantRow
-        // Filter active tenants
+        // Map columns to NodeRow
+        // Filter active nodes
     }
 
-    return tenants, nil
+    return nodes, nil
 }
 
 // Close - cleanup
@@ -178,8 +178,8 @@ func NewYourAdapter(config Config) (*YourAdapter, error) {
     return &YourAdapter{conn: conn}, nil
 }
 
-// QueryTenants queries active tenants from [YourDatasource]
-func (a *YourAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]TenantRow, error) {
+// QueryNodes queries active nodes from [YourDatasource]
+func (a *YourAdapter) QueryNodes(ctx context.Context, config QueryConfig) ([]NodeRow, error) {
     // 1. Build query/request
     //    Use config.Table for table/collection name
     //    Use config.ValueMappings for required columns
@@ -187,10 +187,10 @@ func (a *YourAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]T
 
     // 2. Execute query
 
-    // 3. Scan results into []TenantRow
-    var tenants []TenantRow
+    // 3. Scan results into []NodeRow
+    var nodes []NodeRow
     for /* iterate results */ {
-        row := TenantRow{
+        row := NodeRow{
             UID:       "", // Required
             HostOrURL: "", // Required
             Activate:  "", // Required
@@ -202,13 +202,13 @@ func (a *YourAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]T
             row.Extra[key] = "" // Get value from result
         }
 
-        // Filter: only include active tenants with valid hostOrUrl
+        // Filter: only include active nodes with valid hostOrUrl
         if isActive(row.Activate) && row.HostOrURL != "" {
-            tenants = append(tenants, row)
+            nodes = append(nodes, row)
         }
     }
 
-    return tenants, nil
+    return nodes, nil
 }
 
 // Close closes the datasource connection
@@ -219,7 +219,7 @@ func (a *YourAdapter) Close() error {
     return nil
 }
 
-// Helper: check if tenant is active
+// Helper: check if node is active
 func isActive(value string) bool {
     switch value {
     case "1", "true", "TRUE", "True", "yes", "YES", "Yes":
@@ -233,17 +233,17 @@ func isActive(value string) bool {
 **Important Details:**
 
 ::: tip Required Fields
-Every `TenantRow` must have:
-- `UID` - Unique tenant identifier
-- `HostOrURL` - Tenant URL/hostname
+Every `NodeRow` must have:
+- `UID` - Unique node identifier
+- `HostOrURL` - Node URL/hostname
 - `Activate` - Activation status (truthy/falsy)
 - `Extra` - Map for additional fields
 :::
 
 ::: warning Filtering
 Always filter out:
-- Inactive tenants (`activate` is false/0)
-- Tenants without `hostOrUrl`
+- Inactive nodes (`activate` is false/0)
+- Nodes without `hostOrUrl`
 :::
 
 ### Step 5: Register Your Adapter
@@ -277,7 +277,7 @@ func NewDatasource(sourceType SourceType, config Config) (Datasource, error) {
 
 ### Step 6: Add API Support
 
-Update the CRD API types in `api/v1/tenantregistry_types.go`:
+Update the CRD API types in `api/v1/lynqhub_types.go`:
 
 ```go
 // SourceType defines the type of external data source
@@ -289,8 +289,8 @@ const (
     SourceTypeYours      SourceType = "yourdatasource" // Add
 )
 
-// TenantRegistrySourceSpec defines the data source configuration
-type TenantRegistrySourceSpec struct {
+// LynqHubSourceSpec defines the data source configuration
+type LynqHubSourceSpec struct {
     // Type of the data source
     // +kubebuilder:validation:Enum=mysql;postgresql;yourdatasource
     // +kubebuilder:validation:Required
@@ -329,16 +329,16 @@ type YourDatasourceSpec struct {
 
 ### Step 7: Update Controller Logic
 
-The controller (`internal/controller/tenantregistry_controller.go`) may need updates for password extraction:
+The controller (`internal/controller/lynqhub_controller.go`) may need updates for password extraction:
 
 ```go
-// buildDatasourceConfig builds datasource configuration from TenantRegistry spec
-func (r *TenantRegistryReconciler) buildDatasourceConfig(registry *tenantsv1.TenantRegistry, password string) (datasource.Config, string, error) {
+// buildDatasourceConfig builds datasource configuration from LynqHub spec
+func (r *LynqHubReconciler) buildDatasourceConfig(registry *lynqv1.LynqHub, password string) (datasource.Config, string, error) {
     switch registry.Spec.Source.Type {
-    case tenantsv1.SourceTypeMySQL:
+    case lynqv1.SourceTypeMySQL:
         // ... existing MySQL logic
 
-    case tenantsv1.SourceTypeYours: // Add your case
+    case lynqv1.SourceTypeYours: // Add your case
         yours := registry.Spec.Source.YourDatasource
         if yours == nil {
             return datasource.Config{}, "", fmt.Errorf("YourDatasource configuration is nil")
@@ -392,7 +392,7 @@ import (
     "testing"
 )
 
-func TestYourAdapter_QueryTenants(t *testing.T) {
+func TestYourAdapter_QueryNodes(t *testing.T) {
     // Test setup
     adapter, err := NewYourAdapter(Config{
         Host:     "localhost",
@@ -405,8 +405,8 @@ func TestYourAdapter_QueryTenants(t *testing.T) {
     defer adapter.Close()
 
     // Test query
-    tenants, err := adapter.QueryTenants(context.Background(), QueryConfig{
-        Table: "tenants",
+    nodes, err := adapter.QueryNodes(context.Background(), QueryConfig{
+        Table: "nodes",
         ValueMappings: ValueMappings{
             UID:       "id",
             HostOrURL: "url",
@@ -415,12 +415,12 @@ func TestYourAdapter_QueryTenants(t *testing.T) {
     })
 
     if err != nil {
-        t.Fatalf("QueryTenants failed: %v", err)
+        t.Fatalf("QueryNodes failed: %v", err)
     }
 
     // Verify results
-    if len(tenants) == 0 {
-        t.Error("Expected tenants, got none")
+    if len(nodes) == 0 {
+        t.Error("Expected nodes, got none")
     }
 }
 
@@ -449,7 +449,7 @@ Create documentation in `docs/datasource-[yours].md`:
 ```markdown
 # [YourDatasource] Datasource Configuration
 
-This guide covers configuring Tenant Operator with [YourDatasource].
+This guide covers configuring Lynq with [YourDatasource].
 
 ## Prerequisites
 
@@ -460,26 +460,26 @@ This guide covers configuring Tenant Operator with [YourDatasource].
 ## Basic Configuration
 
 \```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: my-registry
+  name: my-hub
 spec:
   source:
     type: yourdatasource
     yourdatasource:
       host: your-host.example.com
       port: 5432
-      username: tenant_reader
+      username: node_reader
       passwordRef:
         name: yourdatasource-credentials
         key: password
-      database: tenants_db
-      table: tenants
+      database: nodes_db
+      table: nodes
     syncInterval: 1m
   valueMappings:
-    uid: tenant_id
-    hostOrUrl: tenant_url
+    uid: node_id
+    hostOrUrl: node_url
     activate: is_active
 \```
 
@@ -533,7 +533,7 @@ Add example manifests in `config/samples/`:
 mkdir -p config/samples/yourdatasource
 
 # Add example files
-touch config/samples/yourdatasource/registry.yaml
+touch config/samples/yourdatasource/hub.yaml
 touch config/samples/yourdatasource/secret.yaml
 touch config/samples/yourdatasource/template.yaml
 ```
@@ -552,12 +552,12 @@ stringData:
   password: "your-password-here"
 ```
 
-`config/samples/yourdatasource/registry.yaml`:
+`config/samples/yourdatasource/hub.yaml`:
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: yourdatasource-registry
+  name: yourdatasource-hub
   namespace: default
 spec:
   source:
@@ -570,7 +570,7 @@ spec:
         name: yourdatasource-credentials
         key: password
       database: tenants_db
-      table: tenants
+      table: nodes
     syncInterval: 1m
   valueMappings:
     uid: id
@@ -600,12 +600,12 @@ make run
 
 # 6. Apply examples
 kubectl apply -f config/samples/yourdatasource/secret.yaml
-kubectl apply -f config/samples/yourdatasource/registry.yaml
+kubectl apply -f config/samples/yourdatasource/hub.yaml
 
 # 7. Verify
-kubectl get tenantregistries
-kubectl describe tenantregistry yourdatasource-registry
-kubectl get tenants
+kubectl get lynqhubs
+kubectl describe lynqhub yourdatasource-hub
+kubectl get lynqnodes
 ```
 
 **Test Checklist:**
@@ -613,7 +613,7 @@ kubectl get tenants
 - [ ] Query returns expected rows
 - [ ] Active filtering works
 - [ ] Extra mappings work
-- [ ] Tenant CRs are created
+- [ ] LynqNode CRs are created
 - [ ] Status updates correctly
 - [ ] Errors are handled gracefully
 - [ ] Resource cleanup works
@@ -666,7 +666,7 @@ Before submitting your PR:
 4. Check firewall rules
 5. Review connection string format
 
-### Issue: No Tenants Returned
+### Issue: No Nodes Returned
 
 **Symptoms:** Query succeeds but returns empty array
 
@@ -681,13 +681,13 @@ Before submitting your PR:
 // Add debug logging
 logger.Info("Query results",
     "rowCount", len(rows),
-    "activeCount", len(tenants),
+    "activeCount", len(nodes),
     "table", config.Table)
 ```
 
 ### Issue: Extra Mappings Not Working
 
-**Symptoms:** Extra fields not populating in Tenant annotations
+**Symptoms:** Extra fields not populating in LynqNode annotations
 
 **Solution:** Ensure column mapping is stable:
 ```go
@@ -709,9 +709,9 @@ for key, col := range config.ExtraMappings {
 If you need assistance:
 
 1. **Check Examples**: Review MySQL adapter implementation
-2. **Ask Questions**: Open a [GitHub Discussion](https://github.com/kubernetes-tenants/tenant-operator/discussions)
-3. **Report Issues**: File a [bug report](https://github.com/kubernetes-tenants/tenant-operator/issues)
-4. **Contributing**: See [Contributing Guidelines](https://github.com/kubernetes-tenants/tenant-operator/blob/main/CONTRIBUTING.md)
+2. **Ask Questions**: Open a [GitHub Discussion](https://github.com/k8s-lynq/lynq/discussions)
+3. **Report Issues**: File a [bug report](https://github.com/k8s-lynq/lynq/issues)
+4. **Contributing**: See [Contributing Guidelines](https://github.com/k8s-lynq/lynq/blob/main/CONTRIBUTING.md)
 
 ## Recognition
 
@@ -768,7 +768,7 @@ func NewPostgreSQLAdapter(config Config) (*PostgreSQLAdapter, error) {
     return &PostgreSQLAdapter{db: db}, nil
 }
 
-func (a *PostgreSQLAdapter) QueryTenants(ctx context.Context, config QueryConfig) ([]TenantRow, error) {
+func (a *PostgreSQLAdapter) QueryNodes(ctx context.Context, config QueryConfig) ([]NodeRow, error) {
     // Build column list
     columns := []string{
         config.ValueMappings.UID,
@@ -788,14 +788,14 @@ func (a *PostgreSQLAdapter) QueryTenants(ctx context.Context, config QueryConfig
     // Execute
     rows, err := a.db.QueryContext(ctx, query)
     if err != nil {
-        return nil, fmt.Errorf("failed to query tenants: %w", err)
+        return nil, fmt.Errorf("failed to query nodes: %w", err)
     }
     defer rows.Close()
 
     // Scan results
-    var tenants []TenantRow
+    var nodes []NodeRow
     for rows.Next() {
-        row := TenantRow{Extra: make(map[string]string)}
+        row := NodeRow{Extra: make(map[string]string)}
 
         scanDest := []interface{}{&row.UID, &row.HostOrURL, &row.Activate}
 
@@ -824,11 +824,11 @@ func (a *PostgreSQLAdapter) QueryTenants(ctx context.Context, config QueryConfig
 
         // Filter
         if isActive(row.Activate) && row.HostOrURL != "" {
-            tenants = append(tenants, row)
+            nodes = append(nodes, row)
         }
     }
 
-    return tenants, rows.Err()
+    return nodes, rows.Err()
 }
 
 func (a *PostgreSQLAdapter) Close() error {
@@ -854,10 +854,10 @@ func joinColumnsPostgres(columns []string) string {
 
 After your PR is merged:
 
-1. **Announce**: Share your contribution in [discussions](https://github.com/kubernetes-tenants/tenant-operator/discussions)
+1. **Announce**: Share your contribution in [discussions](https://github.com/k8s-lynq/lynq/discussions)
 2. **Blog**: Consider writing a blog post about your datasource
 3. **Maintain**: Help maintain and improve your adapter
 4. **Support**: Answer questions from users
 5. **Evolve**: Propose enhancements
 
-Thank you for contributing to Tenant Operator! Your datasource adapter will help the community build multi-tenant applications with their preferred data sources. 🚀
+Thank you for contributing to Lynq! Your datasource adapter will help the community build database-driven applications with their preferred data sources. 🚀

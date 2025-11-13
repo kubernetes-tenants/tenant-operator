@@ -27,20 +27,20 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/kubernetes-tenants/tenant-operator/test/utils"
+	"github.com/k8s-lynq/lynq/test/utils"
 )
 
 // namespace where the project is deployed in
-const namespace = "tenant-operator-system"
+const namespace = "lynq-system"
 
 // serviceAccountName created for the project
-const serviceAccountName = "tenant-operator-controller-manager"
+const serviceAccountName = "lynq-controller-manager"
 
 // metricsServiceName is the name of the metrics service of the project
-const metricsServiceName = "tenant-operator-controller-manager-metrics-service"
+const metricsServiceName = "lynq-controller-manager-metrics-service"
 
 // metricsRoleBindingName is the name of the RBAC that will be created to allow get the metrics data
-const metricsRoleBindingName = "tenant-operator-metrics-binding"
+const metricsRoleBindingName = "lynq-metrics-binding"
 
 var _ = Describe("Manager", Ordered, func() {
 	var controllerPodName string
@@ -173,7 +173,7 @@ var _ = Describe("Manager", Ordered, func() {
 		It("should ensure the metrics endpoint is serving metrics", func() {
 			By("creating a ClusterRoleBinding for the service account to allow access to metrics")
 			cmd := exec.Command("kubectl", "create", "clusterrolebinding", metricsRoleBindingName,
-				"--clusterrole=tenant-operator-metrics-reader",
+				"--clusterrole=lynq-metrics-reader",
 				fmt.Sprintf("--serviceaccount=%s:%s", namespace, serviceAccountName),
 			)
 			_, err := utils.Run(cmd)
@@ -264,7 +264,7 @@ var _ = Describe("Manager", Ordered, func() {
 		// metricsOutput := getMetricsOutput()
 		// Expect(metricsOutput).To(ContainSubstring(
 		//    fmt.Sprintf(`controller_runtime_reconcile_total{controller="%s",result="success"} 1`,
-		//    strings.ToLower(<Kind>),
+		//    strings.ToLower("lynqnode"), // Example: lynqnode, lynqhub, or lynqform
 		// ))
 	})
 })

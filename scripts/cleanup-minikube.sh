@@ -43,7 +43,7 @@ else
         read -p "Do you want to clean up MySQL test database resources? (y/N): " -n 1 -r
         echo ""
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            MYSQL_NAMESPACE="${MYSQL_NAMESPACE:-tenant-operator-test}"
+            MYSQL_NAMESPACE="${MYSQL_NAMESPACE:-lynq-test}"
 
             if kubectl get namespace "$MYSQL_NAMESPACE" &> /dev/null; then
                 echo -e "${YELLOW}Cleaning up MySQL resources in namespace $MYSQL_NAMESPACE...${NC}"
@@ -72,18 +72,18 @@ else
 
         # Clean up operator resources
         echo ""
-        read -p "Do you want to clean up Tenant Operator resources? (y/N): " -n 1 -r
+        read -p "Do you want to clean up Lynq resources? (y/N): " -n 1 -r
         echo ""
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            OPERATOR_NAMESPACE="${OPERATOR_NAMESPACE:-tenant-operator-system}"
+            OPERATOR_NAMESPACE="${OPERATOR_NAMESPACE:-lynq-system}"
 
             if kubectl get namespace "$OPERATOR_NAMESPACE" &> /dev/null; then
-                echo -e "${YELLOW}Cleaning up Tenant Operator resources...${NC}"
+                echo -e "${YELLOW}Cleaning up Lynq resources...${NC}"
 
-                # Delete Tenant CRs first
-                kubectl delete tenants --all --all-namespaces --ignore-not-found=true 2>/dev/null || true
-                kubectl delete tenanttemplates --all --all-namespaces --ignore-not-found=true 2>/dev/null || true
-                kubectl delete tenantregistries --all --all-namespaces --ignore-not-found=true 2>/dev/null || true
+                # Delete LynqNode CRs first
+                kubectl delete lynqnodes --all --all-namespaces --ignore-not-found=true 2>/dev/null || true
+                kubectl delete lynqforms --all --all-namespaces --ignore-not-found=true 2>/dev/null || true
+                kubectl delete lynqhubs --all --all-namespaces --ignore-not-found=true 2>/dev/null || true
 
                 # Delete operator deployment
                 kubectl delete deployment -n "$OPERATOR_NAMESPACE" -l control-plane=controller-manager --ignore-not-found=true 2>/dev/null || true
@@ -92,12 +92,12 @@ else
 
                 # Option to delete CRDs
                 echo ""
-                read -p "Do you want to delete Tenant Operator CRDs? (y/N): " -n 1 -r
+                read -p "Do you want to delete Lynq CRDs? (y/N): " -n 1 -r
                 echo ""
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    kubectl delete crd tenants.operator.kubernetes-tenants.org --ignore-not-found=true 2>/dev/null || true
-                    kubectl delete crd tenanttemplates.operator.kubernetes-tenants.org --ignore-not-found=true 2>/dev/null || true
-                    kubectl delete crd tenantregistries.operator.kubernetes-tenants.org --ignore-not-found=true 2>/dev/null || true
+                    kubectl delete crd lynqnodes.operator.lynq.sh --ignore-not-found=true 2>/dev/null || true
+                    kubectl delete crd lynqforms.operator.lynq.sh --ignore-not-found=true 2>/dev/null || true
+                    kubectl delete crd lynqhubs.operator.lynq.sh --ignore-not-found=true 2>/dev/null || true
                     echo -e "${GREEN}✓ CRDs deleted${NC}"
                 fi
             else

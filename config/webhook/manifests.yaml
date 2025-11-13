@@ -10,19 +10,19 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-operator-kubernetes-tenants-org-v1-tenantregistry
+      path: /mutate-operator-lynq-sh-v1-lynqform
   failurePolicy: Fail
-  name: mtenantregistry.kb.io
+  name: mlynqform.kb.io
   rules:
   - apiGroups:
-    - operator.kubernetes-tenants.org
+    - operator.lynq.sh
     apiVersions:
     - v1
     operations:
     - CREATE
     - UPDATE
     resources:
-    - tenantregistries
+    - lynqforms
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -30,19 +30,19 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-operator-kubernetes-tenants-org-v1-tenanttemplate
+      path: /mutate-operator-lynq-sh-v1-lynqhub
   failurePolicy: Fail
-  name: mtenanttemplate.kb.io
+  name: mlynqhub.kb.io
   rules:
   - apiGroups:
-    - operator.kubernetes-tenants.org
+    - operator.lynq.sh
     apiVersions:
     - v1
     operations:
     - CREATE
     - UPDATE
     resources:
-    - tenanttemplates
+    - lynqhubs
   sideEffects: None
 ---
 apiVersion: admissionregistration.k8s.io/v1
@@ -56,19 +56,19 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-operator-kubernetes-tenants-org-v1-tenantregistry
+      path: /validate-operator-lynq-sh-v1-lynqform
   failurePolicy: Fail
-  name: vtenantregistry.kb.io
+  name: vlynqform.kb.io
   rules:
   - apiGroups:
-    - operator.kubernetes-tenants.org
+    - operator.lynq.sh
     apiVersions:
     - v1
     operations:
     - CREATE
     - UPDATE
     resources:
-    - tenantregistries
+    - lynqforms
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -76,17 +76,17 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-operator-kubernetes-tenants-org-v1-tenanttemplate
+      path: /validate-operator-lynq-sh-v1-lynqhub
   failurePolicy: Fail
-  name: vtenanttemplate.kb.io
+  name: vlynqhub.kb.io
   rules:
   - apiGroups:
-    - operator.kubernetes-tenants.org
+    - operator.lynq.sh
     apiVersions:
     - v1
     operations:
     - CREATE
     - UPDATE
     resources:
-    - tenanttemplates
+    - lynqhubs
   sideEffects: None

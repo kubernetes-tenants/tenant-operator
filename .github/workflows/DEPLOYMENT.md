@@ -5,7 +5,7 @@ This project automatically builds and publishes container images to GitHub Conta
 ## Image Location
 
 ```
-ghcr.io/kubernetes-tenants/tenant-operator
+ghcr.io/k8s-lynq/lynq
 ```
 
 ## Automated Builds
@@ -31,19 +31,19 @@ The `build-push.yml` workflow automatically builds and publishes images on:
 
 ### Pull the latest image
 ```bash
-docker pull ghcr.io/kubernetes-tenants/tenant-operator:latest
+docker pull ghcr.io/k8s-lynq/lynq:latest
 ```
 
 ### Pull a specific version
 ```bash
-docker pull ghcr.io/kubernetes-tenants/tenant-operator:v1.0.0
+docker pull ghcr.io/k8s-lynq/lynq:v1.0.0
 ```
 
 ### Deploy to Kubernetes
 ```bash
 # Using kubectl
-kubectl set image deployment/tenant-operator \
-  manager=ghcr.io/kubernetes-tenants/tenant-operator:v1.0.0
+kubectl set image deployment/lynq-operator \
+  manager=ghcr.io/k8s-lynq/lynq:v1.0.0
 
 # Or update your manifests
 # config/manager/manager.yaml
@@ -52,7 +52,7 @@ spec:
     spec:
       containers:
       - name: manager
-        image: ghcr.io/kubernetes-tenants/tenant-operator:v1.0.0
+        image: ghcr.io/k8s-lynq/lynq:v1.0.0
 ```
 
 ## Authentication
@@ -88,24 +88,24 @@ You can verify the attestation:
 # Verify provenance
 cosign verify-attestation \
   --type slsaprovenance \
-  ghcr.io/kubernetes-tenants/tenant-operator:v1.0.0
+  ghcr.io/k8s-lynq/lynq:v1.0.0
 ```
 
 ## Manual Build (for testing)
 
 ```bash
 # Build locally
-make docker-build IMG=ghcr.io/kubernetes-tenants/tenant-operator:dev
+make docker-build IMG=ghcr.io/k8s-lynq/lynq:dev
 
 # Push manually (requires authentication)
-make docker-push IMG=ghcr.io/kubernetes-tenants/tenant-operator:dev
+make docker-push IMG=ghcr.io/k8s-lynq/lynq:dev
 ```
 
 ## Troubleshooting
 
 ### Image not found
-- Check if the repository is public: https://github.com/kubernetes-tenants/tenant-operator/pkgs/container/tenant-operator
-- Ensure you're using the correct image name: `ghcr.io/kubernetes-tenants/tenant-operator`
+- Check if the repository is public: https://github.com/k8s-lynq/lynq/pkgs/container/lynq-operator
+- Ensure you're using the correct image name: `ghcr.io/k8s-lynq/lynq`
 
 ### Authentication errors
 - Verify your GitHub token has `read:packages` permission
@@ -114,7 +114,7 @@ make docker-push IMG=ghcr.io/kubernetes-tenants/tenant-operator:dev
 
 ### Platform mismatch
 - Docker will automatically select the correct platform
-- To force a specific platform: `docker pull --platform linux/amd64 ghcr.io/kubernetes-tenants/tenant-operator:latest`
+- To force a specific platform: `docker pull --platform linux/amd64 ghcr.io/k8s-lynq/lynq:latest`
 
 ## CI/CD Integration
 

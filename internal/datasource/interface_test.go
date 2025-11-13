@@ -38,7 +38,7 @@ func TestNewDatasource(t *testing.T) {
 				Port:     3306,
 				Username: "root",
 				Password: "password",
-				Database: "tenants",
+				Database: "nodes",
 			},
 			wantErr: true, // Will fail without real MySQL, but validates factory logic
 		},
@@ -50,7 +50,7 @@ func TestNewDatasource(t *testing.T) {
 				Port:     5432,
 				Username: "postgres",
 				Password: "password",
-				Database: "tenants",
+				Database: "nodes",
 			},
 			wantErr:    true,
 			errMessage: "postgresql datasource not yet implemented",
@@ -95,11 +95,11 @@ func TestSourceType(t *testing.T) {
 	assert.Equal(t, SourceType("postgresql"), SourceTypePostgreSQL)
 }
 
-func TestTenantRow(t *testing.T) {
-	// Test TenantRow structure
-	row := TenantRow{
-		UID:       "tenant1",
-		HostOrURL: "https://tenant1.example.com",
+func TestNodeRow(t *testing.T) {
+	// Test NodeRow structure
+	row := NodeRow{
+		UID:       "node1",
+		HostOrURL: "https://node1.example.com",
 		Activate:  "1",
 		Extra: map[string]string{
 			"planId": "premium",
@@ -107,8 +107,8 @@ func TestTenantRow(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, "tenant1", row.UID)
-	assert.Equal(t, "https://tenant1.example.com", row.HostOrURL)
+	assert.Equal(t, "node1", row.UID)
+	assert.Equal(t, "https://node1.example.com", row.HostOrURL)
 	assert.Equal(t, "1", row.Activate)
 	assert.Equal(t, "premium", row.Extra["planId"])
 	assert.Equal(t, "us-east-1", row.Extra["region"])
@@ -117,7 +117,7 @@ func TestTenantRow(t *testing.T) {
 func TestQueryConfig(t *testing.T) {
 	// Test QueryConfig structure
 	config := QueryConfig{
-		Table: "tenants",
+		Table: "nodes",
 		ValueMappings: ValueMappings{
 			UID:       "id",
 			HostOrURL: "url",
@@ -129,7 +129,7 @@ func TestQueryConfig(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, "tenants", config.Table)
+	assert.Equal(t, "nodes", config.Table)
 	assert.Equal(t, "id", config.ValueMappings.UID)
 	assert.Equal(t, "url", config.ValueMappings.HostOrURL)
 	assert.Equal(t, "active", config.ValueMappings.Activate)

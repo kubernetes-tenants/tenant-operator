@@ -1,24 +1,24 @@
 # Dependency Management Guide
 
-Resource ordering and dependency graphs in Tenant Operator.
+Resource ordering and dependency graphs in Lynq.
 
 [[toc]]
 
 ## Overview
 
-Tenant Operator uses a DAG (Directed Acyclic Graph) to order resource creation and ensure dependencies are satisfied before applying resources.
+Lynq uses a DAG (Directed Acyclic Graph) to order resource creation and ensure dependencies are satisfied before applying resources.
 
 ## Dependency Visualizer
 
-The Tenant Operator includes an interactive dependency graph visualizer tool that helps you:
+The Lynq includes an interactive dependency graph visualizer tool that helps you:
 
-- **Visualize Dependencies**: See the complete dependency graph of your TenantTemplate
+- **Visualize Dependencies**: See the complete dependency graph of your LynqForm
 - **Detect Cycles**: Automatically identify circular dependencies that would cause failures
 - **Understand Execution Order**: View numbered badges showing the order resources will be applied
 - **Test Your Templates**: Paste your YAML and analyze dependencies before deployment
 
 ::: tip Interactive Tool Available
-Visit the **[🔍 Dependency Visualizer](./dependency-visualizer.md)** page to analyze your TenantTemplate dependencies interactively. Load preset examples or paste your own YAML to visualize the dependency graph in real-time.
+Visit the **[🔍 Dependency Visualizer](./dependency-visualizer.md)** page to analyze your LynqForm dependencies interactively. Load preset examples or paste your own YAML to visualize the dependency graph in real-time.
 :::
 
 ## Defining Dependencies

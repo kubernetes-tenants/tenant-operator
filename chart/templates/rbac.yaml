@@ -4,10 +4,10 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "tenant-operator.leaderElectionRoleName" . }}
-  namespace: {{ include "tenant-operator.namespace" . }}
+  name: {{ include "lynq-operator.leaderElectionRoleName" . }}
+  namespace: {{ include "lynq-operator.namespace" . }}
   labels:
-    {{- include "tenant-operator.labels" . | nindent 4 }}
+    {{- include "lynq-operator.labels" . | nindent 4 }}
 rules:
 - apiGroups:
   - ""
@@ -45,9 +45,9 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "tenant-operator.managerRoleName" . }}
+  name: {{ include "lynq-operator.managerRoleName" . }}
   labels:
-    {{- include "tenant-operator.labels" . | nindent 4 }}
+    {{- include "lynq-operator.labels" . | nindent 4 }}
 rules:
 - apiGroups:
   - ""
@@ -113,11 +113,11 @@ rules:
   - update
   - watch
 - apiGroups:
-  - operator.kubernetes-tenants.org
+  - operator.lynq.sh
   resources:
-  - tenantregistries
-  - tenants
-  - tenanttemplates
+  - lynqhubs
+  - lynqnodes
+  - lynqforms
   verbs:
   - create
   - delete
@@ -127,19 +127,19 @@ rules:
   - update
   - watch
 - apiGroups:
-  - operator.kubernetes-tenants.org
+  - operator.lynq.sh
   resources:
-  - tenantregistries/finalizers
-  - tenants/finalizers
-  - tenanttemplates/finalizers
+  - lynqhubs/finalizers
+  - lynqnodes/finalizers
+  - lynqforms/finalizers
   verbs:
   - update
 - apiGroups:
-  - operator.kubernetes-tenants.org
+  - operator.lynq.sh
   resources:
-  - tenantregistries/status
-  - tenants/status
-  - tenanttemplates/status
+  - lynqhubs/status
+  - lynqnodes/status
+  - lynqforms/status
   verbs:
   - get
   - patch
@@ -149,9 +149,9 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "tenant-operator.metricsReaderRoleName" . }}
+  name: {{ include "lynq-operator.metricsReaderRoleName" . }}
   labels:
-    {{- include "tenant-operator.labels" . | nindent 4 }}
+    {{- include "lynq-operator.labels" . | nindent 4 }}
 rules:
 - nonResourceURLs:
   - "/metrics"
@@ -162,9 +162,9 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "tenant-operator.proxyRoleName" . }}
+  name: {{ include "lynq-operator.proxyRoleName" . }}
   labels:
-    {{- include "tenant-operator.labels" . | nindent 4 }}
+    {{- include "lynq-operator.labels" . | nindent 4 }}
 rules:
 - apiGroups:
   - authentication.k8s.io
@@ -183,48 +183,48 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "tenant-operator.leaderElectionRoleBindingName" . }}
-  namespace: {{ include "tenant-operator.namespace" . }}
+  name: {{ include "lynq-operator.leaderElectionRoleBindingName" . }}
+  namespace: {{ include "lynq-operator.namespace" . }}
   labels:
-    {{- include "tenant-operator.labels" . | nindent 4 }}
+    {{- include "lynq-operator.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ include "tenant-operator.leaderElectionRoleName" . }}
+  name: {{ include "lynq-operator.leaderElectionRoleName" . }}
 subjects:
 - kind: ServiceAccount
-  name: {{ include "tenant-operator.serviceAccountName" . }}
-  namespace: {{ include "tenant-operator.namespace" . }}
+  name: {{ include "lynq-operator.serviceAccountName" . }}
+  namespace: {{ include "lynq-operator.namespace" . }}
 ---
 # Manager ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "tenant-operator.managerRoleBindingName" . }}
+  name: {{ include "lynq-operator.managerRoleBindingName" . }}
   labels:
-    {{- include "tenant-operator.labels" . | nindent 4 }}
+    {{- include "lynq-operator.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "tenant-operator.managerRoleName" . }}
+  name: {{ include "lynq-operator.managerRoleName" . }}
 subjects:
 - kind: ServiceAccount
-  name: {{ include "tenant-operator.serviceAccountName" . }}
-  namespace: {{ include "tenant-operator.namespace" . }}
+  name: {{ include "lynq-operator.serviceAccountName" . }}
+  namespace: {{ include "lynq-operator.namespace" . }}
 ---
 # Proxy ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "tenant-operator.proxyRoleBindingName" . }}
+  name: {{ include "lynq-operator.proxyRoleBindingName" . }}
   labels:
-    {{- include "tenant-operator.labels" . | nindent 4 }}
+    {{- include "lynq-operator.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "tenant-operator.proxyRoleName" . }}
+  name: {{ include "lynq-operator.proxyRoleName" . }}
 subjects:
 - kind: ServiceAccount
-  name: {{ include "tenant-operator.serviceAccountName" . }}
-  namespace: {{ include "tenant-operator.namespace" . }}
+  name: {{ include "lynq-operator.serviceAccountName" . }}
+  namespace: {{ include "lynq-operator.namespace" . }}
 {{- end }}

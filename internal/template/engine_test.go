@@ -32,9 +32,9 @@ func TestEngine_Render(t *testing.T) {
 	}{
 		{
 			name:     "simple substitution",
-			template: "tenant-{{ .uid }}",
+			template: "node-{{ .uid }}",
 			vars:     Variables{"uid": "42"},
-			want:     "tenant-42",
+			want:     "node-42",
 			wantErr:  false,
 		},
 		{
@@ -101,13 +101,13 @@ func TestEngine_RenderMap(t *testing.T) {
 		{
 			name: "render multiple keys",
 			input: map[string]string{
-				"app":    "{{ .uid }}",
-				"tenant": "{{ .uid }}-{{ .host }}",
+				"app":  "{{ .uid }}",
+				"node": "{{ .uid }}-{{ .host }}",
 			},
 			vars: Variables{"uid": "42", "host": "example.com"},
 			want: map[string]string{
-				"app":    "42",
-				"tenant": "42-example.com",
+				"app":  "42",
+				"node": "42-example.com",
 			},
 			wantErr: false,
 		},
@@ -239,7 +239,7 @@ func Test_sha1sum(t *testing.T) {
 		},
 		{
 			name:  "longer string",
-			input: "tenant-operator-kubernetes",
+			input: "lynq-operator-kubernetes",
 			want:  "8c6976e5b5410415bde908bd4dee15dfb167a9c8",
 		},
 		{
@@ -370,21 +370,21 @@ func TestEngine_Render_WithSha1sum(t *testing.T) {
 		{
 			name:     "sha1sum in template",
 			template: `{{ .uid | sha1sum }}`,
-			vars:     Variables{"uid": "test-tenant"},
+			vars:     Variables{"uid": "test-node"},
 			wantLen:  40, // SHA1 produces 40 hex chars
 			wantErr:  false,
 		},
 		{
 			name:     "sha1sum with concatenation",
 			template: `{{ printf "%s-%s" .uid .host | sha1sum }}`,
-			vars:     Variables{"uid": "tenant1", "host": "example.com"},
+			vars:     Variables{"uid": "node1", "host": "example.com"},
 			wantLen:  40,
 			wantErr:  false,
 		},
 		{
 			name:     "sha1sum for resource naming",
 			template: `resource-{{ .uid | sha1sum | trunc63 }}`,
-			vars:     Variables{"uid": "very-long-tenant-identifier"},
+			vars:     Variables{"uid": "very-long-node-identifier"},
 			wantLen:  49, // "resource-" (9) + 40 chars SHA1 (already under 63)
 			wantErr:  false,
 		},

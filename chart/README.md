@@ -1,10 +1,10 @@
-# Tenant Operator Helm Chart
+# Lynq Operator Helm Chart
 
-Official Helm chart for deploying the Tenant Operator to Kubernetes clusters.
+Official Helm chart for deploying the Lynq Operator to Kubernetes clusters.
 
 ## Overview
 
-The Tenant Operator is a Kubernetes operator that automates the provisioning, configuration, and lifecycle management of multi-tenant applications. This Helm chart provides a simple and configurable way to deploy the operator to your cluster.
+The Lynq Operator is a Kubernetes operator that automates database-driven infrastructure provisioning and lifecycle management. This Helm chart provides a simple and configurable way to deploy the operator to your cluster.
 
 ## Prerequisites
 
@@ -13,14 +13,14 @@ The Tenant Operator is a Kubernetes operator that automates the provisioning, co
 - **cert-manager v1.13+** ⚠️ **REQUIRED for all environments** (webhook certificates)
   - Webhooks provide validation and defaulting for CRDs
   - Installation: `kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml`
-  - **Must be installed BEFORE installing tenant-operator**
+  - **Must be installed BEFORE installing lynq**
 
 ### Why cert-manager is Required
 
-The Tenant Operator uses **admission webhooks** for:
+The Lynq Operator uses **admission webhooks** for:
 - ✅ **Validation**: Prevents invalid configurations at admission time
 - ✅ **Defaulting**: Automatically sets sensible defaults for CRDs
-- ✅ **Integrity**: Ensures referential integrity (e.g., TenantTemplate → TenantRegistry)
+- ✅ **Integrity**: Ensures referential integrity (e.g., LynqForm → LynqHub)
 
 Webhooks require **TLS certificates** for secure communication with the Kubernetes API server. cert-manager automates certificate provisioning and renewal.
 
@@ -33,7 +33,7 @@ Webhooks require **TLS certificates** for secure communication with the Kubernet
 ### Add Helm Repository
 
 ```bash
-helm repo add tenant-operator https://kubernetes-tenants.github.io/tenant-operator
+helm repo add lynq-operator https://k8s-lynq.github.io/lynq
 helm repo update
 ```
 
@@ -53,18 +53,18 @@ kubectl wait --for=condition=Available --timeout=300s -n cert-manager \
   deployment/cert-manager-webhook \
   deployment/cert-manager-cainjector
 
-# Step 2: Install tenant-operator with local values
-helm install tenant-operator tenant-operator/tenant-operator \
-  -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/chart/values-local.yaml \
-  --namespace tenant-operator-system \
+# Step 2: Install lynq with local values
+helm install lynq k8s-lynq/lynq \
+  -f https://raw.githubusercontent.com/k8s-lynq/lynq/main/chart/values-local.yaml \
+  --namespace lynq-system \
   --create-namespace
 
 # or specific alpha version
-helm install tenant-operator tenant-operator/tenant-operator \
-  -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/v1.1.0-alpha.2/chart/values-local.yaml \
+helm install lynq k8s-lynq/lynq \
+  -f https://raw.githubusercontent.com/k8s-lynq/lynq/v1.1.0-alpha.2/chart/values-local.yaml \
   --version 1.1.0-alpha.2 \
   --devel \
-  --namespace tenant-operator-system \
+  --namespace lynq-system \
   --create-namespace
 ```
 
@@ -86,10 +86,10 @@ kubectl wait --for=condition=Available --timeout=300s deployment/cert-manager-ca
 # Verify cert-manager is working
 kubectl get pods -n cert-manager
 
-# STEP 2: Install tenant-operator
-helm install tenant-operator tenant-operator/tenant-operator \
-  -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/chart/values-prod.yaml \
-  --namespace tenant-operator-system \
+# STEP 2: Install lynq
+helm install lynq k8s-lynq/lynq \
+  -f https://raw.githubusercontent.com/k8s-lynq/lynq/main/chart/values-prod.yaml \
+  --namespace lynq-system \
   --create-namespace
 ```
 
@@ -98,26 +98,26 @@ helm install tenant-operator tenant-operator/tenant-operator \
 #### Custom Installation
 
 ```bash
-helm install tenant-operator tenant-operator/tenant-operator \
+helm install lynq k8s-lynq/lynq \
   --set image.tag=v1.0.0 \
   --set webhook.enabled=true \
   --set monitoring.enabled=true \
-  --namespace tenant-operator-system \
+  --namespace lynq-system \
   --create-namespace
 ```
 
 ## Uninstallation
 
 ```bash
-helm uninstall tenant-operator -n tenant-operator-system
+helm uninstall lynq -n lynq-system
 ```
 
 **Note**: CRDs are not deleted automatically. To remove them:
 
 ```bash
-kubectl delete crd tenantregistries.operator.kubernetes-tenants.org
-kubectl delete crd tenanttemplates.operator.kubernetes-tenants.org
-kubectl delete crd tenants.operator.kubernetes-tenants.org
+kubectl delete crd lynqhubs.operator.lynq.sh
+kubectl delete crd lynqforms.operator.lynq.sh
+kubectl delete crd lynqnodes.operator.lynq.sh
 ```
 
 ## Upgrading
@@ -127,8 +127,8 @@ kubectl delete crd tenants.operator.kubernetes-tenants.org
 helm repo update
 
 # Upgrade release
-helm upgrade tenant-operator tenant-operator/tenant-operator \
-  --namespace tenant-operator-system
+helm upgrade lynq k8s-lynq/lynq \
+  --namespace lynq-system
 ```
 
 ## Configuration
@@ -139,7 +139,7 @@ helm upgrade tenant-operator tenant-operator/tenant-operator \
 |-----------|-------------|---------|
 | `replicaCount` | Number of operator replicas | `1` |
 | `image.registry` | Container image registry | `ghcr.io` |
-| `image.repository` | Container image repository | `kubernetes-tenants/tenant-operator` |
+| `image.repository` | Container image repository | `k8s-lynq/lynq` |
 | `image.tag` | Container image tag | `""` (uses Chart appVersion) |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `webhook.enabled` | Enable admission webhooks | `true` |
@@ -188,46 +188,46 @@ See [values.yaml](./values.yaml) for all available configuration options.
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
 
 # Install with custom resource limits
-helm install tenant-operator tenant-operator/tenant-operator \
+helm install lynq k8s-lynq/lynq \
   --set resources.limits.cpu=1000m \
   --set resources.limits.memory=256Mi \
-  --namespace tenant-operator-system \
+  --namespace lynq-system \
   --create-namespace
 ```
 
 ### Example 2: Production with Monitoring
 
 ```bash
-helm install tenant-operator tenant-operator/tenant-operator \
+helm install lynq k8s-lynq/lynq \
   --set webhook.enabled=true \
   --set certManager.enabled=true \
   --set monitoring.enabled=true \
   --set monitoring.labels.prometheus=kube-prometheus \
   --set resources.limits.cpu=1000m \
   --set resources.limits.memory=512Mi \
-  --namespace tenant-operator-system \
+  --namespace lynq-system \
   --create-namespace
 ```
 
 ### Example 3: High Availability
 
 ```bash
-helm install tenant-operator tenant-operator/tenant-operator \
+helm install lynq k8s-lynq/lynq \
   --set replicaCount=3 \
   --set affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].weight=100 \
   --set affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.topologyKey=kubernetes.io/hostname \
-  --namespace tenant-operator-system \
+  --namespace lynq-system \
   --create-namespace
 ```
 
 ### Example 4: Custom Image
 
 ```bash
-helm install tenant-operator tenant-operator/tenant-operator \
+helm install lynq k8s-lynq/lynq \
   --set image.registry=my-registry.io \
-  --set image.repository=my-org/tenant-operator \
+  --set image.repository=my-org/lynq \
   --set image.tag=custom-v1.0.0 \
-  --namespace tenant-operator-system \
+  --namespace lynq-system \
   --create-namespace
 ```
 
@@ -247,10 +247,10 @@ Optimized for minikube, kind, or k3d:
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
 kubectl wait --for=condition=Available --timeout=300s -n cert-manager deployment/cert-manager-webhook
 
-# Install tenant-operator
-helm install tenant-operator tenant-operator/tenant-operator \
+# Install lynq
+helm install lynq k8s-lynq/lynq \
   -f values-local.yaml \
-  --namespace tenant-operator-system \
+  --namespace lynq-system \
   --create-namespace
 ```
 
@@ -269,10 +269,10 @@ Production-ready configuration:
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
 kubectl wait --for=condition=Available --timeout=300s -n cert-manager deployment/cert-manager-webhook
 
-# Install tenant-operator
-helm install tenant-operator tenant-operator/tenant-operator \
+# Install lynq
+helm install lynq k8s-lynq/lynq \
   -f values-prod.yaml \
-  --namespace tenant-operator-system \
+  --namespace lynq-system \
   --create-namespace
 ```
 
@@ -282,7 +282,7 @@ helm install tenant-operator tenant-operator/tenant-operator \
 
 Check logs:
 ```bash
-kubectl logs -n tenant-operator-system -l control-plane=controller-manager
+kubectl logs -n lynq-system -l control-plane=controller-manager
 ```
 
 ### Webhook Certificate Issues
@@ -295,13 +295,13 @@ kubectl logs -n tenant-operator-system -l control-plane=controller-manager
 kubectl get pods -n cert-manager
 
 # Check if certificate is created
-kubectl get certificate -n tenant-operator-system
+kubectl get certificate -n lynq-system
 
 # Check certificate details
-kubectl describe certificate -n tenant-operator-system
+kubectl describe certificate -n lynq-system
 
 # Check if secret is created
-kubectl get secret -n tenant-operator-system | grep cert
+kubectl get secret -n lynq-system | grep cert
 ```
 
 **Solution**:
@@ -318,22 +318,22 @@ kubectl get secret -n tenant-operator-system | grep cert
 
 3. If you don't want to use cert-manager, disable webhooks:
    ```bash
-   helm upgrade tenant-operator tenant-operator/tenant-operator \
+   helm upgrade lynq k8s-lynq/lynq \
      --set webhook.enabled=false \
      --set certManager.enabled=false \
-     --namespace tenant-operator-system
+     --namespace lynq-system
    ```
 
 ### CRDs Not Installed
 
 Check if CRDs exist:
 ```bash
-kubectl get crd | grep operator.kubernetes-tenants.org
+kubectl get crd | grep operator.lynq.sh
 ```
 
 If missing, manually install:
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-operator/main/config/crd/bases/
+kubectl apply -f https://raw.githubusercontent.com/k8s-lynq/lynq/main/config/crd/bases/
 ```
 
 ## Development
@@ -345,21 +345,21 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes-tenants/tenant-ope
 helm lint ./chart
 
 # Dry-run installation
-helm install tenant-operator ./chart \
+helm install lynq ./chart \
   --dry-run --debug \
-  --namespace tenant-operator-system
+  --namespace lynq-system
 
 # Template rendering
-helm template tenant-operator ./chart \
+helm template lynq ./chart \
   -f ./chart/values-local.yaml
 ```
 
 ## Support
 
-- **Documentation**: https://docs.kubernetes-tenants.org/
-- **GitHub**: https://github.com/kubernetes-tenants/tenant-operator
-- **Issues**: https://github.com/kubernetes-tenants/tenant-operator/issues
-- **Discussions**: https://github.com/kubernetes-tenants/tenant-operator/discussions
+- **Documentation**: https://lynq.sh/
+- **GitHub**: https://github.com/k8s-lynq/lynq
+- **Issues**: https://github.com/k8s-lynq/lynq/issues
+- **Discussions**: https://github.com/k8s-lynq/lynq/discussions
 
 ## License
 

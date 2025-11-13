@@ -5,14 +5,14 @@ aside: false
 
 # Dependency Graph Visualizer
 
-Interactive tool to analyze and visualize TenantTemplate dependencies. Paste your YAML to see the execution order and detect cycles.
+Interactive tool to analyze and visualize LynqForm dependencies. Paste your YAML to see the execution order and detect cycles.
 
 <DependencyGraphVisualizer />
 
 ## How to Use
 
-1. **Load an Example**: Click one of the preset buttons above to load a sample TenantTemplate
-2. **Edit YAML**: Modify the YAML in the left editor, or paste your own TenantTemplate
+1. **Load an Example**: Click one of the preset buttons above to load a sample LynqForm
+2. **Edit YAML**: Modify the YAML in the left editor, or paste your own LynqForm
 3. **Analyze**: Click the "🔍 Analyze Dependencies" button to visualize the dependency graph
 4. **Explore**:
    - View the execution order with numbered badges
@@ -52,7 +52,7 @@ Shows what happens when you have circular dependencies (invalid configuration)
 ## Related Documentation
 
 - [Dependencies Guide](./dependencies) - Complete guide on defining dependencies
-- [Templates Guide](./templates) - Learn about TenantTemplate structure
+- [Templates Guide](./templates) - Learn about LynqForm structure
 - [Policies Guide](./policies) - Resource lifecycle policies
 
 ---

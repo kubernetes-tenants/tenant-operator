@@ -1,8 +1,12 @@
 # Custom Domain Provisioning with External DNS
 
+::: info Multi-Tenancy Example
+This guide uses **Multi-Tenancy** (SaaS application with multiple customers) as an example, which is the most common use case for Lynq. The pattern shown here can be adapted for any database-driven infrastructure automation scenario.
+:::
+
 ## Overview
 
-Enable each tenant to have their own custom domain with automatic DNS and SSL certificate management using **Let's Encrypt** and **cert-manager**.
+Enable each node to have their own custom domain with automatic DNS and SSL certificate management using **Let's Encrypt** and **cert-manager**.
 
 **Key Features:**
 - Automatic DNS record creation via External DNS
@@ -14,9 +18,9 @@ Enable each tenant to have their own custom domain with automatic DNS and SSL ce
 
 ```mermaid
 flowchart LR
-    DB[("Database<br/>tenant_id<br/>custom_domain<br/>domain_verified")]
+    DB[("Database<br/>node_id<br/>custom_domain<br/>domain_verified")]
 
-    TO["Tenant Operator<br/>Creates Ingress<br/>per tenant"]
+    TO["Lynq<br/>Creates Ingress<br/>per node"]
 
     ED["External DNS<br/>Syncs to<br/>DNS Provider"]
 
@@ -39,31 +43,31 @@ flowchart LR
 ## Database Schema
 
 ```sql
-CREATE TABLE tenants (
-  tenant_id VARCHAR(63) PRIMARY KEY,
+CREATE TABLE nodes (
+  node_id VARCHAR(63) PRIMARY KEY,
   subdomain VARCHAR(255) NOT NULL,           -- mycompany.saas.example.com
   custom_domain VARCHAR(255),                -- custom.com
   domain_verified BOOLEAN DEFAULT FALSE,
-  cname_target VARCHAR(255),                 -- What tenant should CNAME to
+  cname_target VARCHAR(255),                 -- What node should CNAME to
   is_active BOOLEAN DEFAULT TRUE,
   plan_type VARCHAR(20) DEFAULT 'basic'      -- basic, pro, enterprise
 );
 
 -- Example data
-INSERT INTO tenants VALUES
+INSERT INTO nodes VALUES
   ('acme-corp', 'acme', 'acme.com', TRUE, 'acme-corp.saas.example.com', TRUE, 'enterprise'),
   ('startup-x', 'startupx', 'startup-x.com', TRUE, 'startupx.saas.example.com', TRUE, 'pro'),
   ('demo-user', 'demo', NULL, FALSE, NULL, TRUE, 'basic');
 ```
 
-## TenantRegistry Configuration
+## LynqHub Configuration
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantRegistry
+apiVersion: operator.lynq.sh/v1
+kind: LynqHub
 metadata:
-  name: domain-enabled-tenants
-  namespace: tenant-operator-system
+  name: domain-enabled-nodes
+  namespace: lynq-system
 spec:
   source:
     type: mysql
@@ -71,15 +75,15 @@ spec:
     mysql:
       host: mysql.database.svc.cluster.local
       port: 3306
-      database: tenants_db
-      username: tenant_reader
+      database: nodes_db
+      username: node_reader
       passwordRef:
         name: mysql-credentials
         key: password
-      table: tenants
+      table: nodes
 
   valueMappings:
-    uid: tenant_id
+    uid: node_id
     hostOrUrl: subdomain                    # Default subdomain
     activate: is_active
 
@@ -121,38 +125,38 @@ helm install external-dns external-dns/external-dns \
   --set domainFilters[0]=saas.example.com \
   --set policy=sync \
   --set registry=txt \
-  --set txtOwnerId=tenant-operator-cluster
+  --set txtOwnerId=lynq-cluster
 ```
 
-## TenantTemplate Configuration
+## LynqForm Configuration
 
 ```yaml
-apiVersion: operator.kubernetes-tenants.org/v1
-kind: TenantTemplate
+apiVersion: operator.lynq.sh/v1
+kind: LynqForm
 metadata:
-  name: custom-domain-tenants
-  namespace: tenant-operator-system
+  name: custom-domain-nodes
+  namespace: lynq-system
 spec:
-  registryId: domain-enabled-tenants
+  hubId: domain-enabled-nodes
 
-  # Create namespace per tenant for better isolation
+  # Create namespace per node for better isolation
   manifests:
-    - id: tenant-namespace
+    - id: node-namespace
       spec:
         apiVersion: v1
         kind: Namespace
         metadata:
-          name: "tenant-{{ .uid }}"
+          name: "node-{{ .uid }}"
           labels:
-            tenant-id: "{{ .uid }}"
+            node-id: "{{ .uid }}"
             plan-type: "{{ .planType }}"
 
-  # ServiceAccount in tenant's namespace
+  # ServiceAccount in node's namespace
   serviceAccounts:
     - id: app-sa
       nameTemplate: "{{ .uid }}-app"
-      targetNamespace: "tenant-{{ .uid }}"
-      dependIds: ["tenant-namespace"]
+      targetNamespace: "node-{{ .uid }}"
+      dependIds: ["node-namespace"]
       spec:
         automountServiceAccountToken: true
 
@@ -160,8 +164,8 @@ spec:
   deployments:
     - id: web-app
       nameTemplate: "{{ .uid }}-web"
-      targetNamespace: "tenant-{{ .uid }}"
-      dependIds: ["tenant-namespace", "app-sa"]
+      targetNamespace: "node-{{ .uid }}"
+      dependIds: ["node-namespace", "app-sa"]
       waitForReady: true
       timeoutSeconds: 600
       spec:
@@ -169,21 +173,21 @@ spec:
         selector:
           matchLabels:
             app: "{{ .uid }}-web"
-            tenant-id: "{{ .uid }}"
+            node-id: "{{ .uid }}"
         template:
           metadata:
             labels:
               app: "{{ .uid }}-web"
-              tenant-id: "{{ .uid }}"
+              node-id: "{{ .uid }}"
           spec:
             serviceAccountName: "{{ .uid }}-app"
             containers:
               - name: app
-                image: "registry.example.com/tenant-app:v1.2.3"
+                image: "registry.example.com/node-app:v1.2.3"
                 env:
-                  - name: TENANT_ID
+                  - name: NODE_ID
                     value: "{{ .uid }}"
-                  - name: TENANT_DOMAIN
+                  - name: NODE_DOMAIN
                     value: "{{ if and .customDomain (eq .domainVerified \"true\") }}{{ .customDomain }}{{ else }}{{ .uid }}.saas.example.com{{ end }}"
                   - name: PLAN_TYPE
                     value: "{{ .planType }}"
@@ -214,13 +218,13 @@ spec:
   services:
     - id: web-svc
       nameTemplate: "{{ .uid }}-web"
-      targetNamespace: "tenant-{{ .uid }}"
+      targetNamespace: "node-{{ .uid }}"
       dependIds: ["web-app"]
       waitForReady: false
       spec:
         selector:
           app: "{{ .uid }}-web"
-          tenant-id: "{{ .uid }}"
+          node-id: "{{ .uid }}"
         ports:
           - port: 80
             targetPort: http
@@ -230,7 +234,7 @@ spec:
   ingresses:
     - id: default-ingress
       nameTemplate: "{{ .uid }}-default"
-      targetNamespace: "tenant-{{ .uid }}"
+      targetNamespace: "node-{{ .uid }}"
       dependIds: ["web-svc"]
       annotationsTemplate:
         cert-manager.io/cluster-issuer: "letsencrypt-prod"
@@ -265,14 +269,14 @@ spec:
 
 ## Custom Domain Support
 
-For tenants with verified custom domains, add additional Ingress resources:
+For nodes with verified custom domains, add additional Ingress resources:
 
 ```yaml
   # Custom domain Ingress (for verified domains)
   ingresses:
     - id: custom-ingress
       nameTemplate: "{{ .uid }}-custom"
-      targetNamespace: "tenant-{{ .uid }}"
+      targetNamespace: "node-{{ .uid }}"
       dependIds: ["web-svc"]
       annotationsTemplate:
         cert-manager.io/cluster-issuer: "letsencrypt-prod"
@@ -297,46 +301,46 @@ For tenants with verified custom domains, add additional Ingress resources:
                         number: 80
 ```
 
-**Note:** Filter tenants with verified domains using a database view:
+**Note:** Filter nodes with verified domains using a database view:
 
 ```sql
-CREATE VIEW tenants_with_custom_domains AS
-SELECT * FROM tenants WHERE custom_domain IS NOT NULL AND domain_verified = TRUE;
+CREATE VIEW nodes_with_custom_domains AS
+SELECT * FROM nodes WHERE custom_domain IS NOT NULL AND domain_verified = TRUE;
 ```
 
-Create a separate TenantRegistry and Template for custom domains to avoid creating Ingress for unverified domains.
+Create a separate LynqHub and Template for custom domains to avoid creating Ingress for unverified domains.
 
 ## Domain Verification Workflow
 
-1. **Tenant Requests Custom Domain**: User enters `custom.com` in your SaaS portal
-2. **Database Update**: Portal updates `tenants.custom_domain` but keeps `domain_verified=FALSE`
+1. **Node Requests Custom Domain**: User enters `custom.com` in your SaaS portal
+2. **Database Update**: Portal updates `nodes.custom_domain` but keeps `domain_verified=FALSE`
 3. **CNAME Target Provided**: Show user: "Point CNAME for `custom.com` to `acme-corp.saas.example.com`"
 4. **Background Verification**: Your verification service checks DNS periodically
 5. **Mark as Verified**: Once CNAME is detected, update `domain_verified=TRUE`
-6. **Automatic Deployment**: Tenant Operator creates Ingress with cert-manager annotation
+6. **Automatic Deployment**: Lynq creates Ingress with cert-manager annotation
 7. **DNS Propagation**: External DNS creates Route53/Cloudflare records
 8. **SSL Certificate**: cert-manager issues Let's Encrypt certificate via HTTP-01 or DNS-01 challenge
-9. **Certificate Storage**: cert-manager stores certificate in Secret `<tenant>-custom-tls`
+9. **Certificate Storage**: cert-manager stores certificate in Secret `<node>-custom-tls`
 
 ## Monitoring
 
 ```promql
-# Count tenants with custom domains
-sum(tenant_resources_ready{resource_name=~".*-ingress"})
+# Count nodes with custom domains
+sum(lynqnode_resources_ready{resource_name=~".*-ingress"})
 
 # Alert on ingress failures
 ALERT CustomDomainIngressFailed
   FOR 10m
-  WHERE tenant_resources_failed{resource_name=~".*-ingress"} > 0
+  WHERE lynqnode_resources_failed{resource_name=~".*-ingress"} > 0
   ANNOTATIONS {
-    summary = "Ingress failed for tenant {{ $labels.tenant }}"
+    summary = "Ingress failed for node {{ $labels.node }}"
   }
 ```
 
 ## Best Practices
 
 1. **Domain Verification**: Always verify domain ownership before creating Ingress
-2. **Rate Limiting**: Implement rate limits for domain addition per tenant
+2. **Rate Limiting**: Implement rate limits for domain addition per node
 3. **DNS TTL**: Use low TTL (300s) during initial setup for faster propagation
 4. **Certificate Monitoring**: Monitor cert-manager for SSL provisioning issues
 5. **Fallback Strategy**: Keep default subdomain active even with custom domain

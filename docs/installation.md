@@ -1,6 +1,6 @@
 # Installation Guide
 
-This guide covers various installation methods for Tenant Operator.
+This guide covers various installation methods for Lynq.
 
 [[toc]]
 
@@ -23,7 +23,7 @@ Use the [Quick Start with Minikube](quickstart.md) guide for an automated setup 
 
 **Webhooks are no longer optional.** They provide essential validation and defaulting at admission time.
 
-Install before deploying Tenant Operator:
+Install before deploying Lynq:
 ```bash
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
 ```
@@ -31,7 +31,7 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 
 ### Optional
 
-- **MySQL database** for tenant data source (PostgreSQL support planned for v1.2)
+- **MySQL database** for node data source (PostgreSQL support planned for v1.2)
 
 ## Kubernetes Compatibility
 
@@ -72,16 +72,16 @@ kubectl wait --for=condition=Available --timeout=300s -n cert-manager \
   deployment/cert-manager-cainjector
 
 # Step 3: Add Helm repository
-helm repo add tenant-operator https://kubernetes-tenants.github.io/tenant-operator
+helm repo add lynq https://k8s-lynq.github.io/lynq
 helm repo update
 
-# Step 4: Install Tenant Operator
-helm install tenant-operator tenant-operator/tenant-operator \
-  --namespace tenant-operator-system \
+# Step 4: Install Lynq
+helm install lynq lynq/lynq \
+  --namespace lynq-system \
   --create-namespace
 ```
 
-See the [Helm Chart README](https://github.com/kubernetes-tenants/tenant-operator/blob/main/chart/README.md) for detailed configuration options.
+See the [Helm Chart README](https://github.com/k8s-lynq/lynq/blob/main/chart/README.md) for detailed configuration options.
 
 ---
 
@@ -97,9 +97,9 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 kubectl wait --for=condition=Available --timeout=300s -n cert-manager deployment/cert-manager
 kubectl wait --for=condition=Available --timeout=300s -n cert-manager deployment/cert-manager-webhook
 
-# Step 3: Install Tenant Operator
+# Step 3: Install Lynq
 # cert-manager will automatically issue and manage webhook TLS certificates
-kubectl apply -k https://github.com/kubernetes-tenants/tenant-operator/config/default
+kubectl apply -k https://github.com/k8s-lynq/lynq/config/default
 ```
 
 ::: info What cert-manager handles
@@ -113,8 +113,8 @@ kubectl apply -k https://github.com/kubernetes-tenants/tenant-operator/config/de
 
 ```bash
 # Clone repository
-git clone https://github.com/kubernetes-tenants/tenant-operator.git
-cd tenant-operator
+git clone https://github.com/k8s-lynq/lynq.git
+cd lynq
 
 # Install CRDs
 make install
@@ -123,7 +123,7 @@ make install
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
 
 # Deploy operator
-make deploy IMG=ghcr.io/kubernetes-tenants/tenant-operator:latest
+make deploy IMG=ghcr.io/k8s-lynq/lynq:latest
 ```
 
 ::: warning Remember TLS
@@ -152,24 +152,24 @@ Check that the operator is running:
 
 ```bash
 # Check operator deployment
-kubectl get deployment -n tenant-operator-system tenant-operator-controller-manager
+kubectl get deployment -n lynq-system lynq-controller-manager
 
 # Check operator logs
-kubectl logs -n tenant-operator-system deployment/tenant-operator-controller-manager -f
+kubectl logs -n lynq-system deployment/lynq-controller-manager -f
 
 # Verify CRDs are installed
-kubectl get crd | grep operator.kubernetes-tenants.org
+kubectl get crd | grep operator.lynq.sh
 ```
 
 Expected output:
 ```
-tenantregistries.operator.kubernetes-tenants.org    2025-01-15T10:00:00Z
-tenants.operator.kubernetes-tenants.org             2025-01-15T10:00:00Z
-tenanttemplates.operator.kubernetes-tenants.org     2025-01-15T10:00:00Z
+lynqhubs.operator.lynq.sh    2025-01-15T10:00:00Z
+lynqnodes.operator.lynq.sh             2025-01-15T10:00:00Z
+lynqforms.operator.lynq.sh     2025-01-15T10:00:00Z
 ```
 
 ::: tip Troubleshooting
-If the deployment is not ready, inspect `kubectl describe deployment/tenant-operator-controller-manager` for webhook, RBAC, or image issues.
+If the deployment is not ready, inspect `kubectl describe deployment/lynq-controller-manager` for webhook, RBAC, or image issues.
 :::
 
 ## Configuration Options
@@ -201,7 +201,7 @@ Adjust operator resource limits based on your cluster size:
 resources:
   limits:
     cpu: 500m      # Increase for large clusters
-    memory: 512Mi  # Increase for many tenants
+    memory: 512Mi  # Increase for many nodes
   requests:
     cpu: 100m
     memory: 128Mi
@@ -218,9 +218,9 @@ spec:
       containers:
       - name: manager
         args:
-        - --tenant-concurrency=10        # Concurrent Tenant reconciliations (default: 10)
-        - --template-concurrency=5       # Concurrent Template reconciliations (default: 5)
-        - --registry-concurrency=3       # Concurrent Registry syncs (default: 3)
+        - --node-concurrency=10        # Concurrent LynqNode reconciliations (default: 10)
+        - --form-concurrency=5       # Concurrent Template reconciliations (default: 5)
+        - --hub-concurrency=3       # Concurrent Hub syncs (default: 3)
         - --leader-elect                 # Enable leader election
 ```
 
@@ -235,15 +235,15 @@ Container images are automatically pulled for your platform.
 
 ## Namespace Isolation
 
-By default, the operator is installed in `tenant-operator-system` namespace:
+By default, the operator is installed in `lynq-system` namespace:
 
 ```bash
 # Check operator namespace
-kubectl get all -n tenant-operator-system
+kubectl get all -n lynq-system
 
 # View RBAC
-kubectl get clusterrole | grep tenant-operator
-kubectl get clusterrolebinding | grep tenant-operator
+kubectl get clusterrole | grep lynq
+kubectl get clusterrolebinding | grep lynq
 ```
 
 ## Upgrading
@@ -262,24 +262,24 @@ kubectl apply -f config/crd/bases/
 
 ```bash
 # Update operator deployment
-kubectl set image -n tenant-operator-system \
-  deployment/tenant-operator-controller-manager \
-  manager=ghcr.io/kubernetes-tenants/tenant-operator:v1.1.0
+kubectl set image -n lynq-system \
+  deployment/lynq-controller-manager \
+  manager=ghcr.io/k8s-lynq/lynq:v1.1.0
 
 # Or use make
-make deploy IMG=ghcr.io/kubernetes-tenants/tenant-operator:v1.1.0
+make deploy IMG=ghcr.io/k8s-lynq/lynq:v1.1.0
 ```
 
 ### Rolling Back
 
 ```bash
 # Rollback to previous version
-kubectl rollout undo -n tenant-operator-system \
-  deployment/tenant-operator-controller-manager
+kubectl rollout undo -n lynq-system \
+  deployment/lynq-controller-manager
 
 # Check rollout status
-kubectl rollout status -n tenant-operator-system \
-  deployment/tenant-operator-controller-manager
+kubectl rollout status -n lynq-system \
+  deployment/lynq-controller-manager
 ```
 
 ## Uninstallation
@@ -291,16 +291,16 @@ kubectl delete -k config/default
 # Or with make
 make undeploy
 
-# Delete CRDs (WARNING: This deletes all Tenant data!)
+# Delete CRDs (WARNING: This deletes all LynqNode data!)
 make uninstall
 
 # Or with kubectl
-kubectl delete crd tenantregistries.operator.kubernetes-tenants.org
-kubectl delete crd tenanttemplates.operator.kubernetes-tenants.org
-kubectl delete crd tenants.operator.kubernetes-tenants.org
+kubectl delete crd lynqhubs.operator.lynq.sh
+kubectl delete crd lynqforms.operator.lynq.sh
+kubectl delete crd lynqnodes.operator.lynq.sh
 ```
 
-**Warning:** Deleting CRDs will delete all TenantRegistry, TenantTemplate, and Tenant resources. Ensure you have backups if needed.
+**Warning:** Deleting CRDs will delete all LynqHub, LynqForm, and LynqNode resources. Ensure you have backups if needed.
 
 ## Troubleshooting Installation
 
@@ -318,24 +318,24 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 kubectl wait --for=condition=Available --timeout=300s -n cert-manager deployment/cert-manager
 
 # Restart operator to pick up certificates
-kubectl rollout restart -n tenant-operator-system deployment/tenant-operator-controller-manager
+kubectl rollout restart -n lynq-system deployment/lynq-controller-manager
 ```
 
 ### CRD Already Exists
 
-**Error:** `Error from server (AlreadyExists): customresourcedefinitions.apiextensions.k8s.io "tenants.operator.kubernetes-tenants.org" already exists`
+**Error:** `Error from server (AlreadyExists): customresourcedefinitions.apiextensions.k8s.io "lynqnodes.operator.lynq.sh" already exists`
 
 **Solution:** This is normal during upgrades. CRD updates are applied automatically.
 
 ### Image Pull Errors
 
-**Error:** `Failed to pull image "ghcr.io/kubernetes-tenants/tenant-operator:latest"`
+**Error:** `Failed to pull image "ghcr.io/k8s-lynq/lynq:latest"`
 
 **Solution:** Ensure your cluster can access GitHub Container Registry (ghcr.io). Check network policies and image pull secrets if needed.
 
 ### Permission Denied
 
-**Error:** `Error from server (Forbidden): User "system:serviceaccount:tenant-operator-system:tenant-operator-controller-manager" cannot create resource`
+**Error:** `Error from server (Forbidden): User "system:serviceaccount:lynq-system:lynq-controller-manager" cannot create resource`
 
 **Solution:** Ensure RBAC resources are installed:
 ```bash
@@ -344,7 +344,7 @@ kubectl apply -f config/rbac/
 
 ## Next Steps
 
-- [Create your first TenantRegistry](quickstart.md#step-4-deploy-tenantregistry)
+- [Create your first LynqHub](quickstart.md#step-4-deploy-lynqhub)
 - [Learn about Templates](templates.md)
 - [Configure Monitoring](monitoring.md)
 - [Set up Security](security.md)

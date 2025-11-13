@@ -20,15 +20,15 @@ resources:
 - metrics_reader_role.yaml
 # For each CRD, "Admin", "Editor" and "Viewer" roles are scaffolded by
 # default, aiding admins in cluster management. Those roles are
-# not used by the tenant-operator itself. You can comment the following lines
+# not used by the lynq itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
-- tenant_admin_role.yaml
-- tenant_editor_role.yaml
-- tenant_viewer_role.yaml
-- tenanttemplate_admin_role.yaml
-- tenanttemplate_editor_role.yaml
-- tenanttemplate_viewer_role.yaml
-- tenantregistry_admin_role.yaml
-- tenantregistry_editor_role.yaml
-- tenantregistry_viewer_role.yaml
+- lynqnode_admin_role.yaml
+- lynqnode_editor_role.yaml
+- lynqnode_viewer_role.yaml
+- lynqform_admin_role.yaml
+- lynqform_editor_role.yaml
+- lynqform_viewer_role.yaml
+- lynqhub_admin_role.yaml
+- lynqhub_editor_role.yaml
+- lynqhub_viewer_role.yaml
 

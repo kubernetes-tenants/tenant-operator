@@ -77,7 +77,7 @@ affinity:
               - key: app.kubernetes.io/name
                 operator: In
                 values:
-                  - tenant-operator
+                  - lynq-operator
           topologyKey: kubernetes.io/hostname
 
 # Production tolerations for dedicated nodes

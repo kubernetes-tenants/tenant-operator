@@ -2,9 +2,9 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/operator.kubernetes-tenants.org_tenantregistries.yaml
-- bases/operator.kubernetes-tenants.org_tenanttemplates.yaml
-- bases/operator.kubernetes-tenants.org_tenants.yaml
+- bases/operator.lynq.sh_lynqhubs.yaml
+- bases/operator.lynq.sh_lynqforms.yaml
+- bases/operator.lynq.sh_lynqnodes.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 # patches:
