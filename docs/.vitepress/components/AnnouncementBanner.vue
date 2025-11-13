@@ -8,7 +8,7 @@
             <strong>Official Announcement:</strong> The project formerly known as "tenant-operator" is now <strong>Lynq</strong>
           </span>
           <a href="/about-lynq" class="announcement-link">
-            자세히 보기 →
+            View details →
           </a>
           <button @click="closeBanner" class="close-button" aria-label="Close announcement">
             ✕
