@@ -177,7 +177,7 @@ spec:
             component: lynq
           annotations:
             summary: "High node reconciliation error rate"
-            description: "LynqNode operator is experiencing {{ printf \"%.1f\" (mul $value 100) }}% error rate in reconciliations. This may indicate controller issues, API server problems, or resource contention."
+            description: "LynqNode operator is experiencing {{ humanizePercentage $value }} error rate in reconciliations. This may indicate controller issues, API server problems, or resource contention."
             dashboard: "https://grafana.example.com/d/lynq/controller-health"
             runbook_url: "https://lynq.sh/alert-runbooks#lynqnodereconciliationerrors"
 
@@ -210,7 +210,7 @@ spec:
             component: lynq
           annotations:
             summary: "High apply failure rate for {{ $labels.kind }}"
-            description: "Resource kind {{ $labels.kind }} is experiencing {{ printf \"%.1f\" (mul $value 100) }}% apply failure rate. Review resource templates and RBAC permissions."
+            description: "Resource kind {{ $labels.kind }} is experiencing {{ humanizePercentage $value }} apply failure rate. Review resource templates and RBAC permissions."
             dashboard: "https://grafana.example.com/d/lynq/controller-health"
             runbook_url: "https://lynq.sh/alert-runbooks#highapplyfailurerate"
 
