@@ -24,7 +24,7 @@ spec:
       rules:
         # Critical: LynqNode is in degraded state
         - alert: LynqNodeDegraded
-          expr: max(lynqnode_degraded_status) by (lynqnode, namespace, reason) > 0
+          expr: max by (lynqnode, namespace, reason) (lynqnode_degraded_status) > 0
           for: 5m
           labels:
             severity: critical
@@ -185,7 +185,7 @@ spec:
         - alert: LynqNodeReconciliationSlow
           expr: |
             histogram_quantile(0.95,
-              sum(rate(lynqnode_reconcile_duration_seconds_bucket{result="success"}[5m])) by (le)
+              sum by (le) (rate(lynqnode_reconcile_duration_seconds_bucket{result="success"}[5m]))
             ) > 30
           for: 15m
           labels:
@@ -200,9 +200,9 @@ spec:
         # Warning: High apply failure rate
         - alert: HighApplyFailureRate
           expr: |
-            sum(rate(apply_attempts_total{result="failure"}[5m])) by (kind)
+            sum by (kind) (rate(apply_attempts_total{result="failure"}[5m]))
             /
-            sum(rate(apply_attempts_total[5m])) by (kind)
+            sum by (kind) (rate(apply_attempts_total[5m]))
             > 0.2
           for: 10m
           labels:
