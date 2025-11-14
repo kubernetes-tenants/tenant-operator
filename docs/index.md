@@ -336,16 +336,7 @@ Click **LynqHub** and **LynqForm** to see the YAML, or click database rows to to
   </div>
 </div>
 
-<div style="text-align: center; padding: 3rem 2rem; background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); border-radius: 16px; margin: 3rem 0; border: 1px solid rgba(102, 126, 234, 0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 4px 24px rgba(102, 126, 234, 0.1);">
-  <div>
-    <div style="font-size: clamp(1.5rem, 4vw, 2.25rem); font-weight: 700; margin-bottom: 0.75rem; line-height: 1.2; color: var(--vp-c-text-1);">
-      1 Database Row = 1 Complete Stack
-    </div>
-    <p style="font-size: clamp(0.95rem, 2vw, 1.1rem); margin: 0; line-height: 1.6; color: var(--vp-c-text-2); max-width: 700px; margin-left: auto; margin-right: auto;">
-      Add a node to your database → Get Deployment + Service + Ingress + DNS + whatever you need
-    </p>
-  </div>
-</div>
+<RowToStackBanner />
 
 ::: tip Start in 5 minutes
 Follow the [Quick Start Guide](/quickstart) to see this in action with a working MySQL database and sample templates.

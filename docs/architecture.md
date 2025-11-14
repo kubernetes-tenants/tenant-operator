@@ -77,7 +77,7 @@ Quick reference for the three main components:
 | **LynqForm** | Defines resource blueprint              | Deployment + Service per node       |
 | **LynqNode**       | Instance of a single node               | `acme-corp-web-app` → 5 K8s resources |
 
-**Workflow**: Database row → LynqHub syncs → Creates LynqNode CR → LynqNode controller applies LynqForm → Kubernetes resources created.
+**Workflow**: Database row becomes active → LynqHub controller syncs and multiplies rows by all referencing LynqForms → A LynqNode CR is created per `{row × template}` combination → LynqNode controller renders the LynqForm snapshot for that node and applies it via the SSA engine → Kubernetes resources are created/updated and kept in sync.
 
 ---
 
