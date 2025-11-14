@@ -409,8 +409,6 @@ deployments:
 
 Controls how resources are updated.
 
-<PatchStrategyVisualizer />
-
 ### `apply` (Default - Server-Side Apply)
 
 Uses Kubernetes Server-Side Apply for declarative updates.
