@@ -84,7 +84,8 @@ spec:
 
   valueMappings:
     uid: node_id
-    hostOrUrl: subdomain                    # Default subdomain
+    # DEPRECATED v1.1.11+: Use extraValueMappings instead
+    #     hostOrUrl: subdomain                    # Default subdomain
     activate: is_active
 
   extraValueMappings:

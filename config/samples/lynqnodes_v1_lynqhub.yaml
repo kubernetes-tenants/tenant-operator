@@ -31,9 +31,14 @@ spec:
       table: nodes
   valueMappings:
     uid: id
+    # DEPRECATED: hostOrUrl is deprecated since v1.1.11 and will be removed in v1.3.0
+    # Use extraValueMappings + toHost() function instead (see example below)
     hostOrUrl: url
     activate: isActive
   extraValueMappings:
+    # Recommended: Use extraValueMappings for URL/host fields
+    # Example: nodeUrl: url
+    # Then in template: {{ .nodeUrl | toHost }}
     deployImage: image
     planId: plan_id
     replicas: replica_count

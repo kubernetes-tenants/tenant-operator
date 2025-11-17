@@ -11,6 +11,7 @@ import CreationPolicyVisualizer from '../components/CreationPolicyVisualizer.vue
 import DeletionPolicyVisualizer from '../components/DeletionPolicyVisualizer.vue';
 import ConflictPolicyVisualizer from '../components/ConflictPolicyVisualizer.vue';
 import RowToStackBanner from '../components/RowToStackBanner.vue';
+import WhyLynqCards from '../components/WhyLynqCards.vue';
 import './custom.css';
 
 export default {
@@ -29,5 +30,6 @@ export default {
     app.component('DeletionPolicyVisualizer', DeletionPolicyVisualizer);
     app.component('ConflictPolicyVisualizer', ConflictPolicyVisualizer);
     app.component('RowToStackBanner', RowToStackBanner);
+    app.component('WhyLynqCards', WhyLynqCards);
   }
 };

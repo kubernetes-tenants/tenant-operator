@@ -138,15 +138,16 @@ spec:
                     description: Activate is the column name for the activation status
                     type: string
                   hostOrUrl:
-                    description: HostOrURL is the column name for the node host or
-                      URL
+                    description: |-
+                      HostOrURL is the column name for the node host or URL
+                      Deprecated: Use extraValueMappings with the toHost() function instead
+                      This field will be removed in v1.3.0
                     type: string
                   uid:
                     description: UID is the column name for the node unique identifier
                     type: string
                 required:
                 - activate
-                - hostOrUrl
                 - uid
                 type: object
             required:

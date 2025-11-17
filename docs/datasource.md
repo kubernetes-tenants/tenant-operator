@@ -83,14 +83,37 @@ spec:
 
 ### Required Mappings
 
-Three columns are required for every node:
+Two columns are required for every node:
 
 ```yaml
 valueMappings:
   uid: node_id             # Unique node identifier
-  hostOrUrl: node_url      # Node URL or hostname
   activate: is_active      # Activation flag
 ```
+
+::: danger DEPRECATED: hostOrUrl
+`hostOrUrl` mapping is **deprecated since v1.1.11** and will be **removed in v1.3.0**.
+
+**Legacy usage (deprecated):**
+```yaml
+valueMappings:
+  uid: node_id
+  hostOrUrl: node_url      # ⚠️ DEPRECATED
+  activate: is_active
+```
+
+**New recommended approach:**
+```yaml
+valueMappings:
+  uid: node_id
+  activate: is_active
+extraValueMappings:
+  nodeUrl: node_url        # ✅ Use extraValueMappings instead
+
+# In template, use toHost() function:
+# {{ .nodeUrl | toHost }}  # Extract hostname from URL
+```
+:::
 
 #### `uid` - Node Identifier
 
@@ -99,18 +122,6 @@ valueMappings:
 - **Purpose**: Unique identifier for each node
 - **Examples**: `"node-123"`, `"acme-corp"`, `"customer-456"`
 - **Used in**: Resource naming, labels, template variables
-
-#### `hostOrUrl` - Node URL/Hostname
-
-- **Type**: String
-- **Required**: Yes
-- **Purpose**: LynqNode's URL or hostname
-- **Examples**:
-  - `"https://acme.example.com"`
-  - `"acme.example.com"`
-  - `"node123.myapp.io"`
-- **Auto-extraction**: `.host` variable is automatically extracted
-  - `"https://acme.example.com"` → `.host = "acme.example.com"`
 
 #### `activate` - Activation Flag ⚠️
 

@@ -50,9 +50,9 @@ nameTemplate: "{{ .uid }}-{{ .planId | default \"basic\" }}"
 
 :::
 
-::: v-pre
-
 ## Available Variables
+
+::: v-pre
 
 ### Required Variables
 
@@ -60,10 +60,74 @@ These are always available from the template context:
 
 ```yaml
 .uid         # Node unique identifier (from uid mapping)
-.hostOrUrl   # Original URL/host from registry (from hostOrUrl mapping)
-.host        # Auto-extracted host from .hostOrUrl
 .activate    # Activation status (from activate mapping)
 ```
+
+:::
+
+### Deprecated Variables
+
+::: danger DEPRECATED
+The following variables are **deprecated since v1.1.11** and will be **removed in v1.3.0**:
+:::
+
+::: v-pre
+
+```yaml
+.hostOrUrl   # Original URL/host from registry (from hostOrUrl mapping)
+.host        # Auto-extracted host from .hostOrUrl
+```
+
+:::
+
+::: tip Migration Guide
+**Instead of using `.hostOrUrl` and `.host`:**
+
+**Before (deprecated):**
+
+::: v-pre
+
+```yaml
+# In LynqHub
+spec:
+  valueMappings:
+    uid: node_id
+    hostOrUrl: domain_url  # ⚠️ Deprecated
+    activate: is_active
+
+# In template
+env:
+  - name: HOST
+    value: "{{ .host }}"  # ⚠️ Deprecated
+```
+
+:::
+
+**After (v1.1.11+):**
+
+::: v-pre
+
+```yaml
+# In LynqHub
+spec:
+  valueMappings:
+    uid: node_id
+    activate: is_active
+  extraValueMappings:
+    domainUrl: domain_url  # ✅ Use extraValueMappings
+
+# In template
+env:
+  - name: HOST
+    value: "{{ .domainUrl | toHost }}"  # ✅ Use toHost() function
+```
+
+:::
+
+**Why this change?**
+Lynq is now a **database-driven automation platform**, not limited to tenant/host provisioning. Requiring `.hostOrUrl` was an unnecessary constraint from the legacy "tenant-operator" design.
+
+::: v-pre
 
 ### Context Variables
 
@@ -93,19 +157,28 @@ Access in templates:
 .dbHost   # Maps to database_host column
 ```
 
+:::
+
+::: v-pre
+
 ## Template Functions
 
 ### Built-in Custom Functions
 
 #### `toHost(url)` ✅
 Extract hostname from URL:
+
+::: tip Recommended Usage
+Use with `extraValueMappings` instead of deprecated `.hostOrUrl`:
 ```yaml
 # Input: https://acme.example.com:8080/path
 # Output: acme.example.com
 env:
 - name: HOST
-  value: "{{ .hostOrUrl | toHost }}"
+  value: "{{ .domainUrl | toHost }}"  # ✅ Recommended (v1.1.11+)
+  # value: "{{ .hostOrUrl | toHost }}"  # ⚠️ Deprecated, removed in v1.3.0
 ```
+:::
 
 #### `trunc63(s)` ✅
 Truncate to 63 characters (Kubernetes name limit):
@@ -221,6 +294,8 @@ value: "{{ max .minReplicas 3 }}"
 
 ## Template Examples
 
+::: v-pre
+
 ### Example 1: Multi-Region Deployment
 
 ```yaml
@@ -312,7 +387,11 @@ labelsTemplate:
   version: "{{ .appVersion | default \"v1.0.0\" }}"
 ```
 
+:::
+
 ## Template Best Practices
+
+::: v-pre
 
 ### 1. Use Default Values
 
@@ -370,23 +449,36 @@ value: "{{ .optionalField | default \"default-value\" }}"
 replicas: {{- if eq .planId "enterprise" }}5{{- else if eq .planId "premium" }}3{{- else }}2{{- end }}
 ```
 
+:::
+
 ## Template Rendering Process
+
+::: v-pre
 
 ### 1. Variable Collection
 
 Hub controller collects variables from database row:
 ```
 uid = "acme-corp"
-hostOrUrl = "https://acme.example.com"
+# hostOrUrl = "https://acme.example.com"  # DEPRECATED v1.1.11+
 activate = true
 planId = "enterprise"
+customUrl = "https://acme.example.com"  # Use extraValueMappings instead
 ```
 
-### 2. Auto-Processing
+### 2. Auto-Processing (Deprecated)
 
-Operator automatically extracts `.host`:
+**Note:** This step is deprecated since v1.1.11.
+
+~~Operator automatically extracts `.host`:~~
 ```
-.host = "acme.example.com"  # extracted from .hostOrUrl
+# .host = "acme.example.com"  # DEPRECATED - extracted from .hostOrUrl
+```
+
+**New approach (v1.1.11+):** Use `toHost()` function in templates:
+```
+# In template:
+value: "{{ .customUrl | toHost }}"  # Extracts "acme.example.com"
 ```
 
 ### 3. Template Evaluation
@@ -479,6 +571,8 @@ env:
 ::: tip Dynamic Updates
 LynqForms can be safely modified at runtime. The operator automatically handles resource additions, modifications, and removals.
 :::
+
+::: v-pre
 
 ### Adding Resources
 

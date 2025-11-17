@@ -67,7 +67,11 @@ data:
     CREATE TABLE IF NOT EXISTS tenants (
       id INT AUTO_INCREMENT PRIMARY KEY,
       uid VARCHAR(255) NOT NULL UNIQUE,
-      host_or_url VARCHAR(255) NOT NULL,
+
+      -- DEPRECATED v1.1.11+: host_or_url is optional, use custom columns instead
+      -- Keep for backward compatibility testing, but new deployments should use custom columns
+      host_or_url VARCHAR(255),  -- Optional (was NOT NULL before v1.1.11)
+
       activate BOOLEAN NOT NULL DEFAULT TRUE,
       deploy_image VARCHAR(255),
       plan_id VARCHAR(50),
@@ -81,6 +85,8 @@ data:
     );
 
     -- Insert test data
+    -- NOTE: host_or_url is deprecated but kept for backward compatibility testing
+    -- New deployments can omit this column and use extraValueMappings instead
     INSERT INTO tenants (uid, host_or_url, activate, deploy_image, plan_id, max_users, storage_gb, custom_config)
     VALUES
       ('node-alpha', 'https://alpha.example.com', TRUE, 'nginx:1.21', 'enterprise', 1000, 100, '{"features": ["advanced-analytics", "custom-domain"]}'),
@@ -88,7 +94,9 @@ data:
       ('node-gamma', 'https://gamma.example.com', TRUE, 'nginx:1.21', 'basic', 100, 10, '{"features": ["basic-support"]}'),
       ('node-delta', 'https://delta.example.com', FALSE, 'nginx:1.21', 'professional', 500, 50, '{"features": ["analytics"]}'),
       ('node-epsilon', 'https://epsilon.example.com', TRUE, 'nginx:1.22', 'enterprise', 2000, 200, '{"features": ["advanced-analytics", "custom-domain", "sso"]}'),
-      ('node-zeta', 'https://zeta.example.com', FALSE, 'nginx:1.20', 'basic', 50, 5, '{"features": []}')
+      ('node-zeta', 'https://zeta.example.com', FALSE, 'nginx:1.20', 'basic', 50, 5, '{"features": []}'),
+      -- Example without host_or_url (v1.1.11+): Uses only custom fields
+      ('node-theta', NULL, TRUE, 'nginx:1.23', 'enterprise', 5000, 500, '{"features": ["all"], "customUrl": "https://theta.example.com"}')
     ON DUPLICATE KEY UPDATE
       host_or_url=VALUES(host_or_url),
       activate=VALUES(activate),

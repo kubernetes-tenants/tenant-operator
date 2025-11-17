@@ -38,7 +38,7 @@ spec:
   # Required column mappings
   valueMappings:
     uid: string                      # Node ID column (required)
-    hostOrUrl: string                # Node URL column (required)
+    # hostOrUrl: string              # DEPRECATED v1.1.11+ (optional, removed in v1.3.0)
     activate: string                 # Activation flag column (required)
   
   # Optional column mappings
@@ -156,11 +156,12 @@ metadata:
   annotations:
     # Template variables (set by Hub controller)
     lynq.sh/uid: "acme-corp"
-    lynq.sh/host: "acme.example.com"
-    lynq.sh/hostOrUrl: "https://acme.example.com"
+    # lynq.sh/host: "acme.example.com"                # DEPRECATED v1.1.11+
+    # lynq.sh/hostOrUrl: "https://acme.example.com"   # DEPRECATED v1.1.11+
     lynq.sh/activate: "true"
-    # Extra variables from extraValueMappings
+    # Extra variables from extraValueMappings (recommended for custom fields)
     lynq.sh/planId: "enterprise"
+    lynq.sh/nodeUrl: "https://acme.example.com"       # Use extraValueMappings instead
 spec:
   hubId: string                 # Registry name
   templateRef: string                # Template name
@@ -293,11 +294,11 @@ Examples: `30s`, `1m`, `2h`
 ```yaml
 # Template variables
 lynq.sh/uid: string
-lynq.sh/host: string
-lynq.sh/hostOrUrl: string
+# lynq.sh/host: string                # DEPRECATED v1.1.11+ (removed in v1.3.0)
+# lynq.sh/hostOrUrl: string           # DEPRECATED v1.1.11+ (removed in v1.3.0)
 lynq.sh/activate: string
 
-# Extra variables from extraValueMappings
+# Extra variables from extraValueMappings (recommended approach)
 lynq.sh/<key>: value
 
 # CreationPolicy tracking
@@ -392,7 +393,9 @@ See [Templates Guide](templates.md) and [Quick Start Guide](quickstart.md) for c
 
 ### LynqHub
 
-- `spec.valueMappings` must include: `uid`, `hostOrUrl`, `activate`
+- `spec.valueMappings` must include: `uid`, `activate`
+- `spec.valueMappings.hostOrUrl` is deprecated since v1.1.11 (optional, will be removed in v1.3.0)
+- Use `spec.extraValueMappings` with `toHost()` template function instead of `hostOrUrl`
 - `spec.source.syncInterval` must match pattern: `^\d+(s|m|h)$`
 - `spec.source.mysql.host` required when `type=mysql`
 

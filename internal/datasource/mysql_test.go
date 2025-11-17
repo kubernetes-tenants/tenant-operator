@@ -98,8 +98,8 @@ func TestMySQLAdapter_QueryNodes(t *testing.T) {
 				rows := sqlmock.NewRows([]string{"id", "url", "active", "subscription_plan", "deployment_region"}).
 					AddRow("node1", "https://node1.example.com", "1", "premium", "us-east-1").
 					AddRow("node2", "https://node2.example.com", "true", "basic", "us-west-2").
-					AddRow("node3", "https://node3.example.com", "0", "premium", "eu-west-1"). // Inactive
-					AddRow("node4", "", "1", "basic", "ap-south-1")                            // Empty URL, should be filtered
+					AddRow("node3", "https://node3.example.com", "0", "premium", "eu-west-1"). // Inactive - should be filtered
+					AddRow("node4", "", "1", "basic", "ap-south-1")                            // Empty URL - now allowed (v1.1.11+)
 				mock.ExpectQuery("SELECT .* FROM .*").
 					WillReturnRows(rows)
 			},
@@ -122,6 +122,15 @@ func TestMySQLAdapter_QueryNodes(t *testing.T) {
 						"region": "us-west-2",
 					},
 				},
+				{
+					UID:       "node4",
+					HostOrURL: "", // Empty URL now allowed since v1.1.11
+					Activate:  "1",
+					Extra: map[string]string{
+						"planId": "basic",
+						"region": "ap-south-1",
+					},
+				},
 			},
 			wantErr: false,
 		},
@@ -142,8 +151,8 @@ func TestMySQLAdapter_QueryNodes(t *testing.T) {
 				rows := sqlmock.NewRows([]string{"id", "url", "active", "json_config"}).
 					AddRow("node1", "https://node1.example.com", "1", sql.NullString{Valid: false}). // NULL config
 					AddRow(sql.NullString{Valid: false}, "https://node2.example.com", "1", "{}").    // NULL id
-					AddRow("node3", sql.NullString{Valid: false}, "1", "{}").                        // NULL URL
-					AddRow("node4", "https://node4.example.com", sql.NullString{Valid: false}, "{}") // NULL activate
+					AddRow("node3", sql.NullString{Valid: false}, "1", "{}").                        // NULL URL - now allowed (v1.1.11+)
+					AddRow("node4", "https://node4.example.com", sql.NullString{Valid: false}, "{}") // NULL activate - filtered out
 				mock.ExpectQuery("SELECT .* FROM .*").
 					WillReturnRows(rows)
 			},
@@ -159,6 +168,14 @@ func TestMySQLAdapter_QueryNodes(t *testing.T) {
 				{
 					UID:       "", // NULL UID is converted to empty string but still included
 					HostOrURL: "https://node2.example.com",
+					Activate:  "1",
+					Extra: map[string]string{
+						"config": "{}",
+					},
+				},
+				{
+					UID:       "node3",
+					HostOrURL: "", // NULL URL now allowed since v1.1.11
 					Activate:  "1",
 					Extra: map[string]string{
 						"config": "{}",
@@ -197,6 +214,51 @@ func TestMySQLAdapter_QueryNodes(t *testing.T) {
 					HostOrURL: "https://t2.example.com",
 					Activate:  "YES",
 					Extra:     map[string]string{},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "query without hostOrUrl mapping (v1.1.11+ - deprecated field is optional)",
+			queryConfig: QueryConfig{
+				Table: "nodes",
+				ValueMappings: ValueMappings{
+					UID:       "node_id",
+					HostOrURL: "", // No hostOrUrl mapping (deprecated since v1.1.11)
+					Activate:  "is_active",
+				},
+				ExtraMappings: map[string]string{
+					"customUrl": "custom_url", // Use extraValueMappings instead
+					"planId":    "plan_id",
+				},
+			},
+			setupMock: func(mock sqlmock.Sqlmock) {
+				// Only query UID, activate, and extra columns (no hostOrUrl)
+				rows := sqlmock.NewRows([]string{"node_id", "is_active", "custom_url", "plan_id"}).
+					AddRow("node1", "1", "https://custom1.example.com", "premium").
+					AddRow("node2", "true", "https://custom2.example.com", "basic").
+					AddRow("node3", "0", "https://custom3.example.com", "free") // Inactive - filtered
+				mock.ExpectQuery("SELECT .* FROM .*").
+					WillReturnRows(rows)
+			},
+			want: []NodeRow{
+				{
+					UID:       "node1",
+					HostOrURL: "", // Not queried, remains empty
+					Activate:  "1",
+					Extra: map[string]string{
+						"customUrl": "https://custom1.example.com",
+						"planId":    "premium",
+					},
+				},
+				{
+					UID:       "node2",
+					HostOrURL: "", // Not queried, remains empty
+					Activate:  "true",
+					Extra: map[string]string{
+						"customUrl": "https://custom2.example.com",
+						"planId":    "basic",
+					},
 				},
 			},
 			wantErr: false,
