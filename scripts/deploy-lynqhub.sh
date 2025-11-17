@@ -106,11 +106,14 @@ spec:
   # Required mappings
   valueMappings:
     uid: uid
-    hostOrUrl: host_or_url
+    # DEPRECATED v1.1.11+: hostOrUrl is deprecated, use extraValueMappings instead
+    # hostOrUrl: host_or_url  # Remove in v1.3.0
     activate: activate
 
   # Extra mappings for template variables
   extraValueMappings:
+    # Recommended: Map URL/host fields via extraValueMappings
+    nodeUrl: host_or_url      # Use {{ .nodeUrl | toHost }} in templates
     deployImage: deploy_image
     planId: plan_id
     maxUsers: max_users

@@ -37,6 +37,7 @@ export default withMermaid(
           text: "Core Concepts",
           collapsed: false,
           items: [
+            { text: "How It Works", link: "/how-it-works" },
             { text: "Architecture", link: "/architecture" },
             { text: "API Reference", link: "/api" },
             { text: "Configuration", link: "/configuration" },

@@ -81,12 +81,19 @@ func NewMySQLAdapter(config Config) (*MySQLAdapter, error) {
 
 // QueryNodes queries active nodes from the MySQL database
 func (a *MySQLAdapter) QueryNodes(ctx context.Context, config QueryConfig) ([]NodeRow, error) {
-	// Build column list
+	// Build column list - start with required fields
 	columns := []string{
 		config.ValueMappings.UID,
-		config.ValueMappings.HostOrURL,
-		config.ValueMappings.Activate,
 	}
+
+	// Add HostOrURL only if specified (deprecated, optional since v1.1.11)
+	includeHostOrURL := config.ValueMappings.HostOrURL != ""
+	if includeHostOrURL {
+		columns = append(columns, config.ValueMappings.HostOrURL)
+	}
+
+	// Add activate column
+	columns = append(columns, config.ValueMappings.Activate)
 
 	// Add extra columns in sorted order for stable queries
 	// Sort the keys to ensure consistent column order
@@ -125,8 +132,12 @@ func (a *MySQLAdapter) QueryNodes(ctx context.Context, config QueryConfig) ([]No
 		// Use NullString for required fields to handle NULL values
 		var uid, hostOrURL, activate sql.NullString
 
-		// Prepare scan destinations
-		scanDest := []interface{}{&uid, &hostOrURL, &activate}
+		// Prepare scan destinations based on which columns were queried
+		scanDest := []interface{}{&uid}
+		if includeHostOrURL {
+			scanDest = append(scanDest, &hostOrURL)
+		}
+		scanDest = append(scanDest, &activate)
 
 		// Add extra column destinations
 		extraValues := make([]sql.NullString, len(extraColumns))
@@ -171,7 +182,8 @@ func (a *MySQLAdapter) QueryNodes(ctx context.Context, config QueryConfig) ([]No
 		}
 
 		// Filter: only include active nodes
-		if isActive(row.Activate) && row.HostOrURL != "" {
+		// Note: HostOrURL is deprecated since v1.1.11 and no longer required
+		if isActive(row.Activate) {
 			nodes = append(nodes, row)
 		}
 	}

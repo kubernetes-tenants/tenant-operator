@@ -264,85 +264,71 @@ Automatically.
 </div>
 </div>
 
-## Why Lynq?
+## Why Teams Choose Lynq
 
-<ComparisonSection />
-
-<div style="margin: 3rem 0; padding: 2.5rem 2rem; background: var(--vp-c-bg-soft); border-radius: 16px; border: 1px solid var(--vp-c-divider);">
-
-<h3 style="margin: 0 0 0.5rem; text-align: center; font-size: 1.75rem; color: var(--vp-c-text-1);">Perfect For</h3>
-<p style="text-align: center; color: var(--vp-c-text-2); margin: 0 0 2rem; font-size: 0.95rem;">Automate infrastructure provisioning at any scale</p>
-
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-<div style="text-align: center; padding: 1.5rem; background: var(--vp-c-bg); border-radius: 12px; border: 1px solid var(--vp-c-divider); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
-<div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🏢</div>
-<strong style="display: block; margin-bottom: 0.5rem; font-size: 1.05rem; color: var(--vp-c-text-1);">SaaS Platforms</strong>
-<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2); line-height: 1.6;">
-Each customer gets isolated infrastructure provisioned from your user database
+<p style="text-align: center; color: var(--vp-c-text-2); margin: 0 0 4rem; font-size: 1.1rem; line-height: 1.6; max-width: 900px; margin-left: auto; margin-right: auto;">
+Watch how Lynq transforms complex infrastructure management into elegant automation
 </p>
-</div>
 
-<div style="text-align: center; padding: 1.5rem; background: var(--vp-c-bg); border-radius: 12px; border: 1px solid var(--vp-c-divider); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
-<div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🌍</div>
-<strong style="display: block; margin-bottom: 0.5rem; font-size: 1.05rem; color: var(--vp-c-text-1);">Multi-Environment Apps</strong>
-<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2); line-height: 1.6;">
-Spin up dev/staging/prod environments dynamically per team or feature branch
+<WhyLynqCards />
+
+## See It in Real-Time
+
+<p style="text-align: center; color: var(--vp-c-text-2); margin: 0 0 2rem; font-size: 1.05rem; line-height: 1.6; max-width: 800px; margin-left: auto; margin-right: auto;">
+Watch how a simple database change instantly triggers infrastructure updates across your Kubernetes cluster
 </p>
-</div>
-
-<div style="text-align: center; padding: 1.5rem; background: var(--vp-c-bg); border-radius: 12px; border: 1px solid var(--vp-c-divider); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
-<div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🔧</div>
-<strong style="display: block; margin-bottom: 0.5rem; font-size: 1.05rem; color: var(--vp-c-text-1);">Internal Platforms</strong>
-<p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2); line-height: 1.6;">
-Self-service infrastructure for teams without manual ticket workflows
-</p>
-</div>
-</div>
-
-</div>
-
-## How It Works
-
-<HowItWorksDiagram />
-
-::: tip 💡 Interactive
-Click **LynqHub** and **LynqForm** to see the YAML, or click database rows to toggle nodes
-:::
-
-
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 3rem 0">
-  <div style="text-align: center; padding: 2rem 1.5rem; background: var(--vp-c-bg-soft); border-radius: 12px">
-    <div style="font-size: 2.5rem; margin-bottom: 0.75rem">1️⃣</div>
-    <h3 style="margin: 0.5rem 0 0.75rem">Connect Your Data</h3>
-    <p style="margin: 0; color: var(--vp-c-text-2); font-size: 0.95rem; line-height: 1.6">
-      Point to your MySQL database where node information lives. The operator reads active nodes automatically.
-    </p>
-  </div>
-
-  <div style="text-align: center; padding: 2rem 1.5rem; background: var(--vp-c-bg-soft); border-radius: 12px">
-    <div style="font-size: 2.5rem; margin-bottom: 0.75rem">2️⃣</div>
-    <h3 style="margin: 0.5rem 0 0.75rem">Define Your Template</h3>
-    <p style="margin: 0; color: var(--vp-c-text-2); font-size: 0.95rem; line-height: 1.6">
-      Write one template describing what each node needs: deployments, services, ingresses, and any custom resources.
-    </p>
-  </div>
-
-  <div style="text-align: center; padding: 2rem 1.5rem; background: var(--vp-c-bg-soft); border-radius: 12px">
-    <div style="font-size: 2.5rem; margin-bottom: 0.75rem">3️⃣</div>
-    <h3 style="margin: 0.5rem 0 0.75rem">Deploy Automatically</h3>
-    <p style="margin: 0; color: var(--vp-c-text-2); font-size: 0.95rem; line-height: 1.6">
-      Every active node gets isolated infrastructure. Resources are created, updated, and cleaned up automatically as your data changes.
-    </p>
-  </div>
-</div>
 
 <RowToStackBanner />
+
+<div style="text-align: center; margin: 3rem 0;">
+  <p style="color: var(--vp-c-text-2); margin-bottom: 1.5rem; font-size: 1rem;">
+    Want to understand the architecture? Learn how LynqHub, LynqForm, and LynqNode work together.
+  </p>
+  <a href="/how-it-works" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: var(--vp-c-brand-soft); color: var(--vp-c-brand); border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.2s ease;">
+    Learn How It Works →
+  </a>
+</div>
 
 ::: tip Start in 5 minutes
 Follow the [Quick Start Guide](/quickstart) to see this in action with a working MySQL database and sample templates.
 :::
 
-## Kubernetes Compatibility
+## Fine-Grained Control with Policies
+
+<p style="text-align: center; color: var(--vp-c-text-2); margin: 0 0 2.5rem; font-size: 1.05rem; line-height: 1.6; max-width: 800px; margin-left: auto; margin-right: auto;">
+Customize resource lifecycle behavior with powerful policies for creation, deletion, and conflict resolution. Try the interactive simulators to see how each policy works in real-time.
+</p>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 2.5rem 0">
+  <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px; border: 1px solid var(--vp-c-divider);">
+    <strong style="display: block; margin-bottom: 0.75rem; font-size: 1.05rem; color: var(--vp-c-text-1);">🔄 Creation Policies</strong>
+    <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2); line-height: 1.6">
+      Control when resources are applied: <code>Once</code> for immutable resources like init Jobs, or <code>WhenNeeded</code> for dynamic updates
+    </p>
+  </div>
+
+  <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px; border: 1px solid var(--vp-c-divider);">
+    <strong style="display: block; margin-bottom: 0.75rem; font-size: 1.05rem; color: var(--vp-c-text-1);">🗑️ Deletion Policies</strong>
+    <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2); line-height: 1.6">
+      Choose cleanup behavior: <code>Delete</code> to remove resources automatically, or <code>Retain</code> to preserve them after node deletion
+    </p>
+  </div>
+
+  <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px; border: 1px solid var(--vp-c-divider);">
+    <strong style="display: block; margin-bottom: 0.75rem; font-size: 1.05rem; color: var(--vp-c-text-1);">⚠️ Conflict Policies</strong>
+    <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2); line-height: 1.6">
+      Handle ownership conflicts: <code>Stuck</code> to prevent overwrites, or <code>Force</code> to take ownership with Server-Side Apply
+    </p>
+  </div>
+</div>
+
+<div style="text-align: center; margin-top: 2rem;">
+  <a href="/policies" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: var(--vp-c-brand-soft); color: var(--vp-c-brand); border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.2s ease;">
+    Explore Policy Simulators →
+  </a>
+</div>
+
+## Production Ready
 
 <div style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: var(--vp-c-bg-soft); border-radius: 8px; margin: 2.5rem 0">
   <div style="font-size: 2rem">✅</div>
@@ -354,99 +340,246 @@ Follow the [Quick Start Guide](/quickstart) to see this in action with a working
   </div>
 </div>
 
-## Documentation
+## Learn More
+
+<p style="text-align: center; color: var(--vp-c-text-2); margin: 0 0 3rem; font-size: 1.05rem; line-height: 1.6; max-width: 800px; margin-left: auto; margin-right: auto;">
+Explore comprehensive guides, API references, and real-world integration examples
+</p>
+
+<style scoped>
+.doc-card {
+  position: relative;
+  padding: 2rem;
+  background: var(--vp-c-bg-soft);
+  border-radius: 12px;
+  border: 1px solid var(--vp-c-divider);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: visible;
+}
+
+.doc-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--card-color), transparent 50%, var(--card-color-light));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.doc-card:hover {
+  border-color: transparent;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 0 0 1px var(--card-color-alpha);
+  transform: translateY(-4px);
+  background: var(--vp-c-bg);
+}
+
+.doc-card:hover::before {
+  opacity: 1;
+}
+
+.doc-card-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  display: block;
+  filter: grayscale(0.2);
+  transition: all 0.3s ease;
+}
+
+.doc-card:hover .doc-card-icon {
+  filter: grayscale(0);
+  transform: scale(1.1);
+}
+
+.doc-card-title {
+  margin: 0 0 1.25rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--vp-c-text-1);
+}
+
+.doc-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.doc-link-item {
+  display: block;
+}
+
+.doc-link-item a {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+}
+
+.doc-link-item a:hover {
+  padding-left: 0.5rem;
+}
+
+.doc-link-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--vp-c-brand);
+}
+
+.doc-link-item a:hover .doc-link-title {
+  color: var(--vp-c-brand-dark);
+}
+
+.doc-link-desc {
+  font-size: 0.875rem;
+  color: var(--vp-c-text-2);
+  line-height: 1.5;
+}
+</style>
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2.5rem 0">
-  <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px; border-left: 4px solid #42b883">
-    <h3 style="margin: 0 0 1rem">🚀 Getting Started</h3>
-    <ul style="list-style: none; padding: 0; margin: 0">
-      <li style="margin: 0.75rem 0">
-        <a href="/installation"><strong>Installation</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Deploy the operator to your cluster</span>
+  <div class="doc-card" style="--card-color: #42b883; --card-color-light: #7dd3ae; --card-color-alpha: rgba(66, 184, 131, 0.2)">
+    <span class="doc-card-icon">🚀</span>
+    <h3 class="doc-card-title">Getting Started</h3>
+    <ul class="doc-links">
+      <li class="doc-link-item">
+        <a href="/installation">
+          <span class="doc-link-title">Installation</span>
+          <span class="doc-link-desc">Deploy the operator to your cluster</span>
+        </a>
       </li>
-      <li style="margin: 0.75rem 0">
-        <a href="/quickstart"><strong>Quick Start</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Complete tutorial in 5 minutes</span>
+      <li class="doc-link-item">
+        <a href="/quickstart">
+          <span class="doc-link-title">Quick Start</span>
+          <span class="doc-link-desc">Complete tutorial in 5 minutes</span>
+        </a>
       </li>
-      <li style="margin: 0.75rem 0">
-        <a href="/local-development-minikube"><strong>Local Development</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Set up with Minikube</span>
-      </li>
-    </ul>
-  </div>
-
-  <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px; border-left: 4px solid #3b82f6">
-    <h3 style="margin: 0 0 1rem">📚 Core Concepts</h3>
-    <ul style="list-style: none; padding: 0; margin: 0">
-      <li style="margin: 0.75rem 0">
-        <a href="/architecture"><strong>Architecture</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">System design and reconciliation flow</span>
-      </li>
-      <li style="margin: 0.75rem 0">
-        <a href="/api"><strong>API Reference</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Complete CRD specification</span>
-      </li>
-      <li style="margin: 0.75rem 0">
-        <a href="/templates"><strong>Templates</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Go templates with 200+ functions</span>
-      </li>
-      <li style="margin: 0.75rem 0">
-        <a href="/policies"><strong>Policies</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Lifecycle and conflict management</span>
-      </li>
-      <li style="margin: 0.75rem 0">
-        <a href="/datasource"><strong>Datasources</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">External data integration (MySQL)</span>
+      <li class="doc-link-item">
+        <a href="/local-development-minikube">
+          <span class="doc-link-title">Local Development</span>
+          <span class="doc-link-desc">Set up with Minikube</span>
+        </a>
       </li>
     </ul>
   </div>
 
-  <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px; border-left: 4px solid #f59e0b">
-    <h3 style="margin: 0 0 1rem">⚙️ Operations</h3>
-    <ul style="list-style: none; padding: 0; margin: 0">
-      <li style="margin: 0.75rem 0">
-        <a href="/monitoring"><strong>Monitoring</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Prometheus metrics, alerts, and Grafana</span>
+  <div class="doc-card" style="--card-color: #3b82f6; --card-color-light: #93bbfd; --card-color-alpha: rgba(59, 130, 246, 0.2)">
+    <span class="doc-card-icon">📚</span>
+    <h3 class="doc-card-title">Core Concepts</h3>
+    <ul class="doc-links">
+      <li class="doc-link-item">
+        <a href="/architecture">
+          <span class="doc-link-title">Architecture</span>
+          <span class="doc-link-desc">System design and reconciliation flow</span>
+        </a>
       </li>
-      <li style="margin: 0.75rem 0">
-        <a href="/performance"><strong>Performance</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Tuning and scalability</span>
+      <li class="doc-link-item">
+        <a href="/api">
+          <span class="doc-link-title">API Reference</span>
+          <span class="doc-link-desc">Complete CRD specification</span>
+        </a>
       </li>
-      <li style="margin: 0.75rem 0">
-        <a href="/security"><strong>Security</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">RBAC, credentials, and best practices</span>
+      <li class="doc-link-item">
+        <a href="/templates">
+          <span class="doc-link-title">Templates</span>
+          <span class="doc-link-desc">Go templates with 200+ functions</span>
+        </a>
       </li>
-      <li style="margin: 0.75rem 0">
-        <a href="/troubleshooting"><strong>Troubleshooting</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Common issues and solutions</span>
+      <li class="doc-link-item">
+        <a href="/policies">
+          <span class="doc-link-title">Policies</span>
+          <span class="doc-link-desc">Lifecycle and conflict management</span>
+        </a>
+      </li>
+      <li class="doc-link-item">
+        <a href="/datasource">
+          <span class="doc-link-title">Datasources</span>
+          <span class="doc-link-desc">External data integration (MySQL)</span>
+        </a>
       </li>
     </ul>
   </div>
 
-  <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px; border-left: 4px solid #8b5cf6">
-    <h3 style="margin: 0 0 1rem">🔌 Integrations</h3>
-    <ul style="list-style: none; padding: 0; margin: 0">
-      <li style="margin: 0.75rem 0">
-        <a href="/integration-crossplane"><strong>Crossplane</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">K8s-native cloud provisioning</span>
+  <div class="doc-card" style="--card-color: #f59e0b; --card-color-light: #fbbf5a; --card-color-alpha: rgba(245, 158, 11, 0.2)">
+    <span class="doc-card-icon">⚙️</span>
+    <h3 class="doc-card-title">Operations</h3>
+    <ul class="doc-links">
+      <li class="doc-link-item">
+        <a href="/monitoring">
+          <span class="doc-link-title">Monitoring</span>
+          <span class="doc-link-desc">Prometheus metrics, alerts, and Grafana</span>
+        </a>
       </li>
-      <li style="margin: 0.75rem 0">
-        <a href="/integration-external-dns"><strong>External DNS</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Automatic DNS per node</span>
+      <li class="doc-link-item">
+        <a href="/performance">
+          <span class="doc-link-title">Performance</span>
+          <span class="doc-link-desc">Tuning and scalability</span>
+        </a>
       </li>
-      <li style="margin: 0.75rem 0">
-        <a href="/integration-terraform-operator"><strong>Terraform Operator</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">Cloud resource provisioning</span>
+      <li class="doc-link-item">
+        <a href="/security">
+          <span class="doc-link-title">Security</span>
+          <span class="doc-link-desc">RBAC, credentials, and best practices</span>
+        </a>
       </li>
-      <li style="margin: 0.75rem 0">
-        <a href="/integration-argocd"><strong>Argo CD</strong></a><br/>
-        <span style="font-size: 0.9rem; color: var(--vp-c-text-2)">GitOps delivery pipeline</span>
+      <li class="doc-link-item">
+        <a href="/troubleshooting">
+          <span class="doc-link-title">Troubleshooting</span>
+          <span class="doc-link-desc">Common issues and solutions</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <div class="doc-card" style="--card-color: #8b5cf6; --card-color-light: #b794f6; --card-color-alpha: rgba(139, 92, 246, 0.2)">
+    <span class="doc-card-icon">🔌</span>
+    <h3 class="doc-card-title">Integrations</h3>
+    <ul class="doc-links">
+      <li class="doc-link-item">
+        <a href="/integration-crossplane">
+          <span class="doc-link-title">Crossplane</span>
+          <span class="doc-link-desc">K8s-native cloud provisioning</span>
+        </a>
+      </li>
+      <li class="doc-link-item">
+        <a href="/integration-external-dns">
+          <span class="doc-link-title">External DNS</span>
+          <span class="doc-link-desc">Automatic DNS per node</span>
+        </a>
+      </li>
+      <li class="doc-link-item">
+        <a href="/integration-terraform-operator">
+          <span class="doc-link-title">Terraform Operator</span>
+          <span class="doc-link-desc">Cloud resource provisioning</span>
+        </a>
+      </li>
+      <li class="doc-link-item">
+        <a href="/integration-argocd">
+          <span class="doc-link-title">Argo CD</span>
+          <span class="doc-link-desc">GitOps delivery pipeline</span>
+        </a>
       </li>
     </ul>
   </div>
 </div>
 
-## Resources & Community
+## Join the Community
+
+<p style="text-align: center; color: var(--vp-c-text-2); margin: 0 0 2.5rem; font-size: 1.05rem; line-height: 1.6; max-width: 800px; margin-left: auto; margin-right: auto;">
+Open source and actively maintained. Contributions, feedback, and questions are welcome
+</p>
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin: 2.5rem 0 0">
   <div style="padding: 1.5rem; background: var(--vp-c-bg-soft); border-radius: 8px">

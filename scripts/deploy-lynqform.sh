@@ -77,7 +77,8 @@ spec:
       metadata:
         labels:
           node-id: "{{ .uid }}"
-          node-host: "{{ .host }}"
+          # DEPRECATED v1.1.11+: Use {{ .nodeUrl | toHost }} instead of {{ .host }}
+          node-host: "{{ .nodeUrl | toHost }}"
           node-plan: "{{ default \"basic\" .planId }}"
           managed-by: lynq
 
@@ -97,7 +98,9 @@ spec:
           tenant: "{{ .uid }}"
       data:
         node.uid: "{{ .uid }}"
-        node.host: "{{ .host }}"
+        # DEPRECATED v1.1.11+: Use {{ .nodeUrl | toHost }} instead of {{ .host }}
+        node.host: "{{ .nodeUrl | toHost }}"
+        node.url: "{{ .nodeUrl }}"
         node.plan: "{{ default \"basic\" .planId }}"
         node.maxUsers: "{{ default \"100\" .maxUsers }}"
         node.storageGb: "{{ default \"10\" .storageGb }}"
@@ -139,8 +142,11 @@ spec:
               env:
               - name: NODE_UID
                 value: "{{ .uid }}"
+              # DEPRECATED v1.1.11+: Use {{ .nodeUrl | toHost }} instead of {{ .host }}
               - name: NODE_HOST
-                value: "{{ .host }}"
+                value: "{{ .nodeUrl | toHost }}"
+              - name: NODE_URL
+                value: "{{ .nodeUrl }}"
               - name: NODE_PLAN
                 value: "{{ default \"basic\" .planId }}"
               - name: NODE_MAX_USERS

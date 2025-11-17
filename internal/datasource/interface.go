@@ -33,7 +33,9 @@ type Datasource interface {
 
 // NodeRow represents a row from the node datasource
 type NodeRow struct {
-	UID       string
+	UID string
+	// HostOrURL is deprecated since v1.1.11 and will be removed in v1.3.0
+	// Use extraValueMappings with toHost() template function instead
 	HostOrURL string
 	Activate  string
 	Extra     map[string]string
@@ -53,7 +55,9 @@ type QueryConfig struct {
 
 // ValueMappings defines required column mappings
 type ValueMappings struct {
-	UID       string
+	UID string
+	// HostOrURL is deprecated since v1.1.11 and will be removed in v1.3.0
+	// Use extraValueMappings with toHost() template function instead
 	HostOrURL string
 	Activate  string
 }

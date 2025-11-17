@@ -141,15 +141,20 @@ func fromJson(jsonStr string) interface{} {
 }
 
 // BuildVariables creates Variables from database row data
+// Note: hostOrURL and host are deprecated since v1.1.11 and will be removed in v1.3.0
 func BuildVariables(uid, hostOrURL, activate string, extraMappings map[string]string) Variables {
 	vars := Variables{
-		"uid":       uid,
-		"hostOrUrl": hostOrURL,
-		"activate":  activate,
+		"uid":      uid,
+		"activate": activate,
 	}
 
-	// Auto-extract host from hostOrURL
-	vars["host"] = toHost(hostOrURL)
+	// Deprecated: hostOrUrl and host variables (since v1.1.11, removed in v1.3.0)
+	// Only populate if hostOrURL is provided (for backward compatibility)
+	if hostOrURL != "" {
+		vars["hostOrUrl"] = hostOrURL
+		// Auto-extract host from hostOrURL
+		vars["host"] = toHost(hostOrURL)
+	}
 
 	// Add extra mappings
 	for k, v := range extraMappings {

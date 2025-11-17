@@ -135,8 +135,10 @@ spec:
     syncInterval: 1m
   valueMappings:
     uid: node_id
-    hostOrUrl: node_url
+    # hostOrUrl: node_url  # DEPRECATED v1.1.11+ (use extraValueMappings)
     activate: is_active  # Must be "1", "true", or "yes"
+  extraValueMappings:
+    nodeUrl: node_url  # Recommended: use extraValueMappings + toHost() in templates
 ```
 
 📖 **Database setup guide:** [DataSource Configuration](https://lynq.sh/datasource)

@@ -106,10 +106,14 @@ LynqNode Controller -> Reconciles each LynqNode -> SSA applies resources
 
 **Required Value Mappings**:
 - `uid`: Node identifier (required)
-- `hostOrUrl`: Node URL/host (required, auto-extracts `.host`)
 - `activate`: Activation flag (required)
 
-**Extra Value Mappings**: Arbitrary column-to-variable mappings for templates
+**Deprecated Value Mappings** (since v1.1.11, removed in v1.3.0):
+- `hostOrUrl`: Node URL/host (deprecated, use `extraValueMappings` + `toHost()` function instead)
+  - Previously auto-extracted `.host` variable
+  - Migration: Use `extraValueMappings` to map column to custom variable, then use `toHost()` in templates
+
+**Extra Value Mappings**: Arbitrary column-to-variable mappings for templates (recommended approach)
 
 ### LynqForm
 
@@ -122,8 +126,9 @@ LynqNode Controller -> Reconciles each LynqNode -> SSA applies resources
 - All `*Template` fields support Go `text/template` + sprig functions
 
 **Template Variables Available**:
-- Required: `.uid`, `.hostOrUrl` (-> `.host` auto-extracted), `.activate`
-- Extra: Any keys from `extraValueMappings`
+- Required: `.uid`, `.activate`
+- Deprecated (v1.1.11, removed in v1.3.0): `.hostOrUrl`, `.host`
+- Extra: Any keys from `extraValueMappings` (recommended for all custom fields including URLs/hosts)
 - Context: `.hubId`, `.templateRef`, etc.
 
 **Custom Template Functions** (All Implemented ✅):

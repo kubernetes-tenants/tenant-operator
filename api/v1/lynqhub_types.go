@@ -85,8 +85,10 @@ type ValueMappings struct {
 	UID string `json:"uid"`
 
 	// HostOrURL is the column name for the node host or URL
-	// +kubebuilder:validation:Required
-	HostOrURL string `json:"hostOrUrl"`
+	// Deprecated: Use extraValueMappings with the toHost() function instead
+	// This field will be removed in v1.3.0
+	// +optional
+	HostOrURL string `json:"hostOrUrl,omitempty"`
 
 	// Activate is the column name for the activation status
 	// +kubebuilder:validation:Required

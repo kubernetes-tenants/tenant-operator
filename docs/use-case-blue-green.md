@@ -104,7 +104,8 @@ spec:
 
   valueMappings:
     uid: node_id
-    hostOrUrl: domain
+    # DEPRECATED v1.1.11+: Use extraValueMappings instead
+    #     hostOrUrl: domain
     activate: is_active
 
   extraValueMappings:

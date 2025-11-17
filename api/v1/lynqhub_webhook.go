@@ -115,11 +115,15 @@ func (v *LynqHubValidator) validateLynqHub(ctx context.Context, registry *LynqHu
 	if registry.Spec.ValueMappings.UID == "" {
 		return warnings, fmt.Errorf("valueMappings.uid is required")
 	}
-	if registry.Spec.ValueMappings.HostOrURL == "" {
-		return warnings, fmt.Errorf("valueMappings.hostOrUrl is required")
-	}
 	if registry.Spec.ValueMappings.Activate == "" {
 		return warnings, fmt.Errorf("valueMappings.activate is required")
+	}
+
+	// Deprecation warning for hostOrUrl
+	if registry.Spec.ValueMappings.HostOrURL != "" {
+		warnings = append(warnings,
+			"valueMappings.hostOrUrl is deprecated since v1.1.11 and will be removed in v1.3.0. "+
+				"Use extraValueMappings with the toHost() template function instead.")
 	}
 
 	// Validate source configuration

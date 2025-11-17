@@ -107,6 +107,36 @@ Scalability and advanced multi-tenancy features
   - Node lifecycle hooks
   - Custom node tagging and filtering
 
+### Breaking Changes
+
+::: danger Breaking Changes in v1.3.0
+The following deprecated features will be **removed** in v1.3.0:
+:::
+
+- [ ] **Removal of Deprecated `.hostOrUrl` and `.host` Variables**
+  - **Deprecated since**: v1.1.11
+  - **Removed in**: v1.3.0
+  - **Migration required**: Use `extraValueMappings` + `toHost()` template function
+  - **Impact**: LynqHub configurations using `valueMappings.hostOrUrl` will fail validation
+  - **Migration guide**:
+    ```yaml
+    # Before (deprecated - will fail in v1.3.0)
+    valueMappings:
+      uid: node_id
+      hostOrUrl: domain_url  # ❌ Removed
+      activate: is_active
+
+    # After (v1.3.0+)
+    valueMappings:
+      uid: node_id
+      activate: is_active
+    extraValueMappings:
+      nodeUrl: domain_url    # ✅ Use extraValueMappings
+
+    # In templates: {{ .nodeUrl | toHost }}
+    ```
+  - **Rationale**: Lynq evolved from "tenant-operator" to a general database-driven automation platform, removing hardcoded host/URL requirements provides flexibility for diverse use cases
+
 ### Improvements
 - [ ] Enhanced reconciliation performance for large node counts
 - [ ] Improved status reporting and aggregation
