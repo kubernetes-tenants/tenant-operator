@@ -9,7 +9,7 @@ export default withMermaid(
     base: "/",
     srcDir: ".",
     ignoreDeadLinks: false,
-    appearance: 'force-dark', // Force dark mode only
+    appearance: "force-dark", // Force dark mode only
 
     themeConfig: {
       // https://vitepress.dev/reference/default-theme-config
@@ -76,7 +76,10 @@ export default withMermaid(
             { text: "Custom Domains", link: "/use-case-custom-domains" },
             { text: "Multi-Tier Stack", link: "/use-case-multi-tier" },
             { text: "Blue-Green Deployments", link: "/use-case-blue-green" },
-            { text: "Database-per-Tenant", link: "/use-case-database-per-tenant" },
+            {
+              text: "Database-per-Tenant",
+              link: "/use-case-database-per-tenant",
+            },
             { text: "Feature Flags", link: "/use-case-feature-flags" },
           ],
         },
@@ -99,8 +102,14 @@ export default withMermaid(
           text: "Integrations",
           collapsed: false,
           items: [
-            { text: "Crossplane (Recommended)", link: "/integration-crossplane" },
-            { text: "External DNS (Recommended)", link: "/integration-external-dns" },
+            {
+              text: "Crossplane (Recommended)",
+              link: "/integration-crossplane",
+            },
+            {
+              text: "External DNS (Recommended)",
+              link: "/integration-external-dns",
+            },
             {
               text: "Terraform Operator",
               link: "/integration-terraform-operator",
@@ -151,8 +160,7 @@ export default withMermaid(
       },
 
       editLink: {
-        pattern:
-          "https://github.com/k8s-lynq/lynq/edit/main/docs/:path",
+        pattern: "https://github.com/k8s-lynq/lynq/edit/main/docs/:path",
         text: "Edit this page on GitHub",
       },
 
@@ -193,10 +201,147 @@ export default withMermaid(
     },
 
     head: [
-      ["link", { rel: "icon", type: "image/png", href: "/logo.png" }],
-      ["link", { rel: "shortcut icon", href: "/logo.ico" }],
-      ["link", { rel: "apple-touch-icon", href: "/logo.ico" }],
-      ["meta", { name: "google-site-verification", content: "g7LPr3Wcm6hCm-Lm8iP5KVl11KvPv6Chxpjh3oNKHPw" }],
+      // Standard favicon
+      ["link", { rel: "icon", type: "image/x-icon", href: "/favicon.ico" }],
+      [
+        "link",
+        { rel: "shortcut icon", type: "image/x-icon", href: "/favicon.ico" },
+      ],
+
+      // PNG favicons for different sizes
+      [
+        "link",
+        {
+          rel: "icon",
+          type: "image/png",
+          sizes: "16x16",
+          href: "/favicon-16x16.png",
+        },
+      ],
+      [
+        "link",
+        {
+          rel: "icon",
+          type: "image/png",
+          sizes: "32x32",
+          href: "/favicon-32x32.png",
+        },
+      ],
+
+      // Apple Touch Icon
+      [
+        "link",
+        {
+          rel: "apple-touch-icon",
+          sizes: "180x180",
+          href: "/apple-touch-icon.png",
+        },
+      ],
+
+      // Android Chrome icons
+      [
+        "link",
+        {
+          rel: "icon",
+          type: "image/png",
+          sizes: "192x192",
+          href: "/android-chrome-192x192.png",
+        },
+      ],
+      [
+        "link",
+        {
+          rel: "icon",
+          type: "image/png",
+          sizes: "512x512",
+          href: "/android-chrome-512x512.png",
+        },
+      ],
+
+      // Web App Manifest
+      ["link", { rel: "manifest", href: "/site.webmanifest" }],
+
+      // Theme color for mobile browsers
+      ["meta", { name: "theme-color", content: "#1a1a1a" }],
+
+      // Basic SEO
+      [
+        "meta",
+        {
+          name: "description",
+          content:
+            "Lynq is a Kubernetes operator that automates database-driven resource provisioning. Create and synchronize K8s resources from external datasources using templates.",
+        },
+      ],
+      [
+        "meta",
+        {
+          name: "keywords",
+          content:
+            "kubernetes, operator, automation, database-driven, k8s, lynq, multi-tenancy, resource provisioning, template engine",
+        },
+      ],
+      ["meta", { name: "author", content: "Lynq Contributors" }],
+
+      // OpenGraph (Facebook, LinkedIn, etc.)
+      ["meta", { property: "og:type", content: "website" }],
+      ["meta", { property: "og:site_name", content: "Lynq" }],
+      [
+        "meta",
+        {
+          property: "og:title",
+          content: "Lynq - Database-Driven Kubernetes Automation Platform",
+        },
+      ],
+      [
+        "meta",
+        {
+          property: "og:description",
+          content:
+            "Automate Kubernetes resource provisioning with database-driven templates. Create, sync, and manage K8s resources declaratively from external datasources.",
+        },
+      ],
+      ["meta", { property: "og:url", content: "https://lynq.sh" }],
+      [
+        "meta",
+        { property: "og:image", content: "https://lynq.sh/og-image.png" },
+      ],
+      ["meta", { property: "og:image:width", content: "1200" }],
+      ["meta", { property: "og:image:height", content: "630" }],
+      ["meta", { property: "og:image:alt", content: "Lynq Logo" }],
+      ["meta", { property: "og:locale", content: "en_US" }],
+
+      // Twitter Card
+      ["meta", { name: "twitter:card", content: "summary_large_image" }],
+      [
+        "meta",
+        {
+          name: "twitter:title",
+          content: "Lynq - Database-Driven Kubernetes Automation Platform",
+        },
+      ],
+      [
+        "meta",
+        {
+          name: "twitter:description",
+          content:
+            "Automate Kubernetes resource provisioning with database-driven templates. Create, sync, and manage K8s resources declaratively from external datasources.",
+        },
+      ],
+      [
+        "meta",
+        { name: "twitter:image", content: "https://lynq.sh/og-image.png" },
+      ],
+      ["meta", { name: "twitter:image:alt", content: "Lynq Logo" }],
+
+      // Google site verification
+      [
+        "meta",
+        {
+          name: "google-site-verification",
+          content: "g7LPr3Wcm6hCm-Lm8iP5KVl11KvPv6Chxpjh3oNKHPw",
+        },
+      ],
     ],
   })
 );
