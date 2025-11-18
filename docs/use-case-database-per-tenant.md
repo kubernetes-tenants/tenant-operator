@@ -129,13 +129,13 @@ spec:
   hubId: database-per-node
 
   # Create node namespace
-  manifests:
+  namespaces:
     - id: node-namespace
+      nameTemplate: "node-{{ .uid }}"
       spec:
         apiVersion: v1
         kind: Namespace
         metadata:
-          name: "node-{{ .uid }}"
           labels:
             node-id: "{{ .uid }}"
 
@@ -153,7 +153,6 @@ spec:
         apiVersion: database.aws.crossplane.io/v1beta1
         kind: RDSInstance
         metadata:
-          name: "{{ .uid | trunc 40 }}-db"  # RDS naming limits
           labels:
             node-id: "{{ .uid }}"
         spec:
@@ -194,50 +193,57 @@ spec:
       dependIds: ["rds-instance"]
       waitForReady: true
       spec:
-        replicas: 2
-        selector:
-          matchLabels:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          labels:
             app: "{{ .uid }}"
-        template:
-          metadata:
-            labels:
+            node-id: "{{ .uid }}"
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
               app: "{{ .uid }}"
-          spec:
-            containers:
-              - name: app
-                image: registry.example.com/node-app:v1.0.0
-                env:
-                  - name: NODE_ID
-                    value: "{{ .uid }}"
-                  # Crossplane automatically creates connection secret
-                  - name: DATABASE_HOST
-                    valueFrom:
-                      secretKeyRef:
-                        name: "{{ .uid }}-db-conn"
-                        key: endpoint
-                  - name: DATABASE_PORT
-                    valueFrom:
-                      secretKeyRef:
-                        name: "{{ .uid }}-db-conn"
-                        key: port
-                  - name: DATABASE_NAME
-                    value: "{{ .uid }}"
-                  - name: DATABASE_USER
-                    valueFrom:
-                      secretKeyRef:
-                        name: "{{ .uid }}-db-conn"
-                        key: username
-                  - name: DATABASE_PASSWORD
-                    valueFrom:
-                      secretKeyRef:
-                        name: "{{ .uid }}-db-conn"
-                        key: password
-                ports:
-                  - containerPort: 8080
-                resources:
-                  requests:
-                    cpu: "{{ if eq .planType \"enterprise\" }}1000m{{ else }}500m{{ end }}"
-                    memory: "{{ if eq .planType \"enterprise\" }}2Gi{{ else }}1Gi{{ end }}"
+          template:
+            metadata:
+              labels:
+                app: "{{ .uid }}"
+            spec:
+              containers:
+                - name: app
+                  image: registry.example.com/node-app:v1.0.0
+                  env:
+                    - name: NODE_ID
+                      value: "{{ .uid }}"
+                    # Crossplane automatically creates connection secret
+                    - name: DATABASE_HOST
+                      valueFrom:
+                        secretKeyRef:
+                          name: "{{ .uid }}-db-conn"
+                          key: endpoint
+                    - name: DATABASE_PORT
+                      valueFrom:
+                        secretKeyRef:
+                          name: "{{ .uid }}-db-conn"
+                          key: port
+                    - name: DATABASE_NAME
+                      value: "{{ .uid }}"
+                    - name: DATABASE_USER
+                      valueFrom:
+                        secretKeyRef:
+                          name: "{{ .uid }}-db-conn"
+                          key: username
+                    - name: DATABASE_PASSWORD
+                      valueFrom:
+                        secretKeyRef:
+                          name: "{{ .uid }}-db-conn"
+                          key: password
+                  ports:
+                    - containerPort: 8080
+                  resources:
+                    requests:
+                      cpu: "{{ if eq .planType \"enterprise\" }}1000m{{ else }}500m{{ end }}"
+                      memory: "{{ if eq .planType \"enterprise\" }}2Gi{{ else }}1Gi{{ end }}"
 ```
 
 ::: tip Connection Secret

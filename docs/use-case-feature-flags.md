@@ -73,52 +73,66 @@ spec:
     - id: main-app
       nameTemplate: "{{ .uid }}-app"
       spec:
-        replicas: 2
-        selector:
-          matchLabels:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          labels:
             app: "{{ .uid }}"
-        template:
-          metadata:
-            labels:
+            node-id: "{{ .uid }}"
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
               app: "{{ .uid }}"
-          spec:
-            containers:
-              - name: app
-                image: registry.example.com/node-app:v1.5.0
-                env:
-                  - name: NODE_ID
-                    value: "{{ .uid }}"
+          template:
+            metadata:
+              labels:
+                app: "{{ .uid }}"
+            spec:
+              containers:
+                - name: app
+                  image: registry.example.com/node-app:v1.5.0
+                  env:
+                    - name: NODE_ID
+                      value: "{{ .uid }}"
 
-                  # Feature flags as environment variables
-                  - name: FEATURE_ANALYTICS
-                    value: "{{ .featureAnalytics }}"
-                  - name: FEATURE_SSO
-                    value: "{{ .featureSso }}"
-                  - name: FEATURE_AUDIT_LOGS
-                    value: "{{ .featureAuditLogs }}"
-                  - name: FEATURE_ADVANCED_REPORTS
-                    value: "{{ .featureAdvancedReports }}"
+                    # Feature flags as environment variables
+                    - name: FEATURE_ANALYTICS
+                      value: "{{ .featureAnalytics }}"
+                    - name: FEATURE_SSO
+                      value: "{{ .featureSso }}"
+                    - name: FEATURE_AUDIT_LOGS
+                      value: "{{ .featureAuditLogs }}"
+                    - name: FEATURE_ADVANCED_REPORTS
+                      value: "{{ .featureAdvancedReports }}"
 
-                  # Complex feature config as JSON
-                  - name: FEATURE_CONFIG
-                    value: "{{ .featureConfig | toJson }}"
-                ports:
-                  - containerPort: 8080
-                resources:
-                  requests:
-                    cpu: 500m
-                    memory: 1Gi
+                    # Complex feature config as JSON
+                    - name: FEATURE_CONFIG
+                      value: "{{ .featureConfig | toJson }}"
+                  ports:
+                    - containerPort: 8080
+                  resources:
+                    requests:
+                      cpu: 500m
+                      memory: 1Gi
 
   services:
     - id: app-svc
       nameTemplate: "{{ .uid }}-app"
       dependIds: ["main-app"]
       spec:
-        selector:
-          app: "{{ .uid }}"
-        ports:
-          - port: 80
-            targetPort: 8080
+        apiVersion: v1
+        kind: Service
+        metadata:
+          labels:
+            app: "{{ .uid }}"
+            node-id: "{{ .uid }}"
+        spec:
+          selector:
+            app: "{{ .uid }}"
+          ports:
+            - port: 80
+              targetPort: 8080
 ```
 
 **Benefits:**
@@ -197,51 +211,67 @@ spec:
       nameTemplate: "{{ .uid }}-ai"
       waitForReady: true
       spec:
-        replicas: 1
-        selector:
-          matchLabels:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          labels:
             app: "{{ .uid }}-ai"
             component: ai-assistant
-        template:
-          metadata:
-            labels:
+            node-id: "{{ .uid }}"
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
               app: "{{ .uid }}-ai"
               component: ai-assistant
-          spec:
-            containers:
-              - name: ai-assistant
-                image: registry.example.com/ai-assistant:v2.0.0
-                env:
-                  - name: NODE_ID
-                    value: "{{ .uid }}"
-                  - name: OPENAI_API_KEY
-                    valueFrom:
-                      secretKeyRef:
-                        name: openai-credentials
-                        key: api-key
-                ports:
-                  - containerPort: 8080
-                    name: http
-                resources:
-                  requests:
-                    cpu: 1000m
-                    memory: 2Gi
-                    nvidia.com/gpu: "1"
-                  limits:
-                    cpu: 2000m
-                    memory: 4Gi
-                    nvidia.com/gpu: "1"
+          template:
+            metadata:
+              labels:
+                app: "{{ .uid }}-ai"
+                component: ai-assistant
+            spec:
+              containers:
+                - name: ai-assistant
+                  image: registry.example.com/ai-assistant:v2.0.0
+                  env:
+                    - name: NODE_ID
+                      value: "{{ .uid }}"
+                    - name: OPENAI_API_KEY
+                      valueFrom:
+                        secretKeyRef:
+                          name: openai-credentials
+                          key: api-key
+                  ports:
+                    - containerPort: 8080
+                      name: http
+                  resources:
+                    requests:
+                      cpu: 1000m
+                      memory: 2Gi
+                      nvidia.com/gpu: "1"
+                    limits:
+                      cpu: 2000m
+                      memory: 4Gi
+                      nvidia.com/gpu: "1"
 
   services:
     - id: ai-service
       nameTemplate: "{{ .uid }}-ai"
       dependIds: ["ai-assistant"]
       spec:
-        selector:
-          app: "{{ .uid }}-ai"
-        ports:
-          - port: 80
-            targetPort: http
+        apiVersion: v1
+        kind: Service
+        metadata:
+          labels:
+            app: "{{ .uid }}-ai"
+            component: ai-assistant
+            node-id: "{{ .uid }}"
+        spec:
+          selector:
+            app: "{{ .uid }}-ai"
+          ports:
+            - port: 80
+              targetPort: http
 ```
 
 **Benefits:**

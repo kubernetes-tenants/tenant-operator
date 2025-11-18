@@ -141,13 +141,13 @@ spec:
   hubId: domain-enabled-nodes
 
   # Create namespace per node for better isolation
-  manifests:
+  namespaces:
     - id: node-namespace
+      nameTemplate: "node-{{ .uid }}"
       spec:
         apiVersion: v1
         kind: Namespace
         metadata:
-          name: "node-{{ .uid }}"
           labels:
             node-id: "{{ .uid }}"
             plan-type: "{{ .planType }}"
@@ -159,6 +159,12 @@ spec:
       targetNamespace: "node-{{ .uid }}"
       dependIds: ["node-namespace"]
       spec:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          labels:
+            app: "{{ .uid }}-web"
+            node-id: "{{ .uid }}"
         automountServiceAccountToken: true
 
   # Main application deployment
@@ -170,50 +176,57 @@ spec:
       waitForReady: true
       timeoutSeconds: 600
       spec:
-        replicas: 2
-        selector:
-          matchLabels:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          labels:
             app: "{{ .uid }}-web"
             node-id: "{{ .uid }}"
-        template:
-          metadata:
-            labels:
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
               app: "{{ .uid }}-web"
               node-id: "{{ .uid }}"
-          spec:
-            serviceAccountName: "{{ .uid }}-app"
-            containers:
-              - name: app
-                image: "registry.example.com/node-app:v1.2.3"
-                env:
-                  - name: NODE_ID
-                    value: "{{ .uid }}"
-                  - name: NODE_DOMAIN
-                    value: "{{ if and .customDomain (eq .domainVerified \"true\") }}{{ .customDomain }}{{ else }}{{ .uid }}.saas.example.com{{ end }}"
-                  - name: PLAN_TYPE
-                    value: "{{ .planType }}"
-                ports:
-                  - containerPort: 8080
-                    name: http
-                resources:
-                  requests:
-                    cpu: "{{ if eq .planType \"enterprise\" }}1000m{{ else if eq .planType \"pro\" }}500m{{ else }}200m{{ end }}"
-                    memory: "{{ if eq .planType \"enterprise\" }}2Gi{{ else if eq .planType \"pro\" }}1Gi{{ else }}512Mi{{ end }}"
-                  limits:
-                    cpu: "{{ if eq .planType \"enterprise\" }}2000m{{ else if eq .planType \"pro\" }}1000m{{ else }}400m{{ end }}"
-                    memory: "{{ if eq .planType \"enterprise\" }}4Gi{{ else if eq .planType \"pro\" }}2Gi{{ else }}1Gi{{ end }}"
-                livenessProbe:
-                  httpGet:
-                    path: /healthz
-                    port: http
-                  initialDelaySeconds: 10
-                  periodSeconds: 10
-                readinessProbe:
-                  httpGet:
-                    path: /ready
-                    port: http
-                  initialDelaySeconds: 5
-                  periodSeconds: 5
+          template:
+            metadata:
+              labels:
+                app: "{{ .uid }}-web"
+                node-id: "{{ .uid }}"
+            spec:
+              serviceAccountName: "{{ .uid }}-app"
+              containers:
+                - name: app
+                  image: "registry.example.com/node-app:v1.2.3"
+                  env:
+                    - name: NODE_ID
+                      value: "{{ .uid }}"
+                    - name: NODE_DOMAIN
+                      value: "{{ if and .customDomain (eq .domainVerified \"true\") }}{{ .customDomain }}{{ else }}{{ .uid }}.saas.example.com{{ end }}"
+                    - name: PLAN_TYPE
+                      value: "{{ .planType }}"
+                  ports:
+                    - containerPort: 8080
+                      name: http
+                  resources:
+                    requests:
+                      cpu: "{{ if eq .planType \"enterprise\" }}1000m{{ else if eq .planType \"pro\" }}500m{{ else }}200m{{ end }}"
+                      memory: "{{ if eq .planType \"enterprise\" }}2Gi{{ else if eq .planType \"pro\" }}1Gi{{ else }}512Mi{{ end }}"
+                    limits:
+                      cpu: "{{ if eq .planType \"enterprise\" }}2000m{{ else if eq .planType \"pro\" }}1000m{{ else }}400m{{ end }}"
+                      memory: "{{ if eq .planType \"enterprise\" }}4Gi{{ else if eq .planType \"pro\" }}2Gi{{ else }}1Gi{{ end }}"
+                  livenessProbe:
+                    httpGet:
+                      path: /healthz
+                      port: http
+                    initialDelaySeconds: 10
+                    periodSeconds: 10
+                  readinessProbe:
+                    httpGet:
+                      path: /ready
+                      port: http
+                    initialDelaySeconds: 5
+                    periodSeconds: 5
 
   # Service for the deployment
   services:
@@ -223,13 +236,20 @@ spec:
       dependIds: ["web-app"]
       waitForReady: false
       spec:
-        selector:
-          app: "{{ .uid }}-web"
-          node-id: "{{ .uid }}"
-        ports:
-          - port: 80
-            targetPort: http
-            name: http
+        apiVersion: v1
+        kind: Service
+        metadata:
+          labels:
+            app: "{{ .uid }}-web"
+            node-id: "{{ .uid }}"
+        spec:
+          selector:
+            app: "{{ .uid }}-web"
+            node-id: "{{ .uid }}"
+          ports:
+            - port: 80
+              targetPort: http
+              name: http
 
   # Ingress with default subdomain
   ingresses:
@@ -244,22 +264,35 @@ spec:
         nginx.ingress.kubernetes.io/ssl-redirect: "true"
         nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
       spec:
-        ingressClassName: nginx
-        tls:
-          - hosts:
-              - "{{ .uid }}.saas.example.com"
-            secretName: "{{ .uid }}-default-tls"
-        rules:
-          - host: "{{ .uid }}.saas.example.com"
-            http:
-              paths:
-                - path: /
-                  pathType: Prefix
-                  backend:
-                    service:
-                      name: "{{ .uid }}-web"
-                      port:
-                        number: 80
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          labels:
+            app: "{{ .uid }}-web"
+            node-id: "{{ .uid }}"
+          annotations:
+            cert-manager.io/cluster-issuer: "letsencrypt-prod"
+            external-dns.alpha.kubernetes.io/hostname: "{{ .uid }}.saas.example.com"
+            external-dns.alpha.kubernetes.io/ttl: "300"
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+            nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+        spec:
+          ingressClassName: nginx
+          tls:
+            - hosts:
+                - "{{ .uid }}.saas.example.com"
+              secretName: "{{ .uid }}-default-tls"
+          rules:
+            - host: "{{ .uid }}.saas.example.com"
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: "{{ .uid }}-web"
+                        port:
+                          number: 80
 ```
 
 ::: tip How It Works
@@ -284,22 +317,33 @@ For nodes with verified custom domains, add additional Ingress resources:
         external-dns.alpha.kubernetes.io/hostname: "{{ .customDomain }}"
         external-dns.alpha.kubernetes.io/ttl: "300"
       spec:
-        ingressClassName: nginx
-        tls:
-          - hosts:
-              - "{{ .customDomain }}"
-            secretName: "{{ .uid }}-custom-tls"
-        rules:
-          - host: "{{ .customDomain }}"
-            http:
-              paths:
-                - path: /
-                  pathType: Prefix
-                  backend:
-                    service:
-                      name: "{{ .uid }}-web"
-                      port:
-                        number: 80
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          labels:
+            app: "{{ .uid }}-web"
+            node-id: "{{ .uid }}"
+          annotations:
+            cert-manager.io/cluster-issuer: "letsencrypt-prod"
+            external-dns.alpha.kubernetes.io/hostname: "{{ .customDomain }}"
+            external-dns.alpha.kubernetes.io/ttl: "300"
+        spec:
+          ingressClassName: nginx
+          tls:
+            - hosts:
+                - "{{ .customDomain }}"
+              secretName: "{{ .uid }}-custom-tls"
+          rules:
+            - host: "{{ .customDomain }}"
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: "{{ .uid }}-web"
+                        port:
+                          number: 80
 ```
 
 **Note:** Filter nodes with verified domains using a database view:

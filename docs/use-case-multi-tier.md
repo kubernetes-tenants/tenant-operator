@@ -121,13 +121,13 @@ spec:
   hubId: multi-tier-nodes
 
   # Create node namespace
-  manifests:
+  namespaces:
     - id: node-namespace
+      nameTemplate: "node-{{ .uid }}"
       spec:
         apiVersion: v1
         kind: Namespace
         metadata:
-          name: "node-{{ .uid }}"
           labels:
             node-id: "{{ .uid }}"
             tier: data
@@ -143,50 +143,57 @@ spec:
       waitForReady: true
       timeoutSeconds: 600
       spec:
-        serviceName: "{{ .uid }}-postgres"
-        replicas: 1
-        selector:
-          matchLabels:
+        apiVersion: apps/v1
+        kind: StatefulSet
+        metadata:
+          labels:
             app: "{{ .uid }}-postgres"
-        template:
-          metadata:
-            labels:
+            tier: data
+        spec:
+          serviceName: "{{ .uid }}-postgres"
+          replicas: 1
+          selector:
+            matchLabels:
               app: "{{ .uid }}-postgres"
-              tier: data
-          spec:
-            containers:
-              - name: postgres
-                image: postgres:15-alpine
-                env:
-                  - name: POSTGRES_DB
-                    value: "{{ .uid }}"
-                  - name: POSTGRES_USER
-                    value: "{{ .uid }}"
-                  - name: POSTGRES_PASSWORD
-                    valueFrom:
-                      secretKeyRef:
-                        name: "{{ .uid }}-db-credentials"
-                        key: password
-                  - name: PGDATA
-                    value: /var/lib/postgresql/data/pgdata
-                ports:
-                  - containerPort: 5432
-                    name: postgres
-                volumeMounts:
-                  - name: data
-                    mountPath: /var/lib/postgresql/data
+          template:
+            metadata:
+              labels:
+                app: "{{ .uid }}-postgres"
+                tier: data
+            spec:
+              containers:
+                - name: postgres
+                  image: postgres:15-alpine
+                  env:
+                    - name: POSTGRES_DB
+                      value: "{{ .uid }}"
+                    - name: POSTGRES_USER
+                      value: "{{ .uid }}"
+                    - name: POSTGRES_PASSWORD
+                      valueFrom:
+                        secretKeyRef:
+                          name: "{{ .uid }}-db-credentials"
+                          key: password
+                    - name: PGDATA
+                      value: /var/lib/postgresql/data/pgdata
+                  ports:
+                    - containerPort: 5432
+                      name: postgres
+                  volumeMounts:
+                    - name: data
+                      mountPath: /var/lib/postgresql/data
+                  resources:
+                    requests:
+                      cpu: "{{ if eq .dbSize \"large\" }}2000m{{ else if eq .dbSize \"medium\" }}1000m{{ else }}500m{{ end }}"
+                      memory: "{{ if eq .dbSize \"large\" }}4Gi{{ else if eq .dbSize \"medium\" }}2Gi{{ else }}1Gi{{ end }}"
+          volumeClaimTemplates:
+            - metadata:
+                name: data
+              spec:
+                accessModes: ["ReadWriteOnce"]
                 resources:
                   requests:
-                    cpu: "{{ if eq .dbSize \"large\" }}2000m{{ else if eq .dbSize \"medium\" }}1000m{{ else }}500m{{ end }}"
-                    memory: "{{ if eq .dbSize \"large\" }}4Gi{{ else if eq .dbSize \"medium\" }}2Gi{{ else }}1Gi{{ end }}"
-        volumeClaimTemplates:
-          - metadata:
-              name: data
-            spec:
-              accessModes: ["ReadWriteOnce"]
-              resources:
-                requests:
-                  storage: "{{ if eq .dbSize \"large\" }}100Gi{{ else if eq .dbSize \"medium\" }}50Gi{{ else }}20Gi{{ end }}"
+                    storage: "{{ if eq .dbSize \"large\" }}100Gi{{ else if eq .dbSize \"medium\" }}50Gi{{ else }}20Gi{{ end }}"
 
   # PostgreSQL Service
   services:
@@ -195,12 +202,19 @@ spec:
       targetNamespace: "node-{{ .uid }}"
       dependIds: ["postgres"]
       spec:
-        clusterIP: None  # Headless service for StatefulSet
-        selector:
-          app: "{{ .uid }}-postgres"
-        ports:
-          - port: 5432
-            targetPort: postgres
+        apiVersion: v1
+        kind: Service
+        metadata:
+          labels:
+            app: "{{ .uid }}-postgres"
+            tier: data
+        spec:
+          clusterIP: None  # Headless service for StatefulSet
+          selector:
+            app: "{{ .uid }}-postgres"
+          ports:
+            - port: 5432
+              targetPort: postgres
 
   # Redis cache deployment
   deployments:
@@ -210,29 +224,36 @@ spec:
       dependIds: ["node-namespace"]
       waitForReady: true
       spec:
-        replicas: 1
-        selector:
-          matchLabels:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          labels:
             app: "{{ .uid }}-redis"
-        template:
-          metadata:
-            labels:
+            tier: cache
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
               app: "{{ .uid }}-redis"
-              tier: cache
-          spec:
-            containers:
-              - name: redis
-                image: redis:7-alpine
-                ports:
-                  - containerPort: 6379
-                    name: redis
-                resources:
-                  requests:
-                    cpu: 200m
-                    memory: 512Mi
-                  limits:
-                    cpu: 400m
-                    memory: 1Gi
+          template:
+            metadata:
+              labels:
+                app: "{{ .uid }}-redis"
+                tier: cache
+            spec:
+              containers:
+                - name: redis
+                  image: redis:7-alpine
+                  ports:
+                    - containerPort: 6379
+                      name: redis
+                  resources:
+                    requests:
+                      cpu: 200m
+                      memory: 512Mi
+                    limits:
+                      cpu: 400m
+                      memory: 1Gi
 
   # Redis Service
   services:
@@ -241,11 +262,18 @@ spec:
       targetNamespace: "node-{{ .uid }}"
       dependIds: ["redis"]
       spec:
-        selector:
-          app: "{{ .uid }}-redis"
-        ports:
-          - port: 6379
-            targetPort: redis
+        apiVersion: v1
+        kind: Service
+        metadata:
+          labels:
+            app: "{{ .uid }}-redis"
+            tier: cache
+        spec:
+          selector:
+            app: "{{ .uid }}-redis"
+          ports:
+            - port: 6379
+              targetPort: redis
 
   # Database credentials secret
   secrets:
@@ -255,6 +283,12 @@ spec:
       dependIds: ["node-namespace"]
       creationPolicy: Once  # Generate password once
       spec:
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          labels:
+            app: "{{ .uid }}-postgres"
+            tier: data
         stringData:
           password: "{{ randAlphaNum 32 }}"
           connection-string: "postgresql://{{ .uid }}:REPLACE_WITH_PASSWORD@{{ .uid }}-postgres:5432/{{ .uid }}"
@@ -282,59 +316,66 @@ spec:
       waitForReady: true
       timeoutSeconds: 600
       spec:
-        replicas: {{ .apiReplicas }}
-        strategy:
-          type: RollingUpdate
-          rollingUpdate:
-            maxSurge: 1
-            maxUnavailable: 0
-        selector:
-          matchLabels:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          labels:
             app: "{{ .uid }}-api"
             tier: api
-        template:
-          metadata:
-            labels:
+        spec:
+          replicas: {{ .apiReplicas }}
+          strategy:
+            type: RollingUpdate
+            rollingUpdate:
+              maxSurge: 1
+              maxUnavailable: 0
+          selector:
+            matchLabels:
               app: "{{ .uid }}-api"
               tier: api
-          spec:
-            containers:
-              - name: api
-                image: registry.example.com/node-api:v2.0.0
-                env:
-                  - name: NODE_ID
-                    value: "{{ .uid }}"
-                  - name: DATABASE_URL
-                    valueFrom:
-                      secretKeyRef:
-                        name: "{{ .uid }}-db-credentials"
-                        key: connection-string
-                  - name: REDIS_URL
-                    value: "redis://{{ .uid }}-redis:6379"
-                  - name: ENABLE_ANALYTICS
-                    value: "{{ .enableAnalytics }}"
-                ports:
-                  - containerPort: 8080
-                    name: http
-                resources:
-                  requests:
-                    cpu: 500m
-                    memory: 1Gi
-                  limits:
-                    cpu: 1000m
-                    memory: 2Gi
-                livenessProbe:
-                  httpGet:
-                    path: /healthz
-                    port: http
-                  initialDelaySeconds: 30
-                  periodSeconds: 10
-                readinessProbe:
-                  httpGet:
-                    path: /ready
-                    port: http
-                  initialDelaySeconds: 10
-                  periodSeconds: 5
+          template:
+            metadata:
+              labels:
+                app: "{{ .uid }}-api"
+                tier: api
+            spec:
+              containers:
+                - name: api
+                  image: registry.example.com/node-api:v2.0.0
+                  env:
+                    - name: NODE_ID
+                      value: "{{ .uid }}"
+                    - name: DATABASE_URL
+                      valueFrom:
+                        secretKeyRef:
+                          name: "{{ .uid }}-db-credentials"
+                          key: connection-string
+                    - name: REDIS_URL
+                      value: "redis://{{ .uid }}-redis:6379"
+                    - name: ENABLE_ANALYTICS
+                      value: "{{ .enableAnalytics }}"
+                  ports:
+                    - containerPort: 8080
+                      name: http
+                  resources:
+                    requests:
+                      cpu: 500m
+                      memory: 1Gi
+                    limits:
+                      cpu: 1000m
+                      memory: 2Gi
+                  livenessProbe:
+                    httpGet:
+                      path: /healthz
+                      port: http
+                    initialDelaySeconds: 30
+                    periodSeconds: 10
+                  readinessProbe:
+                    httpGet:
+                      path: /ready
+                      port: http
+                    initialDelaySeconds: 10
+                    periodSeconds: 5
 
   services:
     - id: api-svc
@@ -342,11 +383,18 @@ spec:
       targetNamespace: "node-{{ .uid }}"
       dependIds: ["api"]
       spec:
-        selector:
-          app: "{{ .uid }}-api"
-        ports:
-          - port: 8080
-            targetPort: http
+        apiVersion: v1
+        kind: Service
+        metadata:
+          labels:
+            app: "{{ .uid }}-api"
+            tier: api
+        spec:
+          selector:
+            app: "{{ .uid }}-api"
+          ports:
+            - port: 8080
+              targetPort: http
 ```
 
 ## Template 3: Web Tier
@@ -366,32 +414,39 @@ spec:
       targetNamespace: "node-{{ .uid }}"
       waitForReady: true
       spec:
-        replicas: {{ .webReplicas }}
-        selector:
-          matchLabels:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          labels:
             app: "{{ .uid }}-web"
             tier: web
-        template:
-          metadata:
-            labels:
+        spec:
+          replicas: {{ .webReplicas }}
+          selector:
+            matchLabels:
               app: "{{ .uid }}-web"
               tier: web
-          spec:
-            containers:
-              - name: web
-                image: registry.example.com/node-web:v2.0.0
-                env:
-                  - name: NODE_ID
-                    value: "{{ .uid }}"
-                  - name: API_URL
-                    value: "http://{{ .uid }}-api:8080"
-                ports:
-                  - containerPort: 3000
-                    name: http
-                resources:
-                  requests:
-                    cpu: 200m
-                    memory: 512Mi
+          template:
+            metadata:
+              labels:
+                app: "{{ .uid }}-web"
+                tier: web
+            spec:
+              containers:
+                - name: web
+                  image: registry.example.com/node-web:v2.0.0
+                  env:
+                    - name: NODE_ID
+                      value: "{{ .uid }}"
+                    - name: API_URL
+                      value: "http://{{ .uid }}-api:8080"
+                  ports:
+                    - containerPort: 3000
+                      name: http
+                  resources:
+                    requests:
+                      cpu: 200m
+                      memory: 512Mi
 
   services:
     - id: web-svc
@@ -399,11 +454,18 @@ spec:
       targetNamespace: "node-{{ .uid }}"
       dependIds: ["web"]
       spec:
-        selector:
-          app: "{{ .uid }}-web"
-        ports:
-          - port: 80
-            targetPort: http
+        apiVersion: v1
+        kind: Service
+        metadata:
+          labels:
+            app: "{{ .uid }}-web"
+            tier: web
+        spec:
+          selector:
+            app: "{{ .uid }}-web"
+          ports:
+            - port: 80
+              targetPort: http
 
   ingresses:
     - id: web-ingress
@@ -411,18 +473,25 @@ spec:
       targetNamespace: "node-{{ .uid }}"
       dependIds: ["web-svc"]
       spec:
-        ingressClassName: nginx
-        rules:
-          - host: "{{ .host }}"
-            http:
-              paths:
-                - path: /
-                  pathType: Prefix
-                  backend:
-                    service:
-                      name: "{{ .uid }}-web"
-                      port:
-                        number: 80
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          labels:
+            app: "{{ .uid }}-web"
+            tier: web
+        spec:
+          ingressClassName: nginx
+          rules:
+            - host: "{{ .uid }}.example.com"
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: "{{ .uid }}-web"
+                        port:
+                          number: 80
 ```
 
 ## Template 4: Worker Tier
@@ -442,43 +511,50 @@ spec:
       targetNamespace: "node-{{ .uid }}"
       waitForReady: true
       spec:
-        replicas: {{ .workerReplicas }}
-        selector:
-          matchLabels:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          labels:
             app: "{{ .uid }}-worker"
             tier: worker
-        template:
-          metadata:
-            labels:
+        spec:
+          replicas: {{ .workerReplicas }}
+          selector:
+            matchLabels:
               app: "{{ .uid }}-worker"
               tier: worker
-          spec:
-            containers:
-              - name: worker
-                image: registry.example.com/node-worker:v2.0.0
-                env:
-                  - name: NODE_ID
-                    value: "{{ .uid }}"
-                  - name: DATABASE_URL
-                    valueFrom:
-                      secretKeyRef:
-                        name: "{{ .uid }}-db-credentials"
-                        key: connection-string
-                  - name: REDIS_URL
-                    value: "redis://{{ .uid }}-redis:6379"
-                  - name: QUEUE_URL
-                    value: "redis://{{ .uid }}-redis:6379"
-                  - name: ENABLE_NOTIFICATIONS
-                    value: "{{ .enableNotifications }}"
-                resources:
-                  requests:
-                    cpu: 300m
-                    memory: 768Mi
-                livenessProbe:
-                  exec:
-                    command: ["pgrep", "-f", "worker"]
-                  initialDelaySeconds: 30
-                  periodSeconds: 30
+          template:
+            metadata:
+              labels:
+                app: "{{ .uid }}-worker"
+                tier: worker
+            spec:
+              containers:
+                - name: worker
+                  image: registry.example.com/node-worker:v2.0.0
+                  env:
+                    - name: NODE_ID
+                      value: "{{ .uid }}"
+                    - name: DATABASE_URL
+                      valueFrom:
+                        secretKeyRef:
+                          name: "{{ .uid }}-db-credentials"
+                          key: connection-string
+                    - name: REDIS_URL
+                      value: "redis://{{ .uid }}-redis:6379"
+                    - name: QUEUE_URL
+                      value: "redis://{{ .uid }}-redis:6379"
+                    - name: ENABLE_NOTIFICATIONS
+                      value: "{{ .enableNotifications }}"
+                  resources:
+                    requests:
+                      cpu: 300m
+                      memory: 768Mi
+                  livenessProbe:
+                    exec:
+                      command: ["pgrep", "-f", "worker"]
+                    initialDelaySeconds: 30
+                    periodSeconds: 30
 ```
 
 ## Deployment Verification
