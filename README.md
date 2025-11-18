@@ -15,7 +15,7 @@
 [![Container Image](https://img.shields.io/badge/container-ghcr.io-blue)](https://github.com/k8s-lynq/lynq/pkgs/container/lynq)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/k8s-lynq/lynq)](go.mod)
 
-[Overview](#-overview) • [Features](#-key-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing)
+[Documentation](https://lynq.sh/) • [Quick Start](https://lynq.sh/quickstart) • [Architecture](https://lynq.sh/architecture) • [Contributing](#-contributing)
 
 </div>
 
@@ -23,163 +23,23 @@
 
 ## 📖 Overview
 
-**Lynq Operator** is a Kubernetes operator that automates database-driven infrastructure provisioning. It reads node data from external datasources (MySQL, PostgreSQL planned for v1.2) and dynamically creates, updates, and manages Kubernetes resources using declarative templates.
+**Lynq Operator** is a Kubernetes operator that automates database-driven infrastructure provisioning. It reads node data from external datasources and dynamically creates, updates, and manages Kubernetes resources using declarative templates.
 
 **One database row = One fully provisioned node stack**
 
-### Why Lynq Operator?
+🗄️ Database-driven automation • 📝 Go templates + Sprig functions • 🔄 Server-Side Apply • 📊 DAG-based dependencies • ⚙️ Lifecycle policies • 🚀 Production-ready
 
-**Traditional provisioning approaches are limited:**
-- ❌ Helm: Manual per-node releases and values files
-- ❌ GitOps: Static manifests don't scale to thousands of nodes
-- ❌ Custom scripts: Fragile, hard to maintain, no drift correction
-
-**Lynq Operator provides:**
-- ✅ **Database-driven automation**: Your existing database becomes the source of truth
-- ✅ **Real-time sync**: Changes propagate automatically (30s status reflection)
-- ✅ **Production-grade**: SSA, webhooks, finalizers, metrics, and drift detection built-in
-
-📚 **[Complete Documentation](https://lynq.sh/)** • 🏗️ **[Architecture Details](https://lynq.sh/architecture)**
-
----
-
-## ✨ Key Features
-
-| Feature | Description |
-|---------|-------------|
-| **🗄️ Database-Driven** | MySQL support (PostgreSQL in v1.2) |
-| **📝 Template Engine** | Go templates + 200+ Sprig functions |
-| **🔄 Server-Side Apply** | Conflict-free resource management |
-| **📊 Dependencies** | DAG-based resource ordering |
-| **⚙️ Policies** | Fine-grained lifecycle control |
-| **🚀 Production-Ready** | Webhooks, metrics, drift detection |
-
-**Advanced capabilities:** Multi-template support, cross-namespace provisioning, orphan cleanup, smart watch predicates, custom template functions (`sha1sum`, `fromJson`, `toHost`), and more.
-
-📖 **Full feature list:** [Documentation](https://lynq.sh/)
-
-### Integrations
-
-- [**ExternalDNS**](https://lynq.sh/integration-external-dns) - Automatic DNS records (Route53, Cloudflare, etc.)
-- [**Flux**](https://lynq.sh/integration-flux) - GitOps-based application deployment per node
-- **cert-manager** - Automatic TLS certificates
-- **Prometheus/Grafana** - Complete monitoring with dashboards
-
----
-
-## 🏗️ Architecture
-
-Lynq Operator uses a three-controller design for database-to-Kubernetes synchronization:
-
-1. **LynqHub Controller** - Syncs database → Creates LynqNode CRs
-2. **LynqForm Controller** - Validates templates and linkage
-3. **LynqNode Controller** - Renders templates → Applies resources via SSA
-
-**Multi-template support:** One registry can be referenced by multiple templates (prod, staging, etc.). Desired count = `referencingTemplates × activeRows`.
-
-📊 **Detailed architecture diagrams:** [Architecture Guide](https://lynq.sh/architecture)
-
-## Supported Kubernetes Versions
-
-| Version | Status |
-|---------|--------|
-| v1.28 - v1.33 | ✅ Validated |
-| Other GA releases | ⚠️ Expected |
-
-The operator targets GA/stable Kubernetes APIs and is decoupled from specific cluster releases. Validate in staging before production rollout.
+📚 **[Complete Documentation](https://lynq.sh/)** • 🏗️ **[Architecture Guide](https://lynq.sh/architecture)**
 
 ---
 
 ## 🚀 Quick Start
 
-Get started in 5 minutes with a working example:
+Get started with Lynq Operator in 5 minutes:
 
-🎯 **[Quick Start Guide with Minikube](https://lynq.sh/quickstart)** - Automated setup scripts included
-
-### Installation (Helm - Recommended)
-
-```bash
-# 1. Install cert-manager (required for webhooks)
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
-
-# 2. Install Lynq Operator
-helm repo add lynq-operator https://k8s-lynq.github.io/lynq
-helm repo update
-
-helm install lynq k8s-lynq/lynq \
-  --namespace lynq-system \
-  --create-namespace
-```
-
-📖 **More installation options:** [Installation Guide](https://lynq.sh/installation)
-
-### Configuration Example
-
-**1. Connect to your database (LynqHub):**
-
-```yaml
-apiVersion: operator.lynq.sh/v1
-kind: LynqHub
-metadata:
-  name: my-saas-hub
-spec:
-  source:
-    type: mysql
-    mysql:
-      host: mysql.database.svc.cluster.local
-      database: nodes
-      table: node_configs
-      passwordRef:
-        name: mysql-secret
-        key: password
-    syncInterval: 1m
-  valueMappings:
-    uid: node_id
-    # hostOrUrl: node_url  # DEPRECATED v1.1.11+ (use extraValueMappings)
-    activate: is_active  # Must be "1", "true", or "yes"
-  extraValueMappings:
-    nodeUrl: node_url  # Recommended: use extraValueMappings + toHost() in templates
-```
-
-📖 **Database setup guide:** [DataSource Configuration](https://lynq.sh/datasource)
-
-**2. Define resource template (LynqForm):**
-
-```yaml
-apiVersion: operator.lynq.sh/v1
-kind: LynqForm
-metadata:
-  name: saas-app-template
-spec:
-  hubId: my-saas-hub
-  deployments:
-    - id: app
-      nameTemplate: "{{ .uid }}-app"
-      spec:
-        apiVersion: apps/v1
-        kind: Deployment
-        spec:
-          replicas: 2
-          template:
-            spec:
-              containers:
-              - name: app
-                image: myapp:latest
-                env:
-                - name: NODE_ID
-                  value: "{{ .uid }}"
-```
-
-📖 **Template syntax and functions:** [Template Guide](https://lynq.sh/templates)
-
-**3. Verify:**
-
-```bash
-kubectl get lynqnodes --watch
-kubectl get lynqnode <lynqnode-name> -o yaml
-```
-
-**Result:** Each active database row automatically provisions a complete node stack!
+🎯 **[Quick Start Guide](https://lynq.sh/quickstart)** - Step-by-step tutorial with working examples
+📦 **[Installation Guide](https://lynq.sh/installation)** - Helm, Kustomize, and manual installation options
+⚙️ **[Configuration Examples](https://lynq.sh/quickstart#configuration)** - LynqHub and LynqForm setup
 
 ---
 
@@ -187,289 +47,67 @@ kubectl get lynqnode <lynqnode-name> -o yaml
 
 Complete documentation is available at **[lynq.sh](https://lynq.sh/)**
 
-### Quick Links
-
-| Category | Pages |
-|----------|-------|
-| **Getting Started** | [Quick Start](https://lynq.sh/quickstart) • [Installation](https://lynq.sh/installation) |
-| **Core Concepts** | [Architecture](https://lynq.sh/architecture) • [API Reference](https://lynq.sh/api) • [Templates](https://lynq.sh/templates) • [Policies](https://lynq.sh/policies) • [Dependencies](https://lynq.sh/dependencies) |
-| **Operations** | [DataSource Setup](https://lynq.sh/datasource) • [Monitoring](https://lynq.sh/monitoring) • [Alert Runbooks](https://lynq.sh/alert-runbooks) • [Troubleshooting](https://lynq.sh/troubleshooting) • [Performance](https://lynq.sh/performance) |
-| **Integrations** | [ExternalDNS](https://lynq.sh/integration-external-dns) • [Flux](https://lynq.sh/integration-flux) • [Argo CD](https://lynq.sh/integration-argocd) |
-| **Advanced** | [Security](https://lynq.sh/security) • [Development](https://lynq.sh/development) • [Contributing](https://lynq.sh/contributing-datasource) |
-
-### Examples
-
-**Simple SaaS Application:**
-```sql
-INSERT INTO nodes VALUES ('acme-corp', 'https://acme.myapp.io', 1, 'enterprise');
-```
-→ Automatically creates Deployment, Service, Ingress, ConfigMaps, and Secrets
-
-**Multi-region with custom variables:**
-```yaml
-extraValueMappings:
-  region: deployment_region
-  dbHost: database_host
-```
-
-**Template functions:**
-```yaml
-nameTemplate: "{{ .uid | sha1sum | trunc63 }}"  # Unique names
-value: "{{ (.config | fromJson).apiKey }}"      # Parse JSON
-value: "{{ .nodeUrl | toHost }}"                # Extract host
-```
-
-📖 **More examples:** [Quick Start Guide](https://lynq.sh/quickstart)
+**Getting Started**: [Quick Start](https://lynq.sh/quickstart) • [Installation](https://lynq.sh/installation)
+**Core Concepts**: [Architecture](https://lynq.sh/architecture) • [API Reference](https://lynq.sh/api) • [Templates](https://lynq.sh/templates)
+**Operations**: [DataSource Setup](https://lynq.sh/datasource) • [Monitoring](https://lynq.sh/monitoring) • [Troubleshooting](https://lynq.sh/troubleshooting)
+**Integrations**: [ExternalDNS](https://lynq.sh/integration-external-dns) • [Flux](https://lynq.sh/integration-flux) • [Argo CD](https://lynq.sh/integration-argocd)
 
 ---
 
 ## 🛠️ Development
 
-### Building from Source
-
 ```bash
-# Clone repository
 git clone https://github.com/k8s-lynq/lynq.git
 cd lynq
-
-# Install dependencies
-go mod download
-
-# Run tests
-make test
-
-# Build binary
-make build
-
-# Build and push container
-make docker-build docker-push IMG=<your-registry>/lynq:tag
+make install  # Install CRDs
+make run      # Run locally
+make test     # Run tests
 ```
 
-### Running Locally
-
-```bash
-# Install CRDs
-make install
-
-# Run controller locally (uses ~/.kube/config)
-make run
-
-# Run with debug logging
-LOG_LEVEL=debug make run
-```
-
-### Running Tests
-
-```bash
-# Unit tests
-make test
-
-# Integration tests
-make test-integration
-
-# E2E tests (requires kind)
-make test-e2e
-
-# Coverage report
-make test-coverage
-```
+📖 **[Development Guide](https://lynq.sh/development)** - Building, testing, and contributing to Lynq Operator
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions from anyone interested in database-driven Kubernetes automation.
+We welcome contributions! Whether you're fixing bugs, adding features, improving documentation, or sharing use cases - all contributions are valued.
 
-**Our vision:** We're building this project with open governance and community-first principles. As the project grows, we aspire to join cloud-native foundations like CNCF to foster broader collaboration and adoption.
+🌟 **Want to add a new datasource?** Lynq uses a pluggable adapter pattern - see our [Contributing a Datasource Guide](https://lynq.sh/contributing-datasource)
 
-**Ways to contribute:**
-- 🐛 Bug reports and feature requests
-- 📝 Documentation improvements
-- 💻 Code contributions (features, bug fixes, optimizations)
-- 🌍 Translations and internationalization
-- 🎨 UX/UI improvements for tooling
-- 📊 Use case sharing and feedback
-
-### 🌟 Want to Add a New Datasource?
-
-Lynq Operator uses a **pluggable adapter pattern** that makes it easy to add support for new datasources (PostgreSQL, MongoDB, REST APIs, etc.).
-
-**Why contribute a datasource?**
-- ✅ Only 2 methods to implement
-- ✅ MySQL reference implementation to follow
-- ✅ Complete step-by-step guide provided
-- ✅ Recognition in release notes
-
-📚 **Full Guide**: [Contributing a New Datasource](docs/contributing-datasource.md)
-
-### How to Contribute
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'feat: add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-### Contribution Guidelines
-
-- Follow [Conventional Commits](https://www.conventionalcommits.org/)
-- Add tests for new features
-- Update documentation
-- Run `make lint` before submitting
-- Ensure all CI checks pass
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+📋 **[Contributing Guidelines](CONTRIBUTING.md)** - Code standards, commit conventions, and PR process
 
 ---
 
-## 🗺️ Roadmap
+## 📊 Project Status
 
-See [full roadmap](docs/roadmap.md) for details.
+**Production-ready** • Kubernetes v1.28-v1.33 validated • Apache 2.0 License
 
----
-
-## 📊 Status
-
-| Component | Status | Description |
-|-----------|--------|-------------|
-| **Core Controllers** | ✅ Production | LynqHub, LynqForm, and LynqNode controllers with SSA |
-| **MySQL Datasource** | ✅ Production | Sync from MySQL with column mapping and VIEWs |
-| **Template Engine** | ✅ Production | Go templates with 200+ Sprig functions + custom functions |
-| **Webhooks** | ✅ Production | Validation and defaulting for all CRDs |
-| **Performance** | ✅ Production | Event-driven reconciliation with smart watch predicates |
-| **Multi-Template** | ✅ Production | One registry, multiple templates (prod, staging, etc.) |
-| **Cross-Namespace** | ✅ Production | Provision resources across namespaces with label tracking |
-| **Orphan Cleanup** | ✅ Production | Automatic detection and cleanup of removed resources |
-| **PostgreSQL** | 🚧 Planned | PostgreSQL datasource adapter (v1.2) |
-
-**Kubernetes:** v1.28-v1.33 validated • **Status:** Production-ready
-
----
-
-## ❓ FAQ
-
-<details>
-<summary><b>How is this different from Helm or GitOps?</b></summary>
-
-Lynq Operator is **database-driven** and designed for SaaS platforms where node data lives in databases, not git repositories. It automates provisioning from database rows with real-time sync, whereas Helm and GitOps require manual per-node configuration.
-
-📖 [Architecture Guide](https://lynq.sh/architecture)
-</details>
-
-<details>
-<summary><b>Can I use my existing database?</b></summary>
-
-Yes! You just need read-only access and column mappings. If your schema doesn't match, create a MySQL VIEW to transform the data.
-
-📖 [DataSource Configuration Guide](https://lynq.sh/datasource)
-</details>
-
-<details>
-<summary><b>What values are valid for the `activate` column?</b></summary>
-
-Must be **exactly** one of: `"1"`, `"true"`, `"TRUE"`, `"True"`, `"yes"`, `"YES"`, `"Yes"`
-
-All other values (including `"active"`, `"0"`, empty, NULL) are considered inactive. Use a VIEW to transform your data if needed.
-
-📖 [DataSource Guide - Activate Column](https://lynq.sh/datasource#activate-column-requirements)
-</details>
-
-<details>
-<summary><b>⚠️ What happens if I delete LynqHub or LynqForm?</b></summary>
-
-**Warning:** Causes cascade deletion of all LynqNode CRs and their resources!
-
-**Protection:** Set `deletionPolicy: Retain` on resources BEFORE deleting, or update in-place instead of delete/recreate.
-
-📖 [Policies Guide - Protecting LynqNodes](https://lynq.sh/policies#protecting-lynqnodes-from-cascade-deletion)
-</details>
-
-<details>
-<summary><b>How does it scale to thousands of nodes?</b></summary>
-
-Production deployments handle 1000+ nodes with concurrent reconciliation, SSA efficiency, resource caching, and optional sharding.
-
-📖 [Performance Guide](https://lynq.sh/performance)
-</details>
-
-<details>
-<summary><b>How fast does it react to changes?</b></summary>
-
-- **Immediate**: Event-driven drift correction
-- **30 seconds**: Periodic status reflection
-- **Configurable**: Database sync interval (e.g., 1 minute)
-
-📖 [Architecture - Reconciliation Flow](https://lynq.sh/architecture#reconciliation-flow)
-</details>
-
-<details>
-<summary><b>Can one registry support multiple environments?</b></summary>
-
-Yes! One registry can be referenced by multiple templates (prod, staging, dev). Each database row creates multiple LynqNode CRs.
-
-📖 [Configuration Guide - Multi-Template](https://lynq.sh/configuration#multi-template-support)
-</details>
-
-<details>
-<summary><b>How do I set up webhook certificates?</b></summary>
-
-Install **cert-manager** first - it automatically manages TLS certificates for webhook communication. See installation guide for details.
-
-📖 [Installation Guide](https://lynq.sh/installation)
-</details>
+- 🗺️ **[Roadmap](docs/roadmap.md)** - Feature plans and versioning
 
 ---
 
 ## 📝 License
 
-Copyright 2025 Lynq Operator Authors
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Licensed under the [Apache License 2.0](LICENSE).
+Copyright 2025 Lynq Operator Authors.
 
 ---
 
-## 🌟 Acknowledgments
+## 📬 Community
 
-Built with:
-- [Kubebuilder](https://kubebuilder.io/) - Kubernetes operator framework
-- [Operator SDK](https://sdk.operatorframework.io/) - Operator development toolkit
-- [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime) - Kubernetes controller library
-- [Sprig](https://masterminds.github.io/sprig/) - Template function library
-
-Inspired by the cloud-native ecosystem and CNCF projects.
-
----
-
-## 📬 Contact & Community
-
-- 🐛 **Issues**: [GitHub Issues](https://github.com/k8s-lynq/lynq/issues) - Report bugs or request features
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/k8s-lynq/lynq/discussions) - Ask questions or share ideas
-- 📧 **Email**: rationlunas@gmail.com - Direct contact for partnership inquiries
-
-**We're looking for:**
-- Users sharing their experiences and use cases
-- Contributors interested in database-driven Kubernetes
-- Organizations interested in collaboration
+🐛 [GitHub Issues](https://github.com/k8s-lynq/lynq/issues) • 💬 [Discussions](https://github.com/k8s-lynq/lynq/discussions)
 
 ---
 
 ## Star History
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=k8s-lynq/lynq&type=date&theme=dark&legend=top-left" />
-  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=k8s-lynq/lynq&type=date&legend=top-left" />
-  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=k8s-lynq/lynq&type=date&legend=top-left" />
-</picture>
+<a href="https://www.star-history.com/#k8s-lynq/lynq&type=timeline&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=k8s-lynq/lynq&type=timeline&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=k8s-lynq/lynq&type=timeline&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=k8s-lynq/lynq&type=timeline&legend=top-left" />
+ </picture>
+</a>
 
 ---
 
