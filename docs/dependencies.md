@@ -56,6 +56,8 @@ svc (depends on: app)
 
 Circular dependencies are rejected:
 
+<DependencyAnimationCycle />
+
 ::: warning Why it fails
 Dependency resolution uses a DAG. Any cycle blocks reconciliation and surfaces as `DependencyError`.
 :::
@@ -125,6 +127,8 @@ statefulSets:
 
 Use `waitForReady` to wait for resource readiness:
 
+<DependencyAnimationWaitForReady />
+
 ::: tip Combine readiness and dependencies
 `dependIds` only guarantees creation order. Enable `waitForReady` to ensure *ready* status before dependent workloads roll out.
 :::
@@ -164,6 +168,8 @@ secret → config → pvc → db → db-svc → app
 ### 2. Parallel Execution
 
 Independent resources execute in parallel:
+
+<DependencyAnimationParallel />
 
 ```yaml
 deployments:

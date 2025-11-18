@@ -12,6 +12,9 @@ import DeletionPolicyVisualizer from '../components/DeletionPolicyVisualizer.vue
 import ConflictPolicyVisualizer from '../components/ConflictPolicyVisualizer.vue';
 import RowToStackBanner from '../components/RowToStackBanner.vue';
 import WhyLynqCards from '../components/WhyLynqCards.vue';
+import DependencyAnimationParallel from '../components/DependencyAnimationParallel.vue';
+import DependencyAnimationCycle from '../components/DependencyAnimationCycle.vue';
+import DependencyAnimationWaitForReady from '../components/DependencyAnimationWaitForReady.vue';
 import './custom.css';
 
 export default {
@@ -31,5 +34,8 @@ export default {
     app.component('ConflictPolicyVisualizer', ConflictPolicyVisualizer);
     app.component('RowToStackBanner', RowToStackBanner);
     app.component('WhyLynqCards', WhyLynqCards);
+    app.component('DependencyAnimationParallel', DependencyAnimationParallel);
+    app.component('DependencyAnimationCycle', DependencyAnimationCycle);
+    app.component('DependencyAnimationWaitForReady', DependencyAnimationWaitForReady);
   }
 };
