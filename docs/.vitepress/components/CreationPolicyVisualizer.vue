@@ -1088,7 +1088,6 @@ onBeforeUnmount(() => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  z-index: 30;
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
 }
 

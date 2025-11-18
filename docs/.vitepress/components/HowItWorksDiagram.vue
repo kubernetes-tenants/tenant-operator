@@ -455,7 +455,6 @@ const handleEscapeKey = (e) => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  z-index: 20;
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
