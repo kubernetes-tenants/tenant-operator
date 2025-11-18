@@ -143,13 +143,6 @@ export default withMermaid(
         },
       ],
 
-      socialLinks: [
-        {
-          icon: "github",
-          link: "https://github.com/k8s-lynq/lynq",
-        },
-      ],
-
       search: {
         provider: "local",
       },
