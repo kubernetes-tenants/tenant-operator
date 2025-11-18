@@ -112,8 +112,8 @@ export default withMermaid(
               link: "/integration-external-dns",
             },
             {
-              text: "Terraform Operator",
-              link: "/integration-terraform-operator",
+              text: "Flux",
+              link: "/integration-flux",
             },
             {
               text: "Argo CD",

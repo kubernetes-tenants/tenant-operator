@@ -61,7 +61,7 @@
 ### Integrations
 
 - [**ExternalDNS**](https://lynq.sh/integration-external-dns) - Automatic DNS records (Route53, Cloudflare, etc.)
-- [**Terraform Operator**](https://lynq.sh/integration-terraform-operator) - Cloud resource provisioning (S3, RDS, CDN)
+- [**Flux**](https://lynq.sh/integration-flux) - GitOps-based application deployment per node
 - **cert-manager** - Automatic TLS certificates
 - **Prometheus/Grafana** - Complete monitoring with dashboards
 
@@ -194,7 +194,7 @@ Complete documentation is available at **[lynq.sh](https://lynq.sh/)**
 | **Getting Started** | [Quick Start](https://lynq.sh/quickstart) • [Installation](https://lynq.sh/installation) |
 | **Core Concepts** | [Architecture](https://lynq.sh/architecture) • [API Reference](https://lynq.sh/api) • [Templates](https://lynq.sh/templates) • [Policies](https://lynq.sh/policies) • [Dependencies](https://lynq.sh/dependencies) |
 | **Operations** | [DataSource Setup](https://lynq.sh/datasource) • [Monitoring](https://lynq.sh/monitoring) • [Alert Runbooks](https://lynq.sh/alert-runbooks) • [Troubleshooting](https://lynq.sh/troubleshooting) • [Performance](https://lynq.sh/performance) |
-| **Integrations** | [ExternalDNS](https://lynq.sh/integration-external-dns) • [Terraform Operator](https://lynq.sh/integration-terraform-operator) • [Argo CD](https://lynq.sh/integration-argocd) |
+| **Integrations** | [ExternalDNS](https://lynq.sh/integration-external-dns) • [Flux](https://lynq.sh/integration-flux) • [Argo CD](https://lynq.sh/integration-argocd) |
 | **Advanced** | [Security](https://lynq.sh/security) • [Development](https://lynq.sh/development) • [Contributing](https://lynq.sh/contributing-datasource) |
 
 ### Examples

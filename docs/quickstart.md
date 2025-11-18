@@ -436,7 +436,7 @@ Now that you have Lynq running, explore these topics:
 
 - [**Local Development**](local-development-minikube.md) - Development workflow and debugging
 - [**Integration with External DNS**](integration-external-dns.md) - Automatic DNS per node
-- [**Integration with Terraform Operator**](integration-terraform-operator.md) - Cloud resource provisioning
+- [**Integration with Flux**](integration-flux.md) - GitOps-based deployment
 
 ## Summary
 

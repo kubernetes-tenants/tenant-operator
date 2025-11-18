@@ -560,9 +560,9 @@ Explore comprehensive guides, API references, and real-world integration example
         </a>
       </li>
       <li class="doc-link-item">
-        <a href="/integration-terraform-operator">
-          <span class="doc-link-title">Terraform Operator</span>
-          <span class="doc-link-desc">Cloud resource provisioning</span>
+        <a href="/integration-flux">
+          <span class="doc-link-title">Flux</span>
+          <span class="doc-link-desc">GitOps-based deployment</span>
         </a>
       </li>
       <li class="doc-link-item">

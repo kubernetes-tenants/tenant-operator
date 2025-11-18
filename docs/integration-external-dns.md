@@ -454,4 +454,4 @@ ingresses:
 - [ExternalDNS Provider List](https://github.com/kubernetes-sigs/external-dns#status-of-providers)
 - [Lynq Templates Guide](templates.md)
 - [cert-manager Integration](https://cert-manager.io/docs/)
-- [Integration with Terraform Operator](integration-terraform-operator.md)
+- [Integration with Flux](integration-flux.md)

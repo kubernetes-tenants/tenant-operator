@@ -1032,6 +1032,6 @@ kubectl delete pod -n crossplane-system -l pkg.crossplane.io/provider=provider-a
 
 - [Crossplane Documentation](https://docs.crossplane.io/)
 - [Upbound Provider Marketplace](https://marketplace.upbound.io/)
-- [Terraform Operator Integration](integration-terraform-operator.md)
+- [Flux Integration](integration-flux.md)
 - [ExternalDNS Integration](integration-external-dns.md)
 - [Lynq Templates Guide](templates.md)
