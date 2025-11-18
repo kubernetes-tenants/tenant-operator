@@ -4,6 +4,12 @@
 
 The `ignoreFields` feature provides fine-grained control over which fields should be excluded from synchronization. This allows you to manage most resource fields declaratively through templates while letting specific fields be controlled externally (e.g., by HPA, manual scaling, or other operators).
 
+<script setup>
+import FieldIgnoreAnimation from './.vitepress/components/FieldIgnoreAnimation.vue'
+</script>
+
+<FieldIgnoreAnimation />
+
 ## Problem Statement
 
 Standard `CreationPolicy` options are too coarse-grained:
