@@ -77,6 +77,7 @@ Complete documentation is available at **[lynq.sh](https://lynq.sh/)**
 - [Troubleshooting](https://lynq.sh/troubleshooting) - Common issues and solutions
 
 ### Integrations
+- [Crossplane](https://lynq.sh/integration-crossplane) - Infrastructure as Code
 - [ExternalDNS](https://lynq.sh/integration-external-dns) - Dynamic DNS management
 - [Flux](https://lynq.sh/integration-flux) - GitOps workflows
 - [Argo CD](https://lynq.sh/integration-argocd) - Declarative GitOps
