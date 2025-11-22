@@ -885,9 +885,9 @@ func (r *LynqHubReconciler) updateStatus(ctx context.Context, registry *lynqv1.L
 	logger := log.FromContext(ctx)
 
 	// Record metrics first (these don't depend on the status update)
-	metrics.RegistryDesired.WithLabelValues(registry.Name, registry.Namespace).Set(float64(desired))
-	metrics.RegistryReady.WithLabelValues(registry.Name, registry.Namespace).Set(float64(ready))
-	metrics.RegistryFailed.WithLabelValues(registry.Name, registry.Namespace).Set(float64(failed))
+	metrics.HubDesired.WithLabelValues(registry.Name, registry.Namespace).Set(float64(desired))
+	metrics.HubReady.WithLabelValues(registry.Name, registry.Namespace).Set(float64(ready))
+	metrics.HubFailed.WithLabelValues(registry.Name, registry.Namespace).Set(float64(failed))
 
 	// Retry status update on conflict
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
