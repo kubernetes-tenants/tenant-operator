@@ -1108,7 +1108,7 @@
           "refId": "A"
         }
       ],
-      "title": "Registry Health",
+      "title": "Hub Health",
       "transformations": [
         {
           "id": "organize",
@@ -1127,7 +1127,7 @@
             "indexByName": {},
             "renameByName": {
               "Value": "Health",
-              "registry": "Registry",
+              "hub": "Hub",
               "namespace": "Namespace"
             }
           }
@@ -1416,7 +1416,7 @@
             "uid": "${datasource}"
           },
           "expr": "workqueue_depth{name=\"lynqhub\"}",
-          "legendFormat": "Registry Queue",
+          "legendFormat": "Hub Queue",
           "refId": "B"
         },
         {
